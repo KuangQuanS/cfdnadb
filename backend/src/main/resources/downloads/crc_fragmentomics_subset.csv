@@ -1,0 +1,4 @@
+marker_name,marker_type,significance_metric,significance_value
+FragShift-27,Fragmentomics,AUC,0.8870
+EndMotif-AT,End motif,OR,2.3800
+CRC-Integrated,Composite signature,AUC,0.9050

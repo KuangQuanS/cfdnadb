@@ -1,0 +1,310 @@
+import type {
+  BiomarkerRecord,
+  DownloadAsset,
+  FilterOptions,
+  Overview,
+  PagedResponse,
+  StudyDetail,
+  VisualizationSummary
+} from "../types/api";
+
+export const overviewMock: Overview = {
+  studyCount: 3,
+  biomarkerCount: 9,
+  datasetCount: 4,
+  downloadableAssets: 4,
+  leadingDiseases: [
+    { label: "Hepatocellular carcinoma", count: 1 },
+    { label: "Colorectal cancer", count: 1 },
+    { label: "Bladder cancer", count: 1 }
+  ],
+  leadingTechnologies: [
+    { label: "Targeted methylation sequencing", count: 1 },
+    { label: "Whole-genome sequencing", count: 1 },
+    { label: "Targeted panel sequencing", count: 1 }
+  ]
+};
+
+export const recordsMock: PagedResponse<BiomarkerRecord> = {
+  content: [
+    {
+      id: 1,
+      markerName: "cgHCC_104",
+      markerType: "DNA methylation",
+      chromosomeLocation: "chr1:145002-145178",
+      regulationDirection: "Hyper",
+      assayPlatform: "Targeted methylation sequencing",
+      specimenType: "Plasma",
+      diseaseType: "Hepatocellular carcinoma",
+      significanceMetric: "AUC",
+      significanceValue: 0.931,
+      effectSize: 1.82,
+      notes: "Stable performance in independent validation.",
+      studyId: 1,
+      studyAccession: "CFDNA-001",
+      studyTitle: "Genome-wide cfDNA methylation landscape for early hepatocellular carcinoma detection",
+      publicationYear: 2024
+    },
+    {
+      id: 2,
+      markerName: "LiverScore",
+      markerType: "Composite signature",
+      chromosomeLocation: null,
+      regulationDirection: "Up",
+      assayPlatform: "Targeted methylation sequencing",
+      specimenType: "Plasma",
+      diseaseType: "Hepatocellular carcinoma",
+      significanceMetric: "AUC",
+      significanceValue: 0.952,
+      effectSize: 2.41,
+      notes: "Integrated multiregion classifier.",
+      studyId: 1,
+      studyAccession: "CFDNA-001",
+      studyTitle: "Genome-wide cfDNA methylation landscape for early hepatocellular carcinoma detection",
+      publicationYear: 2024
+    },
+    {
+      id: 4,
+      markerName: "FragShift-27",
+      markerType: "Fragmentomics",
+      chromosomeLocation: "chr5q31",
+      regulationDirection: "Up",
+      assayPlatform: "Whole-genome sequencing",
+      specimenType: "Plasma",
+      diseaseType: "Colorectal cancer",
+      significanceMetric: "AUC",
+      significanceValue: 0.887,
+      effectSize: 1.45,
+      notes: "Fragment length skew score.",
+      studyId: 2,
+      studyAccession: "CFDNA-002",
+      studyTitle: "Fragmentomics signatures distinguish colorectal cancer and advanced adenoma",
+      publicationYear: 2023
+    },
+    {
+      id: 6,
+      markerName: "CRC-Integrated",
+      markerType: "Composite signature",
+      chromosomeLocation: null,
+      regulationDirection: "Up",
+      assayPlatform: "Whole-genome sequencing",
+      specimenType: "Plasma",
+      diseaseType: "Colorectal cancer",
+      significanceMetric: "AUC",
+      significanceValue: 0.905,
+      effectSize: 1.98,
+      notes: "Combines fragmentomics and copy number.",
+      studyId: 2,
+      studyAccession: "CFDNA-002",
+      studyTitle: "Fragmentomics signatures distinguish colorectal cancer and advanced adenoma",
+      publicationYear: 2023
+    },
+    {
+      id: 7,
+      markerName: "TERT C228T",
+      markerType: "Mutation",
+      chromosomeLocation: "chr5:1295228",
+      regulationDirection: "Mutated",
+      assayPlatform: "Targeted panel sequencing",
+      specimenType: "Urine",
+      diseaseType: "Bladder cancer",
+      significanceMetric: "Sensitivity",
+      significanceValue: 0.76,
+      effectSize: 1.29,
+      notes: "Most frequent recurrent hotspot.",
+      studyId: 3,
+      studyAccession: "CFDNA-003",
+      studyTitle: "Urine cfDNA mutation panel for bladder cancer surveillance",
+      publicationYear: 2022
+    }
+  ],
+  page: 0,
+  size: 10,
+  totalElements: 5,
+  totalPages: 1,
+  first: true,
+  last: true
+};
+
+export const downloadsMock: DownloadAsset[] = [
+  {
+    id: 1,
+    name: "cfDNA master release",
+    category: "Full database release",
+    description: "Combined curated study, dataset and biomarker release.",
+    fileName: "cfdna_master_release.csv",
+    contentType: "text/csv",
+    fileSizeBytes: 412,
+    publicAsset: true,
+    studyId: null,
+    studyAccession: null,
+    downloadUrl: "/api/v1/downloads/1/file"
+  },
+  {
+    id: 2,
+    name: "Field dictionary",
+    category: "Documentation",
+    description: "Data dictionary for the public schema.",
+    fileName: "field_dictionary.csv",
+    contentType: "text/csv",
+    fileSizeBytes: 288,
+    publicAsset: true,
+    studyId: null,
+    studyAccession: null,
+    downloadUrl: "/api/v1/downloads/2/file"
+  },
+  {
+    id: 3,
+    name: "HCC methylation subset",
+    category: "Study subset",
+    description: "Study-specific release for the HCC methylation cohort.",
+    fileName: "hcc_methylation_subset.csv",
+    contentType: "text/csv",
+    fileSizeBytes: 218,
+    publicAsset: true,
+    studyId: 1,
+    studyAccession: "CFDNA-001",
+    downloadUrl: "/api/v1/downloads/3/file"
+  },
+  {
+    id: 4,
+    name: "CRC fragmentomics subset",
+    category: "Study subset",
+    description: "Study-specific release for the CRC fragmentomics cohort.",
+    fileName: "crc_fragmentomics_subset.csv",
+    contentType: "text/csv",
+    fileSizeBytes: 219,
+    publicAsset: true,
+    studyId: 2,
+    studyAccession: "CFDNA-002",
+    downloadUrl: "/api/v1/downloads/4/file"
+  }
+];
+
+export const studyDetailsMock: Record<number, StudyDetail> = {
+  1: {
+    id: 1,
+    accession: "CFDNA-001",
+    title: "Genome-wide cfDNA methylation landscape for early hepatocellular carcinoma detection",
+    diseaseType: "Hepatocellular carcinoma",
+    sampleSource: "Plasma",
+    technology: "Targeted methylation sequencing",
+    journal: "Nature Medicine",
+    publicationYear: 2024,
+    cohortSize: 286,
+    doi: "10.1000/cfdna001",
+    pmid: "39800001",
+    abstractText: "A curated multicenter cfDNA methylation study focused on liver cancer screening cohorts.",
+    citation: "Author A et al. Nature Medicine (2024).",
+    datasets: [
+      {
+        id: 1,
+        name: "Discovery cohort methylation markers",
+        description: "Candidate methylation biomarkers from the discovery cohort.",
+        dataType: "Methylation markers",
+        recordCount: 124,
+        fileFormat: "CSV",
+        releaseVersion: "v1.0"
+      }
+    ],
+    sampleGroups: [
+      { id: 1, datasetId: 1, groupName: "Discovery HCC cases", conditionName: "Case", sampleType: "Plasma cfDNA", sampleCount: 82 },
+      { id: 2, datasetId: 1, groupName: "Discovery controls", conditionName: "Control", sampleType: "Plasma cfDNA", sampleCount: 54 }
+    ],
+    biomarkers: recordsMock.content.filter((record) => record.studyId === 1),
+    downloads: downloadsMock.filter((item) => item.studyId === 1)
+  },
+  2: {
+    id: 2,
+    accession: "CFDNA-002",
+    title: "Fragmentomics signatures distinguish colorectal cancer and advanced adenoma",
+    diseaseType: "Colorectal cancer",
+    sampleSource: "Plasma",
+    technology: "Whole-genome sequencing",
+    journal: "Gut",
+    publicationYear: 2023,
+    cohortSize: 198,
+    doi: "10.1000/cfdna002",
+    pmid: "39800002",
+    abstractText: "This study benchmarks fragment length, end motif and copy-number signals across colorectal cohorts.",
+    citation: "Author B et al. Gut (2023).",
+    datasets: [
+      {
+        id: 3,
+        name: "Fragmentomic signature matrix",
+        description: "Fragment size and end motif summary matrix.",
+        dataType: "Fragmentomics",
+        recordCount: 98,
+        fileFormat: "CSV",
+        releaseVersion: "v1.1"
+      }
+    ],
+    sampleGroups: [
+      { id: 5, datasetId: 3, groupName: "CRC cases", conditionName: "Case", sampleType: "Plasma cfDNA", sampleCount: 120 },
+      { id: 6, datasetId: 3, groupName: "Advanced adenoma", conditionName: "Case", sampleType: "Plasma cfDNA", sampleCount: 38 }
+    ],
+    biomarkers: recordsMock.content.filter((record) => record.studyId === 2),
+    downloads: downloadsMock.filter((item) => item.studyId === 2)
+  },
+  3: {
+    id: 3,
+    accession: "CFDNA-003",
+    title: "Urine cfDNA mutation panel for bladder cancer surveillance",
+    diseaseType: "Bladder cancer",
+    sampleSource: "Urine",
+    technology: "Targeted panel sequencing",
+    journal: "Clinical Cancer Research",
+    publicationYear: 2022,
+    cohortSize: 142,
+    doi: "10.1000/cfdna003",
+    pmid: "39800003",
+    abstractText: "A longitudinal urine cfDNA panel study evaluating surveillance performance after surgery.",
+    citation: "Author C et al. Clin Cancer Res (2022).",
+    datasets: [
+      {
+        id: 4,
+        name: "Urine mutation panel calls",
+        description: "Driver mutation calls across surveillance visits.",
+        dataType: "Mutation panel",
+        recordCount: 73,
+        fileFormat: "CSV",
+        releaseVersion: "v1.0"
+      }
+    ],
+    sampleGroups: [
+      { id: 7, datasetId: 4, groupName: "Surveillance positives", conditionName: "Case", sampleType: "Urine cfDNA", sampleCount: 61 },
+      { id: 8, datasetId: 4, groupName: "Surveillance negatives", conditionName: "Control", sampleType: "Urine cfDNA", sampleCount: 81 }
+    ],
+    biomarkers: recordsMock.content.filter((record) => record.studyId === 3),
+    downloads: []
+  }
+};
+
+export const filtersMock: FilterOptions = {
+  diseaseTypes: ["Bladder cancer", "Colorectal cancer", "Hepatocellular carcinoma"],
+  sampleSources: ["Plasma", "Urine"],
+  technologies: ["Targeted methylation sequencing", "Targeted panel sequencing", "Whole-genome sequencing"],
+  markerTypes: ["Composite signature", "DNA methylation", "Fragmentomics", "Mutation"],
+  specimenTypes: ["Plasma", "Urine"],
+  publicationYears: [2024, 2023, 2022]
+};
+
+export const visualizationMock: VisualizationSummary = {
+  diseaseDistribution: overviewMock.leadingDiseases,
+  technologyDistribution: overviewMock.leadingTechnologies,
+  markerTypeDistribution: [
+    { label: "Composite signature", count: 3 },
+    { label: "DNA methylation", count: 2 },
+    { label: "Mutation", count: 2 },
+    { label: "Fragmentomics", count: 1 }
+  ],
+  sampleSourceDistribution: [
+    { label: "Plasma", count: 2 },
+    { label: "Urine", count: 1 }
+  ],
+  publicationTrend: [
+    { year: 2022, count: 1 },
+    { year: 2023, count: 1 },
+    { year: 2024, count: 1 }
+  ]
+};

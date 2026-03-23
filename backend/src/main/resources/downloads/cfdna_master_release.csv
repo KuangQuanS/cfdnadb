@@ -1,0 +1,5 @@
+study_accession,disease_type,sample_source,technology,marker_name,marker_type
+CFDNA-001,Hepatocellular carcinoma,Plasma,Targeted methylation sequencing,cgHCC_104,DNA methylation
+CFDNA-001,Hepatocellular carcinoma,Plasma,Targeted methylation sequencing,LiverScore,Composite signature
+CFDNA-002,Colorectal cancer,Plasma,Whole-genome sequencing,FragShift-27,Fragmentomics
+CFDNA-003,Bladder cancer,Urine,Targeted panel sequencing,TERT C228T,Mutation

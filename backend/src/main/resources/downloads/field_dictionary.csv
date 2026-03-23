@@ -1,0 +1,5 @@
+field_name,description
+study_accession,Stable public accession for each curated study
+disease_type,Primary disease or clinical context used for browsing
+technology,Assay or sequencing technology used in the study
+marker_type,High-level biomarker classification

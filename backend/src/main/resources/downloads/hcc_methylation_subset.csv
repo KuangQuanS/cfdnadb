@@ -1,0 +1,4 @@
+marker_name,marker_type,significance_metric,significance_value
+cgHCC_104,DNA methylation,AUC,0.9310
+cgHCC_287,DNA methylation,AUC,0.9140
+LiverScore,Composite signature,AUC,0.9520

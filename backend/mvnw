@@ -1,0 +1,8 @@
+#!/bin/sh
+if ! command -v mvn >/dev/null 2>&1; then
+  echo "Apache Maven was not found in PATH."
+  echo "Install Maven or generate the official Maven Wrapper once JDK 21 is available."
+  exit 1
+fi
+mvn "$@"
+
