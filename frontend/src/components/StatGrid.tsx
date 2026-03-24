@@ -13,9 +13,9 @@ export function StatGrid({ items }: StatGridProps) {
     <div className="stat-grid">
       {items.map((item) => (
         <article key={item.label} className="stat-card">
-          <p>{item.label}</p>
+          <span>{item.label}</span>
           <strong>{item.value}</strong>
-          {item.meta ? <span>{item.meta}</span> : null}
+          {item.meta ? <p className="file-size">{item.meta}</p> : null}
         </article>
       ))}
     </div>

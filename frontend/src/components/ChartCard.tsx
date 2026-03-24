@@ -9,7 +9,7 @@ interface ChartCardProps {
 export function ChartCard({ title, option }: ChartCardProps) {
   return (
     <article className="chart-card">
-      <h3>{title}</h3>
+      <h3 className="chart-card-title">{title}</h3>
       <ReactECharts option={option} style={{ height: 320 }} />
     </article>
   );

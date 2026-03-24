@@ -3,42 +3,51 @@
 This repository contains an initial full-stack scaffold for an academic-style cfDNA database site aimed at NAR-style database presentation.
 
 ## Structure
-- `backend/`: Spring Boot API with Flyway migrations, demo data, download endpoints and OpenAPI UI
-- `frontend/`: React + Vite portal with academic visual language, browse table, charts and detail pages
-- `docs/`: architecture and field notes
+- `backend/`: Spring Boot API, Flyway migrations, demo data, download endpoints and Tomcat WAR packaging
+- `frontend/`: React + Vite portal source code that is built and bundled into the backend WAR
+- `docs/`: architecture, field notes and deployment guidance
 
 ## Backend features
 - Core entities for studies, datasets, sample groups, biomarker records and download assets
 - Public API endpoints for overview, browsing, detail, filters, visualizations and downloads
 - PostgreSQL-oriented schema with Flyway seed data
 - CSV import service interface for future structured-table ingestion
+- External Tomcat deployment as a single `war`
 
 ## Frontend features
-- Six pages: Home, Browse, Study Detail, Downloads, Visualizations, About
+- Pages: Home, Browse, Study Detail, VCF Demo, Downloads, Visualizations, About
 - TanStack Query for data loading
 - TanStack Table for browse results
 - ECharts summary visualizations
 - Fallback mock data so the UI remains navigable before the backend is running
+- Built into the backend WAR during `mvn package`
 
-## Local setup
+## Local development
 ### Backend
-1. Install JDK 21.
-2. Install PostgreSQL and create a database named `cfdnadb`.
-3. Set optional env vars: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `CORS_ALLOWED_ORIGIN`.
-4. Run `./mvnw spring-boot:run` from [backend](D:/OneDrive/website/cfdnadb/backend).
+1. Install JDK 21, Maven, Node.js 20+ and npm.
+2. Optional: set `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` and `CORS_ALLOWED_ORIGINS`.
+3. Run `mvn spring-boot:run` from [backend](D:/OneDrive/website/cfdnadb/backend).
 
-Note: the repository includes lightweight `mvnw` entry scripts, but not the official Maven Wrapper JAR. On a machine with Maven installed, regenerate the official wrapper if you want fully self-contained Maven bootstrap.
+Notes:
+- If no database variables are provided, the scaffold starts with the in-memory H2 demo datasource.
+- Default API port is `8080` for local development.
 
 ### Frontend
-1. Install Node.js 20+.
-2. Run `npm install` in [frontend](D:/OneDrive/website/cfdnadb/frontend).
-3. Run `npm run dev`.
-4. Optional: set `VITE_API_BASE_URL` if the API is hosted elsewhere.
+1. Run `npm install` in [frontend](D:/OneDrive/website/cfdnadb/frontend).
+2. Run `npm run dev`.
+
+## Deployment target
+The project is prepared for a single Tomcat application:
+- deploy `backend/target/cfdnadb.war`
+- access the site at `https://leelab.kmmu.edu.cn/cfdnadb/`
+- API is served at `https://leelab.kmmu.edu.cn/cfdnadb/api/v1/...`
+
+See [deployment.md](D:/OneDrive/website/cfdnadb/docs/deployment.md) for the exact build and Tomcat deployment steps.
 
 ## API docs
-Once the backend is running, Swagger UI is available at [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html).
+Once deployed, Swagger UI is available at `/cfdnadb/swagger-ui.html`.
 
 ## Current limitations
-- Not executed locally in this workspace because `java`, `mvn`, and `node` are not installed in PATH here.
 - Seed data is illustrative demo content, not your final cfDNA curation.
-- No admin UI, auth, or production deployment config yet.
+- The VCF page is currently a frontend placeholder, not a real parser-backed browser.
+- No admin UI, auth, or production-grade ingestion workflow yet.

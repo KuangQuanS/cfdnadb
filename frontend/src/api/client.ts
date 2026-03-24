@@ -6,17 +6,28 @@ import type {
   PagedResponse,
   BiomarkerRecord,
   StudyDetail,
-  VisualizationSummary
+  VisualizationSummary,
+  VcfDemo
 } from "../types/api";
-import { downloadsMock, filtersMock, overviewMock, recordsMock, studyDetailsMock, visualizationMock } from "./mockData";
+import {
+  downloadsMock,
+  filtersMock,
+  overviewMock,
+  recordsMock,
+  studyDetailsMock,
+  vcfDemoMock,
+  visualizationMock
+} from "./mockData";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+const derivedBase = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (derivedBase === "/" ? "" : derivedBase);
 
 function resolveMock(path: string): unknown {
   if (path.startsWith("/api/v1/overview")) return overviewMock;
   if (path.startsWith("/api/v1/records")) return recordsMock;
   if (path.startsWith("/api/v1/filters")) return filtersMock;
   if (path.startsWith("/api/v1/visualizations/summary")) return visualizationMock;
+  if (path.startsWith("/api/v1/vcf-demo")) return vcfDemoMock;
   if (path.startsWith("/api/v1/downloads")) return downloadsMock;
   if (path.startsWith("/api/v1/studies/")) {
     const id = Number(path.split("/").pop());
@@ -52,6 +63,10 @@ export function getFilters() {
 
 export function getVisualizationSummary() {
   return request<VisualizationSummary>("/api/v1/visualizations/summary");
+}
+
+export function getVcfDemo() {
+  return request<VcfDemo>("/api/v1/vcf-demo");
 }
 
 export function getDownloads() {

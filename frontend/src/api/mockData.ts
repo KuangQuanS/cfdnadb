@@ -5,6 +5,7 @@ import type {
   Overview,
   PagedResponse,
   StudyDetail,
+  VcfDemo,
   VisualizationSummary
 } from "../types/api";
 
@@ -306,5 +307,171 @@ export const visualizationMock: VisualizationSummary = {
     { year: 2022, count: 1 },
     { year: 2023, count: 1 },
     { year: 2024, count: 1 }
+  ]
+};
+
+export const vcfDemoMock: VcfDemo = {
+  totalDatasetFolders: 3,
+  totalVcfFiles: 12,
+  totalSamples: 146,
+  parsedVariantCount: 427,
+  datasetFolders: [
+    {
+      datasetKey: "CRC_2023",
+      displayName: "Colorectal plasma surveillance set",
+      publicReleaseId: "CFDNA-VCF-CRC-2023",
+      diseaseType: "Colorectal cancer",
+      sampleSource: "Plasma",
+      platform: "Targeted panel sequencing",
+      referenceBuild: "hg38",
+      sampleCount: 58,
+      vcfFileCount: 6,
+      parsedVariantCount: 192,
+      publication: "Gut (demo placeholder)",
+      parserStatus: "Indexed and ready for metadata registration",
+      nextAction: "Attach sample manifest and annotation summary"
+    },
+    {
+      datasetKey: "HCC_2024",
+      displayName: "HCC methylation-informed mutation subset",
+      publicReleaseId: "CFDNA-VCF-HCC-2024",
+      diseaseType: "Hepatocellular carcinoma",
+      sampleSource: "Plasma",
+      platform: "Hybrid capture panel",
+      referenceBuild: "hg38",
+      sampleCount: 44,
+      vcfFileCount: 4,
+      parsedVariantCount: 131,
+      publication: "Nature Medicine (demo placeholder)",
+      parserStatus: "VCF files detected; public metadata incomplete",
+      nextAction: "Complete release metadata and cohort summary"
+    },
+    {
+      datasetKey: "BLCA_2022",
+      displayName: "Urine cfDNA recurrence monitoring set",
+      publicReleaseId: "CFDNA-VCF-BLCA-2022",
+      diseaseType: "Bladder cancer",
+      sampleSource: "Urine",
+      platform: "Amplicon panel",
+      referenceBuild: "hg19",
+      sampleCount: 44,
+      vcfFileCount: 2,
+      parsedVariantCount: 104,
+      publication: "Clin Cancer Res (demo placeholder)",
+      parserStatus: "Release registered; public variant view pending",
+      nextAction: "Run import worker and publish curated variant summary"
+    }
+  ],
+  pipelineSteps: [
+    {
+      step: "01",
+      title: "Register dataset release",
+      description: "Create a public dataset record, accession and release note before parsing any variant file.",
+      output: "dataset, release metadata"
+    },
+    {
+      step: "02",
+      title: "Parse per-sample VCF",
+      description: "Extract CHROM, POS, REF, ALT, QUAL, FILTER, INFO and sample FORMAT fields into a normalized import table.",
+      output: "raw_variant_import"
+    },
+    {
+      step: "03",
+      title: "Annotate biological meaning",
+      description: "Resolve gene symbol, consequence, protein change, ClinVar and COSMIC tags from annotation fields or a downstream annotator.",
+      output: "variant_record"
+    },
+    {
+      step: "04",
+      title: "Expose public browser",
+      description: "Publish dataset summaries, release notes, download links and searchable variant rows without exposing private storage details.",
+      output: "dataset detail, variant browser"
+    }
+  ],
+  exampleVariants: [
+    {
+      datasetKey: "CRC_2023",
+      sampleId: "CRC-017",
+      gene: "KRAS",
+      chromosome: "chr12",
+      position: 25245350,
+      ref: "C",
+      alt: "T",
+      variantType: "SNV",
+      consequence: "missense_variant",
+      proteinChange: "p.G12D",
+      vaf: 0.084,
+      depth: 1842,
+      filterStatus: "PASS"
+    },
+    {
+      datasetKey: "CRC_2023",
+      sampleId: "CRC-024",
+      gene: "APC",
+      chromosome: "chr5",
+      position: 112175770,
+      ref: "G",
+      alt: "A",
+      variantType: "SNV",
+      consequence: "stop_gained",
+      proteinChange: "p.R1450*",
+      vaf: 0.051,
+      depth: 1336,
+      filterStatus: "PASS"
+    },
+    {
+      datasetKey: "HCC_2024",
+      sampleId: "HCC-011",
+      gene: "TERT",
+      chromosome: "chr5",
+      position: 1295228,
+      ref: "G",
+      alt: "A",
+      variantType: "SNV",
+      consequence: "regulatory_region_variant",
+      proteinChange: null,
+      vaf: 0.023,
+      depth: 2104,
+      filterStatus: "PASS"
+    },
+    {
+      datasetKey: "BLCA_2022",
+      sampleId: "BLCA-032",
+      gene: "FGFR3",
+      chromosome: "chr4",
+      position: 1807894,
+      ref: "C",
+      alt: "A",
+      variantType: "SNV",
+      consequence: "missense_variant",
+      proteinChange: "p.S249C",
+      vaf: 0.117,
+      depth: 965,
+      filterStatus: "PASS"
+    },
+    {
+      datasetKey: "BLCA_2022",
+      sampleId: "BLCA-032",
+      gene: "TERT",
+      chromosome: "chr5",
+      position: 1295250,
+      ref: "C",
+      alt: "T",
+      variantType: "SNV",
+      consequence: "regulatory_region_variant",
+      proteinChange: null,
+      vaf: 0.094,
+      depth: 1008,
+      filterStatus: "PanelOfNormalsFlag"
+    }
+  ],
+  diseaseDistribution: [
+    { label: "Colorectal cancer", count: 1 },
+    { label: "Hepatocellular carcinoma", count: 1 },
+    { label: "Bladder cancer", count: 1 }
+  ],
+  sampleSourceDistribution: [
+    { label: "Plasma", count: 2 },
+    { label: "Urine", count: 1 }
   ]
 };

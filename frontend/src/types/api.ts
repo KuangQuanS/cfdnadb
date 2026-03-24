@@ -127,3 +127,51 @@ export interface VisualizationSummary {
   sampleSourceDistribution: LabelCount[];
   publicationTrend: YearCount[];
 }
+
+export interface VcfDatasetFolder {`r`n  datasetKey: string;`r`n  displayName: string;`r`n  publicReleaseId: string;
+  diseaseType: string;
+  sampleSource: string;
+  platform: string;
+  referenceBuild: string;
+  sampleCount: number;
+  vcfFileCount: number;
+  parsedVariantCount: number;
+  publication: string;
+  parserStatus: string;
+  nextAction: string;
+}
+
+export interface VcfPipelineStep {
+  step: string;
+  title: string;
+  description: string;
+  output: string;
+}
+
+export interface VcfVariantRecord {
+  datasetKey: string;
+  sampleId: string;
+  gene: string;
+  chromosome: string;
+  position: number;
+  ref: string;
+  alt: string;
+  variantType: string;
+  consequence: string;
+  proteinChange: string | null;
+  vaf: number | null;
+  depth: number | null;
+  filterStatus: string;
+}
+
+export interface VcfDemo {
+  totalDatasetFolders: number;
+  totalVcfFiles: number;
+  totalSamples: number;
+  parsedVariantCount: number;
+  datasetFolders: VcfDatasetFolder[];
+  pipelineSteps: VcfPipelineStep[];
+  exampleVariants: VcfVariantRecord[];
+  diseaseDistribution: LabelCount[];
+  sampleSourceDistribution: LabelCount[];
+}
