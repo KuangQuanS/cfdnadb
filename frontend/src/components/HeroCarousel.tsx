@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import slide1Img from "../assets/slider1.png";
 import slide2Img from "../assets/slider2.jpg";
@@ -7,20 +7,20 @@ const slides = [
   {
     id: 1,
     image: slide1Img,
-    kicker: "Curated liquid biopsy reference",
-    title: "cfDNA Database Knowledgebase",
-    description: "Expertly curated data of circulating free DNA mutations and genomic datasets, providing comprehensive liquid biopsy metrics.",
-    primaryAction: { label: "Browse records", to: "/browse" },
-    secondaryAction: { label: "Open VCF demo", to: "/vcf-demo" },
+    kicker: "Liquid biopsy mutation resource",
+    title: "Somatic variant atlas for circulating cell-free DNA",
+    description: "Query ANNOVAR-annotated somatic mutations across breast, colorectal, liver, lung, and pancreatic cohorts. Gene-centric search, functional class filtering, and cross-cohort comparative analysis in a single portal.",
+    primaryAction: { label: "Search variants", to: "/gene-search?cancer=Breast&gene=TP53" },
+    secondaryAction: { label: "Mutation analysis", to: "/mutation-analysis" }
   },
   {
     id: 2,
     image: slide2Img,
-    kicker: "High-resolution datasets",
-    title: "VCF-Oriented Release Portal",
-    description: "Explore standardized manifestations of somatic mutations parsed from cell-free DNA repositories.",
-    primaryAction: { label: "Download releases", to: "/downloads" },
-    secondaryAction: { label: "Learn more", to: "/about" },
+    kicker: "Multi-cohort statistical analysis",
+    title: "Population-level cfDNA variant statistics and mutation signatures",
+    description: "Explore functional region distributions, exonic mutation spectra, chromosomal variant burden, and per-sample mutation load across sequenced cfDNA cohorts processed through a standardized MuTect2 pipeline.",
+    primaryAction: { label: "View statistics", to: "/mutation-analysis" },
+    secondaryAction: { label: "Download data", to: "/downloads" }
   }
 ];
 
@@ -29,16 +29,16 @@ export function HeroCarousel() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
-    }, 6000);
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 7000);
     return () => clearInterval(timer);
   }, []);
 
   return (
-    <section className="hero-carousel">
+    <div className="hero-carousel">
       {slides.map((slide, index) => (
-        <div 
-          key={slide.id} 
+        <div
+          key={slide.id}
           className={`carousel-slide ${index === currentSlide ? "active" : ""}`}
           style={{ backgroundImage: `url(${slide.image})` }}
         >
@@ -49,26 +49,36 @@ export function HeroCarousel() {
                 <h1>{slide.title}</h1>
                 <p className="hero-copy">{slide.description}</p>
                 <div className="hero-actions-row">
-                  <Link to={slide.primaryAction.to} className="button-primary">{slide.primaryAction.label}</Link>
-                  <Link to={slide.secondaryAction.to} className="button-secondary">{slide.secondaryAction.label}</Link>
+                  {slide.primaryAction && (
+                    <Link to={slide.primaryAction.to} className="button-primary">
+                      {slide.primaryAction.label}
+                    </Link>
+                  )}
+                  {slide.secondaryAction && (
+                    <Link to={slide.secondaryAction.to} className="button-secondary">
+                      {slide.secondaryAction.label}
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
       ))}
-      <div className="carousel-container indicators-container">
-        <div className="carousel-indicators">
-          {slides.map((_, index) => (
-            <button 
-              key={index} 
-              className={`indicator ${index === currentSlide ? "active" : ""}`}
-              onClick={() => setCurrentSlide(index)}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
+      <div className="indicators-container">
+        <div className="carousel-container">
+          <div className="carousel-indicators">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                className={`indicator ${index === currentSlide ? "active" : ""}`}
+                onClick={() => setCurrentSlide(index)}
+                aria-label={`Slide ${index + 1}`}
+              />
+            ))}
+          </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

@@ -7,6 +7,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import javax.validation.ConstraintViolationException;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -18,6 +20,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException exception) {
         return ResponseEntity.badRequest().body(ApiResponse.failure("Validation failed"));
+    }
+
+    @ExceptionHandler({ConstraintViolationException.class, IllegalArgumentException.class})
+    public ResponseEntity<ApiResponse<Void>> handleBadRequest(Exception exception) {
+        return ResponseEntity.badRequest().body(ApiResponse.failure(exception.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

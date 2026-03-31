@@ -27,4 +27,13 @@ class OverviewControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.studyCount").value(3))
                 .andExpect(jsonPath("$.data.biomarkerCount").value(9));
     }
+
+    @Test
+    void recordsEndpointReturnsSeededRows() throws Exception {
+        mockMvc.perform(get("/api/v1/records").param("page", "0").param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content.length()").value(9))
+                .andExpect(jsonPath("$.data.totalElements").value(9));
+    }
 }

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(head -50 /d/cfdnadb/backend/src/main/java/org/cfdna/database/dto/*.java)",
+      "Bash(grep:*)",
+      "Bash(wc -l /d/cfdnadb/frontend/src/styles/*.css)",
+      "Bash(ssh fatnode:*)",
+      "Bash(find /d/cfdnadb/frontend/src -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))",
+      "Bash(npx tsc:*)",
+      "Bash(mvn compile:*)",
+      "Bash(ls -lh /d/cfdnadb/backend/target/*.war)",
+      "Bash(mvn clean:*)",
+      "Bash(npx vite:*)"
+    ]
+  }
+}

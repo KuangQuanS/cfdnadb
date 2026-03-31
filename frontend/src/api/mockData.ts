@@ -1,13 +1,103 @@
 import type {
   BiomarkerRecord,
+  CancerSummary,
   DownloadAsset,
   FilterOptions,
+  LabelCount,
   Overview,
   PagedResponse,
   StudyDetail,
   VcfDemo,
   VisualizationSummary
 } from "../types/api";
+
+export const cancerSummaryMock: CancerSummary[] = [
+  {
+    cancer: "Breast",
+    sampleCount: 48,
+    totalDataFiles: 242,
+    avinputCount: 48,
+    filteredCount: 48,
+    annotatedCount: 48,
+    somaticCount: 48,
+    plotAssetCount: 2,
+    externalAssetCount: 68,
+    rawImportStatus: "Completed",
+    filteredStatus: "Completed",
+    annotatedStatus: "Completed",
+    somaticStatus: "Completed",
+    plotStatus: "Completed",
+    externalStatus: "Completed"
+  },
+  {
+    cancer: "Colonrector",
+    sampleCount: 50,
+    totalDataFiles: 200,
+    avinputCount: 50,
+    filteredCount: 50,
+    annotatedCount: 50,
+    somaticCount: 50,
+    plotAssetCount: 2,
+    externalAssetCount: 0,
+    rawImportStatus: "Completed",
+    filteredStatus: "Completed",
+    annotatedStatus: "Completed",
+    somaticStatus: "Completed",
+    plotStatus: "Completed",
+    externalStatus: "Not started"
+  },
+  {
+    cancer: "Lung",
+    sampleCount: 536,
+    totalDataFiles: 1072,
+    avinputCount: 536,
+    filteredCount: 536,
+    annotatedCount: 0,
+    somaticCount: 0,
+    plotAssetCount: 0,
+    externalAssetCount: 0,
+    rawImportStatus: "Completed",
+    filteredStatus: "Completed",
+    annotatedStatus: "Not started",
+    somaticStatus: "Not started",
+    plotStatus: "Not started",
+    externalStatus: "Not started"
+  },
+  {
+    cancer: "Liver",
+    sampleCount: 0,
+    totalDataFiles: 0,
+    avinputCount: 0,
+    filteredCount: 0,
+    annotatedCount: 0,
+    somaticCount: 0,
+    plotAssetCount: 0,
+    externalAssetCount: 0,
+    rawImportStatus: "Not started",
+    filteredStatus: "Not started",
+    annotatedStatus: "Not started",
+    somaticStatus: "Not started",
+    plotStatus: "Not started",
+    externalStatus: "Not started"
+  },
+  {
+    cancer: "Pdac",
+    sampleCount: 0,
+    totalDataFiles: 0,
+    avinputCount: 0,
+    filteredCount: 0,
+    annotatedCount: 0,
+    somaticCount: 0,
+    plotAssetCount: 0,
+    externalAssetCount: 0,
+    rawImportStatus: "Not started",
+    filteredStatus: "Not started",
+    annotatedStatus: "Not started",
+    somaticStatus: "Not started",
+    plotStatus: "Not started",
+    externalStatus: "Not started"
+  }
+];
 
 export const overviewMock: Overview = {
   studyCount: 3,
@@ -475,3 +565,77 @@ export const vcfDemoMock: VcfDemo = {
     { label: "Urine", count: 1 }
   ]
 };
+
+export const funcDistributionMock: LabelCount[] = [
+  { label: "intronic", count: 79842 },
+  { label: "intergenic", count: 28651 },
+  { label: "exonic", count: 15203 },
+  { label: "UTR3", count: 4812 },
+  { label: "UTR5", count: 1243 },
+  { label: "splicing", count: 987 },
+  { label: "ncRNA_intronic", count: 2134 },
+  { label: "ncRNA_exonic", count: 521 },
+  { label: "upstream", count: 311 },
+  { label: "downstream", count: 299 }
+];
+
+export const exonicDistributionMock: LabelCount[] = [
+  { label: "nonsynonymous SNV", count: 11842 },
+  { label: "synonymous SNV", count: 2103 },
+  { label: "stopgain", count: 612 },
+  { label: "frameshift deletion", count: 287 },
+  { label: "frameshift insertion", count: 194 },
+  { label: "nonframeshift deletion", count: 98 },
+  { label: "nonframeshift insertion", count: 41 },
+  { label: "stoploss", count: 26 }
+];
+
+export const chromDistributionMock: LabelCount[] = [
+  { label: "chr1", count: 9821 },
+  { label: "chr2", count: 7643 },
+  { label: "chr3", count: 6102 },
+  { label: "chr4", count: 5421 },
+  { label: "chr5", count: 5893 },
+  { label: "chr6", count: 5234 },
+  { label: "chr7", count: 6012 },
+  { label: "chr8", count: 4876 },
+  { label: "chr9", count: 3921 },
+  { label: "chr10", count: 4213 },
+  { label: "chr11", count: 5102 },
+  { label: "chr12", count: 4987 },
+  { label: "chr13", count: 2834 },
+  { label: "chr14", count: 3012 },
+  { label: "chr15", count: 2976 },
+  { label: "chr16", count: 3421 },
+  { label: "chr17", count: 4123 },
+  { label: "chr18", count: 2012 },
+  { label: "chr19", count: 3876 },
+  { label: "chr20", count: 2534 },
+  { label: "chr21", count: 1243 },
+  { label: "chr22", count: 1876 },
+  { label: "chrX", count: 2987 },
+  { label: "chrY", count: 312 }
+];
+
+export const sampleBurdenMock: LabelCount[] = [
+  { label: "RTCG0P0009-1-TWN1", count: 4821 },
+  { label: "RTCG0P0018-1-TWN1", count: 3942 },
+  { label: "RTCG0P0044-1-THN1", count: 3512 },
+  { label: "RTCG0P0039-1-THN1", count: 3201 },
+  { label: "RTCG0P0012-1-TWN1", count: 2987 },
+  { label: "RTCG0P0031-1-TWN1", count: 2745 },
+  { label: "RTCG0P0027-1-THN1", count: 2634 },
+  { label: "RTCG0P0055-1-TWN1", count: 2512 },
+  { label: "RTCG0P0003-1-TWN1", count: 2389 },
+  { label: "RTCG0P0022-1-THN1", count: 2201 },
+  { label: "RTCG0P0047-1-TWN1", count: 2087 },
+  { label: "RTCG0P0008-1-THN1", count: 1976 },
+  { label: "RTCG0P0016-1-TWN1", count: 1843 },
+  { label: "RTCG0P0033-1-THN1", count: 1712 },
+  { label: "RTCG0P0041-1-TWN1", count: 1634 },
+  { label: "RTCG0P0019-1-TWN1", count: 1521 },
+  { label: "RTCG0P0028-1-THN1", count: 1398 },
+  { label: "RTCG0P0006-1-TWN1", count: 1287 },
+  { label: "RTCG0P0037-1-THN1", count: 1143 },
+  { label: "RTCG0P0014-1-TWN1", count: 987 }
+];

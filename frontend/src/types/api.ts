@@ -128,7 +128,10 @@ export interface VisualizationSummary {
   publicationTrend: YearCount[];
 }
 
-export interface VcfDatasetFolder {`r`n  datasetKey: string;`r`n  displayName: string;`r`n  publicReleaseId: string;
+export interface VcfDatasetFolder {
+  datasetKey: string;
+  displayName: string;
+  publicReleaseId: string;
   diseaseType: string;
   sampleSource: string;
   platform: string;
@@ -174,4 +177,74 @@ export interface VcfDemo {
   exampleVariants: VcfVariantRecord[];
   diseaseDistribution: LabelCount[];
   sampleSourceDistribution: LabelCount[];
+}
+
+export interface CancerSummary {
+  cancer: string;
+  sampleCount: number;
+  totalDataFiles: number;
+  avinputCount: number;
+  filteredCount: number;
+  annotatedCount: number;
+  somaticCount: number;
+  plotAssetCount: number;
+  externalAssetCount: number;
+  rawImportStatus: string;
+  filteredStatus: string;
+  annotatedStatus: string;
+  somaticStatus: string;
+  plotStatus: string;
+  externalStatus: string;
+}
+
+export interface TopGene {
+  gene: string;
+  count: number;
+}
+
+export interface GeneVariant {
+  chr: string;
+  start: string;
+  end: string;
+  ref: string;
+  alt: string;
+  func: string;
+  exonicFunc: string;
+  gene: string;
+  aaChange: string;
+  sample: string;
+}
+
+export interface DatabaseStats {
+  totalVariants: number;
+  totalSamples: number;
+  totalGenes: number;
+  cohortCount: number;
+}
+
+export interface DataFile {
+  cancer: string;
+  fileType: string;
+  name: string;
+  fileName: string;
+  sizeBytes: number;
+  downloadUrl: string;
+}
+
+export interface GeneSummary {
+  gene: string;
+  cancer: string;
+  totalVariants: number;
+  uniqueSamples: number;
+  funcBreakdown: LabelCount[];
+  exonicBreakdown: LabelCount[];
+  chromBreakdown: LabelCount[];
+}
+
+export interface CancerAsset {
+  category: string;
+  title: string;
+  fileName: string;
+  sizeBytes: number;
+  assetUrl: string;
 }
