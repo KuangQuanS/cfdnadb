@@ -1,48 +1,48 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getCancerSummary, getDatabaseStats } from "../api/client";
+import type { CancerSummary, DatabaseStats } from "../types/api";
 import { formatNumber } from "../utils/format";
+import heroBg from "../assets/slider1.png";
 
-/* Cohort colors matching the bar chart */
+/* ---- Mock / fallback data when backend is unreachable ---- */
+const MOCK_STATS: DatabaseStats = {
+  totalVariants: 3_324_495,
+  totalSamples: 1_527,
+  totalGenes: 22_638,
+  cohortCount: 5
+};
+
+const MOCK_COHORTS: CancerSummary[] = [
+  { cancer: "Breast", sampleCount: 486, totalDataFiles: 972, avinputCount: 486, filteredCount: 486, annotatedCount: 486, somaticCount: 0, plotAssetCount: 12, externalAssetCount: 8, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Colonrector", sampleCount: 352, totalDataFiles: 704, avinputCount: 352, filteredCount: 352, annotatedCount: 352, somaticCount: 0, plotAssetCount: 10, externalAssetCount: 6, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Liver", sampleCount: 278, totalDataFiles: 556, avinputCount: 278, filteredCount: 278, annotatedCount: 278, somaticCount: 0, plotAssetCount: 8, externalAssetCount: 4, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Lung", sampleCount: 312, totalDataFiles: 624, avinputCount: 312, filteredCount: 312, annotatedCount: 312, somaticCount: 0, plotAssetCount: 9, externalAssetCount: 5, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Pdac", sampleCount: 99, totalDataFiles: 198, avinputCount: 99, filteredCount: 99, annotatedCount: 99, somaticCount: 0, plotAssetCount: 5, externalAssetCount: 3, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" }
+];
+
+/* ---- Cohort visual config ---- */
 const COHORT_COLORS: Record<string, string> = {
-  Breast: "#E53E3E",
-  Colonrector: "#FC812F",
-  Liver: "#38A169",
-  Lung: "#3182CE",
-  Pdac: "#805AD5"
+  Breast: "#E53E3E", Colonrector: "#FC812F", Liver: "#38A169", Lung: "#3182CE", Pdac: "#805AD5"
 };
-
 const COHORT_LABELS: Record<string, string> = {
-  Breast: "Breast",
-  Colonrector: "Colorectal",
-  Liver: "Liver",
-  Lung: "Lung",
-  Pdac: "Pancreas"
-};
-
-/* SVG organ highlight positions (cx, cy relative to body center) */
-const ORGAN_HIGHLIGHTS: Record<string, { cx: number; cy: number; rx: number; ry: number }> = {
-  Breast: { cx: 0, cy: -42, rx: 28, ry: 16 },
-  Lung: { cx: 0, cy: -62, rx: 24, ry: 20 },
-  Liver: { cx: 18, cy: -30, rx: 16, ry: 12 },
-  Colonrector: { cx: 0, cy: 8, rx: 22, ry: 22 },
-  Pdac: { cx: -8, cy: -18, rx: 12, ry: 8 }
+  Breast: "Breast", Colonrector: "Colorectal", Liver: "Liver", Lung: "Lung", Pdac: "Pancreas"
 };
 
 export function HeroCarousel() {
   const statsQuery = useQuery({ queryKey: ["db-stats"], queryFn: getDatabaseStats, staleTime: 5 * 60_000 });
   const cancerQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary, staleTime: 5 * 60_000 });
 
-  const stats = statsQuery.data;
-  const cohorts = cancerQuery.data ?? [];
+  const stats = statsQuery.data ?? MOCK_STATS;
+  const cohorts = cancerQuery.data && cancerQuery.data.length > 0 ? cancerQuery.data : MOCK_COHORTS;
   const maxSamples = Math.max(...cohorts.map((c) => c.sampleCount), 1);
 
   return (
     <div className="portal-hero">
-      <div className="portal-hero-bg" />
+      <div className="portal-hero-bg" style={{ backgroundImage: `url(${heroBg})` }} />
       <div className="portal-hero-container">
 
-        {/* Left column — text + CTA */}
+        {/* ---- Left column ---- */}
         <div className="portal-hero-left">
           <h1 className="portal-hero-title">
             <span className="portal-hero-title-main">cfDNA Database</span>
@@ -65,10 +65,10 @@ export function HeroCarousel() {
             <h2 className="portal-hero-h2">Data Portal Summary</h2>
             <div className="portal-stats-bar">
               {[
-                { icon: "cohort", label: "Cohorts", value: stats ? String(stats.cohortCount) : "—" },
-                { icon: "sample", label: "Samples", value: stats ? formatNumber(stats.totalSamples) : "—" },
-                { icon: "variant", label: "Variants", value: stats ? formatNumber(stats.totalVariants) : "—" },
-                { icon: "gene", label: "Genes", value: stats ? formatNumber(stats.totalGenes) : "—" }
+                { icon: "cohort", label: "Cohorts", value: String(stats.cohortCount) },
+                { icon: "sample", label: "Samples", value: formatNumber(stats.totalSamples) },
+                { icon: "variant", label: "Variants", value: formatNumber(stats.totalVariants) },
+                { icon: "gene", label: "Genes", value: formatNumber(stats.totalGenes) }
               ].map((s) => (
                 <div key={s.label} className="portal-stat-item">
                   <PortalIcon type={s.icon} />
@@ -80,59 +80,12 @@ export function HeroCarousel() {
           </div>
         </div>
 
-        {/* Center column — body silhouette */}
+        {/* ---- Center column — anatomical body ---- */}
         <div className="portal-hero-center">
-          <svg viewBox="0 0 180 380" className="portal-body-svg">
-            {/* Head */}
-            <circle cx="90" cy="32" r="24" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-            {/* Neck */}
-            <rect x="82" y="56" width="16" height="14" rx="4" fill="rgba(255,255,255,0.08)" />
-            {/* Torso */}
-            <path d="M55 70 Q52 70 48 80 L38 130 Q36 145 42 160 L48 180 Q50 190 55 200 L60 220 Q65 240 68 260 L72 280 Q74 290 76 300 L80 340 Q82 355 88 360 L92 360 Q98 355 100 340 L104 300 Q106 290 108 280 L112 260 Q115 240 120 220 L125 200 Q130 190 132 180 L138 160 Q144 145 142 130 L132 80 Q128 70 125 70 Z"
-              fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
-            {/* Arms */}
-            <path d="M48 80 Q35 85 25 110 L18 140 Q14 155 16 165 L22 175" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="6" strokeLinecap="round" />
-            <path d="M132 80 Q145 85 155 110 L162 140 Q166 155 164 165 L158 175" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="6" strokeLinecap="round" />
-            {/* Organ highlights */}
-            {cohorts.map((c) => {
-              const pos = ORGAN_HIGHLIGHTS[c.cancer];
-              if (!pos) return null;
-              return (
-                <ellipse
-                  key={c.cancer}
-                  cx={90 + pos.cx}
-                  cy={160 + pos.cy}
-                  rx={pos.rx}
-                  ry={pos.ry}
-                  fill={COHORT_COLORS[c.cancer] ?? "#fff"}
-                  opacity={0.55}
-                  stroke={COHORT_COLORS[c.cancer] ?? "#fff"}
-                  strokeWidth="1.5"
-                />
-              );
-            })}
-            {/* Organ labels */}
-            {cohorts.map((c) => {
-              const pos = ORGAN_HIGHLIGHTS[c.cancer];
-              if (!pos) return null;
-              return (
-                <text
-                  key={c.cancer + "-label"}
-                  x={90 + pos.cx}
-                  y={160 + pos.cy + 4}
-                  textAnchor="middle"
-                  fill="white"
-                  fontSize="8"
-                  fontWeight="700"
-                >
-                  {COHORT_LABELS[c.cancer]?.[0]}
-                </text>
-              );
-            })}
-          </svg>
+          <BodySilhouette cohorts={cohorts} />
         </div>
 
-        {/* Right column — cohort bar chart */}
+        {/* ---- Right column — bar chart ---- */}
         <div className="portal-hero-right">
           <h3 className="portal-chart-title">Samples by Cancer Cohort</h3>
           <div className="portal-bar-chart">
@@ -143,7 +96,7 @@ export function HeroCarousel() {
                 <div key={c.cancer} className="portal-bar-row">
                   <span className="portal-bar-label">{COHORT_LABELS[c.cancer] ?? c.cancer}</span>
                   <div className="portal-bar-track">
-                    <div className="portal-bar-fill" style={{ width: `${Math.max(pct, 3)}%`, background: color }} />
+                    <div className="portal-bar-fill" style={{ width: `${Math.max(pct, 4)}%`, background: color }} />
                   </div>
                   <span className="portal-bar-value">{formatNumber(c.sampleCount)}</span>
                 </div>
@@ -151,7 +104,7 @@ export function HeroCarousel() {
             })}
           </div>
 
-          <h3 className="portal-chart-title" style={{ marginTop: 28 }}>Processing Status</h3>
+          <h3 className="portal-chart-title" style={{ marginTop: 32 }}>Processing Status</h3>
           <div className="portal-status-grid">
             {cohorts.map((c) => (
               <div key={c.cancer} className="portal-status-row">
@@ -169,7 +122,145 @@ export function HeroCarousel() {
   );
 }
 
-/* Small icon set for the stats bar */
+/* ============================================================
+   Detailed anatomical body silhouette SVG
+   ============================================================ */
+function BodySilhouette({ cohorts }: { cohorts: CancerSummary[] }) {
+  const cohortSet = new Set(cohorts.map((c) => c.cancer));
+  const hl = (cancer: string) => cohortSet.has(cancer) ? 0.7 : 0;
+
+  return (
+    <svg viewBox="0 0 240 520" className="portal-body-svg" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.18)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.06)" />
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+
+      {/* Head */}
+      <ellipse cx="120" cy="42" rx="28" ry="34" fill="url(#bodyGrad)" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2" />
+      {/* Ears */}
+      <ellipse cx="90" cy="42" rx="5" ry="10" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" />
+      <ellipse cx="150" cy="42" rx="5" ry="10" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" />
+      {/* Neck */}
+      <rect x="108" y="74" width="24" height="20" rx="8" fill="url(#bodyGrad)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
+
+      {/* Torso outline */}
+      <path d="
+        M 78 94
+        Q 68 96 60 108
+        L 52 140
+        Q 48 160 50 180
+        L 52 210
+        Q 54 235 58 260
+        L 62 285
+        Q 64 295 70 300
+        L 82 305
+        Q 100 310 120 312
+        Q 140 310 158 305
+        L 170 300
+        Q 176 295 178 285
+        L 182 260
+        Q 186 235 188 210
+        L 190 180
+        Q 192 160 188 140
+        L 180 108
+        Q 172 96 162 94
+        Z
+      " fill="url(#bodyGrad)" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2" />
+
+      {/* Shoulders */}
+      <path d="M 78 94 Q 60 94 42 106 L 30 120" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2" />
+      <path d="M 162 94 Q 180 94 198 106 L 210 120" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2" />
+
+      {/* Left arm */}
+      <path d="M 30 120 Q 22 140 18 165 L 14 195 Q 10 220 12 240 L 16 260 Q 18 270 22 275"
+        fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="8" strokeLinecap="round" />
+      <ellipse cx="22" cy="280" rx="8" ry="10" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" />
+
+      {/* Right arm */}
+      <path d="M 210 120 Q 218 140 222 165 L 226 195 Q 230 220 228 240 L 224 260 Q 222 270 218 275"
+        fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="8" strokeLinecap="round" />
+      <ellipse cx="218" cy="280" rx="8" ry="10" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" />
+
+      {/* Left leg */}
+      <path d="M 100 312 Q 95 340 90 380 L 86 420 Q 84 450 82 470 L 80 495"
+        fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="10" strokeLinecap="round" />
+      <ellipse cx="78" cy="502" rx="12" ry="6" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" />
+
+      {/* Right leg */}
+      <path d="M 140 312 Q 145 340 150 380 L 154 420 Q 156 450 158 470 L 160 495"
+        fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="10" strokeLinecap="round" />
+      <ellipse cx="162" cy="502" rx="12" ry="6" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" />
+
+      {/* ---- Internal organs ---- */}
+      {/* Lungs */}
+      <g filter={hl("Lung") ? "url(#glow)" : undefined} opacity={hl("Lung") || 0.2}>
+        {/* Left lung */}
+        <path d="M 82 115 Q 72 120 68 140 L 66 165 Q 65 180 70 185 L 80 188 Q 95 190 105 185 L 108 175 Q 110 155 108 135 L 105 120 Q 100 112 90 112 Z"
+          fill={COHORT_COLORS.Lung} opacity={0.5} stroke={COHORT_COLORS.Lung} strokeWidth="1" />
+        {/* Right lung */}
+        <path d="M 158 115 Q 168 120 172 140 L 174 165 Q 175 180 170 185 L 160 188 Q 145 190 135 185 L 132 175 Q 130 155 132 135 L 135 120 Q 140 112 150 112 Z"
+          fill={COHORT_COLORS.Lung} opacity={0.5} stroke={COHORT_COLORS.Lung} strokeWidth="1" />
+      </g>
+
+      {/* Breast area */}
+      <g filter={hl("Breast") ? "url(#glow)" : undefined} opacity={hl("Breast") || 0.15}>
+        <ellipse cx="100" cy="155" rx="14" ry="12" fill={COHORT_COLORS.Breast} opacity={0.55} stroke={COHORT_COLORS.Breast} strokeWidth="1" />
+        <ellipse cx="140" cy="155" rx="14" ry="12" fill={COHORT_COLORS.Breast} opacity={0.55} stroke={COHORT_COLORS.Breast} strokeWidth="1" />
+      </g>
+
+      {/* Liver */}
+      <g filter={hl("Liver") ? "url(#glow)" : undefined} opacity={hl("Liver") || 0.15}>
+        <path d="M 130 185 Q 145 183 160 188 L 168 195 Q 172 205 168 215 L 155 220 Q 140 222 130 218 L 125 210 Q 122 198 125 190 Z"
+          fill={COHORT_COLORS.Liver} opacity={0.55} stroke={COHORT_COLORS.Liver} strokeWidth="1" />
+      </g>
+
+      {/* Pancreas */}
+      <g filter={hl("Pdac") ? "url(#glow)" : undefined} opacity={hl("Pdac") || 0.15}>
+        <ellipse cx="120" cy="225" rx="28" ry="8" fill={COHORT_COLORS.Pdac} opacity={0.55} stroke={COHORT_COLORS.Pdac} strokeWidth="1" />
+      </g>
+
+      {/* Colorectal (large intestine path) */}
+      <g filter={hl("Colonrector") ? "url(#glow)" : undefined} opacity={hl("Colonrector") || 0.15}>
+        <path d="M 88 240 L 85 260 Q 83 275 88 285 L 100 290 Q 115 293 130 290 L 148 285 Q 155 275 152 260 L 148 245 Q 144 238 135 240 L 120 248 Q 108 252 100 248 L 92 243 Z"
+          fill={COHORT_COLORS.Colonrector} opacity={0.45} stroke={COHORT_COLORS.Colonrector} strokeWidth="1" />
+      </g>
+
+      {/* ---- Organ labels (pointing lines + text) ---- */}
+      <g fontSize="11" fontWeight="700" fill="white">
+        {/* Lung label */}
+        <line x1="175" y1="140" x2="198" y2="128" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
+        <text x="200" y="132" fill="rgba(255,255,255,0.85)">Lung</text>
+
+        {/* Breast label */}
+        <line x1="85" y1="152" x2="52" y2="145" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
+        <text x="22" y="149" fill="rgba(255,255,255,0.85)">Breast</text>
+
+        {/* Liver label */}
+        <line x1="170" y1="205" x2="195" y2="198" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
+        <text x="197" y="202" fill="rgba(255,255,255,0.85)">Liver</text>
+
+        {/* Pancreas label */}
+        <line x1="92" y1="225" x2="48" y2="225" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
+        <text x="14" y="229" fill="rgba(255,255,255,0.85)">Pancreas</text>
+
+        {/* Colorectal label */}
+        <line x1="155" y1="270" x2="192" y2="268" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" />
+        <text x="194" y="272" fill="rgba(255,255,255,0.85)">Colorectal</text>
+      </g>
+    </svg>
+  );
+}
+
+/* ============================================================
+   Icons for the stats bar
+   ============================================================ */
 function PortalIcon({ type }: { type: string }) {
   const style = { width: 32, height: 32, opacity: 0.8 };
   switch (type) {
@@ -198,8 +289,7 @@ function PortalIcon({ type }: { type: string }) {
     case "gene":
       return (
         <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-          <path d="M8 12h8M12 8v8" />
+          <circle cx="12" cy="12" r="10" /><path d="M8 12h8M12 8v8" />
         </svg>
       );
     default:
