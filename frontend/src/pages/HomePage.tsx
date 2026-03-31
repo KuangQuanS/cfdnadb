@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getCancerSummary, getDatabaseStats } from "../api/client";
+import { getCancerSummary } from "../api/client";
 import { HeroCarousel } from "../components/HeroCarousel";
 import { CANCER_OPTIONS, DEFAULT_CANCER, DEFAULT_GENE } from "../constants/cfdna";
 import { formatNumber } from "../utils/format";
@@ -48,10 +48,8 @@ const FEATURES = [
 
 export function HomePage() {
   const navigate = useNavigate();
-  const statsQuery = useQuery({ queryKey: ["db-stats"], queryFn: getDatabaseStats, staleTime: 5 * 60_000 });
   const cancerSummaryQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary });
 
-  const stats = statsQuery.data;
   const cancerSummary = cancerSummaryQuery.data;
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -101,24 +99,6 @@ export function HomePage() {
               <Link to="/gene-search?cancer=Breast&gene=PIK3CA">Breast / PIK3CA</Link>
               <Link to="/gene-search?cancer=Colonrector&gene=APC">Colorectal / APC</Link>
             </div>
-          </div>
-        </section>
-
-        {/* Live stats */}
-        <section className="animate-fade-up animate-fade-up-1">
-          <p className="section-eyebrow" style={{ marginBottom: 16 }}>Database statistics</p>
-          <div className="stat-grid">
-            {[
-              { label: "Somatic variants", value: stats ? formatNumber(stats.totalVariants) : "—" },
-              { label: "cfDNA samples", value: stats ? formatNumber(stats.totalSamples) : "—" },
-              { label: "Unique genes", value: stats ? formatNumber(stats.totalGenes) : "—" },
-              { label: "Cancer cohorts", value: stats ? String(stats.cohortCount) : "—" }
-            ].map((item) => (
-              <div key={item.label} className="stat-card">
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-              </div>
-            ))}
           </div>
         </section>
 

@@ -154,70 +154,266 @@ button, input, select { font: inherit; }
   gap: 40px;
 }
 
-/* Full Width Hero Carousel */
-.hero-carousel {
+/* ============================================================
+   GDC-Style Data Portal Hero
+   ============================================================ */
+.portal-hero {
   position: relative;
-  width: 100vw;
-  margin-left: calc(-50vw + 50%); /* classic trick to break out of center container if needed, though HomePage might already handle this based on layout */
-  height: clamp(420px, 58vh, 560px);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 0;
-}
-
-.carousel-slide {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 0.8s ease-in-out;
-  background-size: cover;
-  background-position: center;
+  overflow: hidden;
 }
 
-.carousel-slide.active {
-  opacity: 1;
-  z-index: 1;
-}
-
-.carousel-overlay {
+.portal-hero-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(29, 38, 92, 0.92) 0%, rgba(44, 58, 133, 0.3) 100%);
-  display: flex;
-  align-items: center;
-  padding: 48px 0 88px;
+  background: linear-gradient(135deg, #e8ecf4 0%, #d4dce8 40%, #c8d5e5 100%);
+  z-index: 0;
 }
 
+.portal-hero-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 600px 600px at 15% 60%, rgba(44,58,133,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 400px at 80% 30%, rgba(252,129,47,0.04) 0%, transparent 70%);
+}
+
+.portal-hero-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 48px 28px 0;
+  display: grid;
+  grid-template-columns: 1fr 180px 1fr;
+  gap: 32px;
+  align-items: start;
+  min-height: 520px;
+}
+
+/* Left — text & stats */
+.portal-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding-top: 8px;
+}
+
+.portal-hero-title {
+  margin: 0;
+  line-height: 1.1;
+}
+
+.portal-hero-title-main {
+  display: block;
+  font-size: clamp(2rem, 3.5vw, 2.8rem);
+  font-weight: 900;
+  color: #1a2a5e;
+  letter-spacing: -0.02em;
+}
+
+.portal-hero-title-sub {
+  display: block;
+  font-size: clamp(1.6rem, 2.8vw, 2.2rem);
+  font-weight: 700;
+  color: #4a6080;
+  margin-top: 4px;
+}
+
+.portal-hero-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.portal-hero-h2 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #1a2a5e;
+  margin: 0;
+}
+
+.portal-hero-desc {
+  color: #4a5568;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  margin: 0;
+  max-width: 420px;
+}
+
+.portal-hero-cta {
+  width: fit-content;
+  margin-top: 4px;
+}
+
+/* Stats bar */
+.portal-stats-bar {
+  display: flex;
+  gap: 0;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.portal-stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px;
+  border-right: 1px solid var(--line);
+  color: #4a6080;
+}
+
+.portal-stat-item:last-child {
+  border-right: none;
+}
+
+.portal-stat-item svg {
+  color: #8EACCC;
+  margin-bottom: 6px;
+}
+
+.portal-stat-item strong {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #1a2a5e;
+  line-height: 1.2;
+}
+
+.portal-stat-item span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #718096;
+  margin-top: 2px;
+}
+
+/* Center — body silhouette */
+.portal-hero-center {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 16px;
+}
+
+.portal-body-svg {
+  width: 160px;
+  height: auto;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.08));
+}
+
+/* Right — charts */
+.portal-hero-right {
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-chart-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1a2a5e;
+  margin: 0 0 16px;
+}
+
+/* Bar chart */
+.portal-bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.portal-bar-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 60px;
+  gap: 10px;
+  align-items: center;
+}
+
+.portal-bar-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #4a5568;
+  text-align: right;
+}
+
+.portal-bar-track {
+  height: 20px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.portal-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.portal-bar-value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1a2a5e;
+}
+
+/* Status grid */
+.portal-status-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.portal-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.portal-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.portal-status-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #4a5568;
+  flex: 1;
+}
+
+.portal-status-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+.portal-status-badge.complete {
+  background: #C6F6D5;
+  color: #276749;
+}
+
+.portal-status-badge.pending {
+  background: #FEEBC8;
+  color: #975A16;
+}
+
+/* Keep old carousel-container class for any legacy references */
 .carousel-container {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
   padding: 0 28px;
-}
-
-.carousel-content {
-  max-width: 760px;
-  color: white;
-}
-
-.carousel-slide.active .carousel-content {
-  animation: slideUpFade 0.8s ease forwards;
-}
-
-.carousel-content h1 {
-  font-size: clamp(2.4rem, 4vw, 3.5rem);
-  color: white;
-  margin: 0 0 24px;
-  line-height: 1.15;
-}
-
-.carousel-content .hero-copy {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 1.25rem;
-  margin-bottom: 32px;
 }
 
 .home-search-band {
