@@ -1,271 +1,299 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
+import { useState, useEffect, type FormEvent, type ReactNode } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import ReactECharts from "echarts-for-react";
-import type { EChartsOption } from "echarts";
-import { getGeneVariants, getGeneSummary, getAllGenes } from "../api/client";
-import { DataTable } from "../components/DataTable";
-import { CANCER_OPTIONS, DEFAULT_CANCER, DEFAULT_GENE } from "../constants/cfdna";
-import { COMMON_CANCER_GENES } from "../constants/genes";
-import type { GeneVariant, GeneSummary, LabelCount } from "../types/api";
+import { queryMafMutations } from "../api/client";
 import { formatNumber } from "../utils/format";
 
-const ACCENT = "#2C3A85";
-const WARM = "#FC812F";
-const CHART_COLORS = ["#2C3A85", "#FC812F", "#38A169", "#E53E3E", "#DD6B20", "#805AD5", "#3182CE", "#D69E2E", "#319795", "#B83280"];
+const PAGE_SIZE = 20;
+const DEFAULT_GENE = "TP53";
+const SOURCE_OPTIONS = ["cfDNA", "TCGA"] as const;
 
-const columnHelper = createColumnHelper<GeneVariant>();
+const CANCER_TYPES = [
+  "Bladder", "Brain", "Breast", "Cervical", "CRC",
+  "Endometrium", "Esophageal", "Experiment", "Gastric",
+  "Head_and_neck", "Kidney", "Liver", "Lung", "NGY",
+  "Other", "Ovarian", "PDAC", "Thyriod"
+];
 
-function buildPieOption(title: string, data: LabelCount[]): EChartsOption {
-  return {
-    title: { text: title, left: "center", textStyle: { fontSize: 14, fontWeight: 800, color: "#232642" } },
-    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
-    legend: { bottom: 0, type: "scroll", textStyle: { fontSize: 11 } },
-    color: CHART_COLORS,
-    series: [{
-      type: "pie", radius: ["35%", "65%"], center: ["50%", "45%"],
-      label: { show: false },
-      emphasis: { label: { show: true, fontWeight: "bold" } },
-      data: data.map((d) => ({ name: d.label, value: d.count }))
-    }]
-  };
-}
+const CHROMOSOMES = [
+  "1","2","3","4","5","6","7","8","9","10","11","12",
+  "13","14","15","16","17","18","19","20","21","22","X","Y"
+];
 
-function buildBarOption(title: string, data: LabelCount[]): EChartsOption {
-  const sorted = [...data].sort((a, b) => b.count - a.count).slice(0, 15);
-  return {
-    title: { text: title, left: "center", textStyle: { fontSize: 14, fontWeight: 800, color: "#232642" } },
-    tooltip: { trigger: "axis" },
-    grid: { left: 80, right: 20, bottom: 40, top: 50 },
-    xAxis: { type: "value" },
-    yAxis: {
-      type: "category", data: sorted.map((d) => d.label).reverse(),
-      axisLabel: { fontSize: 11 }
-    },
-    series: [{
-      type: "bar", data: sorted.map((d) => d.count).reverse(),
-      itemStyle: { color: ACCENT, borderRadius: [0, 4, 4, 0] },
-      emphasis: { itemStyle: { color: WARM } }
-    }]
-  };
-}
+const VARIANT_CLASSIFICATIONS = [
+  "Frame_Shift_Del", "Frame_Shift_Ins", "In_Frame_Del", "In_Frame_Ins",
+  "Missense_Mutation", "Nonsense_Mutation", "Nonstop_Mutation", "Translation_Start_Site"
+];
+
+const VARIANT_TYPES = ["SNP", "INS", "DEL", "DNP", "TNP", "ONP"];
 
 export function GeneSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const submittedCancer = searchParams.get("cancer") ?? DEFAULT_CANCER;
-  const submittedGene = searchParams.get("gene") ?? DEFAULT_GENE;
-  const submittedPage = Number(searchParams.get("page") ?? "1") || 1;
 
-  const [cancer, setCancer] = useState(submittedCancer);
-  const [geneInput, setGeneInput] = useState(submittedGene);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestionQuery, setSuggestionQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const pageSize = 25;
+  const source = searchParams.get("source") ?? "cfDNA";
+  const gene = searchParams.get("gene") ?? DEFAULT_GENE;
+  const cancerType = searchParams.get("cancerType") ?? "";
+  const chromosome = searchParams.get("chromosome") ?? "";
+  const variantClass = searchParams.get("variantClass") ?? "";
+  const variantType = searchParams.get("variantType") ?? "";
+  const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1);
 
-  useEffect(() => {
-    setCancer(submittedCancer);
-    setGeneInput(submittedGene);
-  }, [submittedCancer, submittedGene]);
+  const [geneInput, setGeneInput] = useState(gene);
 
-  /* ---- gene autocomplete ---- */
-  const allGenesQuery = useQuery({
-    queryKey: ["all-genes", cancer],
-    queryFn: () => getAllGenes(cancer),
-    staleTime: 10 * 60 * 1000
+  useEffect(() => { setGeneInput(gene); }, [gene]);
+
+  console.log("[GeneSearchPage] render — source=%s gene=%s page=%d", source, gene, page);
+
+  const dataQ = useQuery({
+    queryKey: ["maf-mutations", source, gene, cancerType, chromosome, variantClass, variantType, page],
+    queryFn: () => {
+      console.log("[GeneSearchPage] firing queryMafMutations:", { source, gene, cancerType, chromosome, variantClass, variantType, page });
+      return queryMafMutations({
+        source,
+        gene: gene || undefined,
+        cancerType: cancerType || undefined,
+        chromosome: chromosome || undefined,
+        variantClass: variantClass || undefined,
+        variantType: variantType || undefined,
+        page,
+        size: PAGE_SIZE
+      });
+    },
+    placeholderData: keepPreviousData
   });
 
-  const suggestions = useMemo(() => {
-    if (!suggestionQuery.trim()) return [];
-    const q = suggestionQuery.trim().toUpperCase();
-    const pool = allGenesQuery.data && allGenesQuery.data.length > 0
-      ? allGenesQuery.data : COMMON_CANCER_GENES;
-    return pool.filter((g) => g.toUpperCase().startsWith(q)).slice(0, 12);
-  }, [suggestionQuery, allGenesQuery.data]);
+  const paged = dataQ.data;
+  const rows = paged?.content ?? [];
+  const totalElements = paged?.totalElements ?? 0;
+  const totalPages = paged?.totalPages ?? 1;
+  const currentPage = Math.min(page, totalPages || 1);
+  const startIndex = totalElements === 0 ? 0 : (currentPage - 1) * PAGE_SIZE;
 
-  /* ---- gene summary (stats + charts) ---- */
-  const summaryQuery = useQuery({
-    queryKey: ["gene-summary", submittedCancer, submittedGene],
-    queryFn: () => getGeneSummary(submittedCancer, submittedGene),
-    enabled: submittedGene.trim().length > 0
-  });
-
-  /* ---- variant table ---- */
-  const variantsQuery = useQuery({
-    queryKey: ["gene-variants", submittedCancer, submittedGene, submittedPage, pageSize],
-    queryFn: () => getGeneVariants(submittedCancer, submittedGene, submittedPage, pageSize),
-    enabled: submittedGene.trim().length > 0
-  });
-
-  const columns = useMemo<ColumnDef<GeneVariant>[]>(() => [
-    columnHelper.accessor("gene", { header: "Gene", cell: (info) => <strong>{info.getValue()}</strong> }),
-    columnHelper.accessor("chr", { header: "Chr" }),
-    columnHelper.accessor("start", { header: "Start" }),
-    columnHelper.accessor("end", { header: "End" }),
-    columnHelper.accessor("ref", { header: "Ref" }),
-    columnHelper.accessor("alt", { header: "Alt" }),
-    columnHelper.accessor("func", { header: "Func" }),
-    columnHelper.accessor("exonicFunc", {
-      header: "Exonic Func",
-      cell: (info) => {
-        const v = info.getValue();
-        return v && v !== "." ? <span className="status-chip">{v}</span> : null;
-      }
-    }),
-    columnHelper.accessor("aaChange", {
-      header: "AA Change",
-      cell: (info) => {
-        const v = info.getValue();
-        return v && v !== "." ? <span style={{ fontSize: "0.82rem", fontFamily: "monospace" }}>{v}</span> : "-";
-      }
-    }),
-    columnHelper.accessor("sample", { header: "Sample" })
-  ], []);
-
-  /* ---- handlers ---- */
-  const handleInputChange = (value: string) => {
-    setGeneInput(value);
-    setSuggestionQuery(value.trim());
-    setShowSuggestions(value.trim().length >= 1);
+  const setParam = (key: string, value: string) => {
+    const p = new URLSearchParams(searchParams);
+    if (value) p.set(key, value); else p.delete(key);
+    p.set("page", "1");
+    setSearchParams(p);
   };
 
-  const selectSuggestion = (gene: string) => {
-    setGeneInput(gene);
-    setShowSuggestions(false);
-    setSearchParams(new URLSearchParams({ cancer, gene, page: "1" }));
+  const applyGeneSearch = (e?: FormEvent) => {
+    e?.preventDefault();
+    const trimmed = geneInput.trim();
+    console.log("[GeneSearchPage] Search clicked, geneInput=%s, current gene=%s", trimmed, gene);
+    if (trimmed === gene) {
+      dataQ.refetch();
+    } else {
+      setParam("gene", trimmed);
+    }
   };
 
-  const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setShowSuggestions(false);
-    setSearchParams(new URLSearchParams({
-      cancer, gene: geneInput.trim() || DEFAULT_GENE, page: "1"
-    }));
+  const changeSource = (s: string) => {
+    const p = new URLSearchParams();
+    p.set("source", s);
+    p.set("gene", DEFAULT_GENE);
+    p.set("page", "1");
+    setGeneInput(DEFAULT_GENE);
+    setSearchParams(p);
   };
 
-  const changePage = (nextPage: number) => {
+  const clearFilters = () => {
+    setGeneInput(DEFAULT_GENE);
+    const p = new URLSearchParams();
+    p.set("source", source);
+    p.set("gene", DEFAULT_GENE);
+    p.set("page", "1");
+    setSearchParams(p);
+  };
+
+  const goToPage = (p: number) => {
     const params = new URLSearchParams(searchParams);
-    params.set("page", String(nextPage));
+    params.set("page", String(p));
     setSearchParams(params);
   };
 
-  const summary: GeneSummary | undefined = summaryQuery.data;
-  const hasData = summary && summary.totalVariants > 0;
+  const isCfDNA = source === "cfDNA";
 
   return (
-    <div className="page-stack">
-      {/* ---- Hero search bar ---- */}
-      <div className="gene-hero">
-        <div className="gene-hero-content">
-          <span className="gene-hero-eyebrow">Gene Profile</span>
-          <h1 className="gene-hero-title">
-            {submittedGene ? submittedGene : "Search a Gene"}
-          </h1>
-          <p className="gene-hero-subtitle">
-            Deep-dive into a single gene's variant landscape within a cancer cohort.
-            View summary statistics, functional distribution, and full variant detail.
-          </p>
-          <form className="gene-hero-form" onSubmit={submitSearch}>
-            <select value={cancer} onChange={(e) => { setCancer(e.target.value); setShowSuggestions(false); }}>
-              {CANCER_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <div className="autocomplete-wrapper">
-              <input ref={inputRef} value={geneInput}
-                onChange={(e) => handleInputChange(e.target.value)}
-                onFocus={() => geneInput.trim().length >= 1 && setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder="Enter gene symbol, e.g. TP53" autoComplete="off" />
-              {showSuggestions && suggestions.length > 0 && (
-                <ul className="autocomplete-dropdown">
-                  {suggestions.map((gene) => (
-                    <li key={gene} className="autocomplete-item" onMouseDown={() => selectSuggestion(gene)}>{gene}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <button className="button-primary" type="submit">View Profile</button>
-          </form>
+    <div className="page-stack markerdb-page">
+      <section className="detail-card markerdb-search-header">
+        <div>
+          <h2>Gene Search</h2>
+          <p>Browse somatic mutations from cfDNA and TCGA MAF datasets. Filter by gene, cancer type, chromosome, and variant classification.</p>
         </div>
-      </div>
 
-      {/* ---- Summary stats cards ---- */}
-      {summaryQuery.isLoading && <p className="panel-note">Loading gene summary...</p>}
-      {summaryQuery.isError && <p className="panel-note">Gene summary is unavailable for this cohort.</p>}
+        <form className="markerdb-inline-search" onSubmit={applyGeneSearch}>
+          <input
+            value={geneInput}
+            onChange={(e) => setGeneInput(e.target.value)}
+            placeholder="Search by gene symbol (e.g. TP53)"
+          />
+          <button className="button-secondary" type="submit">Search</button>
+        </form>
+      </section>
 
-      {hasData && (
-        <div className="gene-stat-grid">
-          <div className="gene-stat-card gene-stat-highlight">
-            <span className="gene-stat-label">Total Variants</span>
-            <strong className="gene-stat-value">{formatNumber(summary.totalVariants)}</strong>
-          </div>
-          <div className="gene-stat-card">
-            <span className="gene-stat-label">Unique Samples</span>
-            <strong className="gene-stat-value">{formatNumber(summary.uniqueSamples)}</strong>
-          </div>
-          <div className="gene-stat-card">
-            <span className="gene-stat-label">Functional Classes</span>
-            <strong className="gene-stat-value">{summary.funcBreakdown.length}</strong>
-          </div>
-          <div className="gene-stat-card">
-            <span className="gene-stat-label">Exonic Types</span>
-            <strong className="gene-stat-value">{summary.exonicBreakdown.length}</strong>
-          </div>
+      {/* Data source tabs */}
+      <section className="detail-card" style={{ padding: "12px 20px" }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <span style={{ fontWeight: 500 }}>Data Source:</span>
+          {SOURCE_OPTIONS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              className={source === s ? "button-primary" : "button-secondary"}
+              onClick={() => changeSource(s)}
+            >
+              {s}
+            </button>
+          ))}
         </div>
+      </section>
+
+      {/* Static filter panel */}
+      <section className="detail-card markerdb-filter-panel">
+        {isCfDNA && (
+          <FilterGroup title="Cancer Type">
+            {CANCER_TYPES.map((ct) => (
+              <label key={ct} className="markerdb-check">
+                <input
+                  type="checkbox"
+                  checked={cancerType === ct}
+                  onChange={() => setParam("cancerType", cancerType === ct ? "" : ct)}
+                />
+                <span>{ct}</span>
+              </label>
+            ))}
+          </FilterGroup>
+        )}
+
+        <FilterGroup title="Chromosome">
+          {CHROMOSOMES.map((chr) => (
+            <label key={chr} className="markerdb-check">
+              <input
+                type="checkbox"
+                checked={chromosome === chr}
+                onChange={() => setParam("chromosome", chromosome === chr ? "" : chr)}
+              />
+              <span>chr{chr}</span>
+            </label>
+          ))}
+        </FilterGroup>
+
+        <FilterGroup title="Variant Classification">
+          {VARIANT_CLASSIFICATIONS.map((vc) => (
+            <label key={vc} className="markerdb-check">
+              <input
+                type="checkbox"
+                checked={variantClass === vc}
+                onChange={() => setParam("variantClass", variantClass === vc ? "" : vc)}
+              />
+              <span>{vc}</span>
+            </label>
+          ))}
+        </FilterGroup>
+
+        <FilterGroup title="Variant Type">
+          {VARIANT_TYPES.map((vt) => (
+            <label key={vt} className="markerdb-check">
+              <input
+                type="checkbox"
+                checked={variantType === vt}
+                onChange={() => setParam("variantType", variantType === vt ? "" : vt)}
+              />
+              <span>{vt}</span>
+            </label>
+          ))}
+        </FilterGroup>
+
+        <div className="markerdb-filter-actions">
+          <button className="button-secondary" type="button" onClick={clearFilters}>Clear All Filters</button>
+        </div>
+      </section>
+
+      {/* Loading / error */}
+      {dataQ.isLoading && <p className="panel-note">Loading mutations...</p>}
+      {dataQ.isError && (
+        <p className="panel-note" style={{ color: "#c0392b" }}>
+          Failed to load mutation data. Check browser console (F12) for details.
+        </p>
       )}
 
-      {/* ---- Charts ---- */}
-      {hasData && (
-        <div className="gene-chart-grid">
-          {summary.funcBreakdown.length > 0 && (
-            <article className="chart-card">
-              <ReactECharts option={buildPieOption("Functional Classification", summary.funcBreakdown)}
-                style={{ height: 300 }} />
-            </article>
-          )}
-          {summary.exonicBreakdown.length > 0 && (
-            <article className="chart-card">
-              <ReactECharts option={buildBarOption("Exonic Function Types", summary.exonicBreakdown)}
-                style={{ height: 300 }} />
-            </article>
-          )}
-        </div>
-      )}
-
-      {/* ---- No data ---- */}
-      {summary && summary.totalVariants === 0 && (
-        <section className="detail-card empty-card">
-          <h3>No variants found for {submittedGene}</h3>
-          <p>This gene has no matching rows in the {submittedCancer} aggregate multianno file, or the file has not been generated yet.</p>
-        </section>
-      )}
-
-      {/* ---- Variant table ---- */}
-      {hasData && (
-        <>
-          <div className="gene-table-header">
-            <h2>Variant Detail</h2>
-            <span className="gene-table-count">
-              {variantsQuery.data ? `${formatNumber(variantsQuery.data.totalElements)} rows` : ""}
+      {/* Results table */}
+      {!dataQ.isLoading && !dataQ.isError && (
+        <section className="detail-card markerdb-results-panel">
+          <div className="markerdb-results-meta">
+            <span>
+              Showing {totalElements === 0 ? 0 : startIndex + 1}
+              {" – "}
+              {Math.min(startIndex + PAGE_SIZE, totalElements)} of {formatNumber(totalElements)} mutations
             </span>
           </div>
 
-          {variantsQuery.isLoading && <p className="panel-note">Loading variants...</p>}
-
-          {variantsQuery.data && variantsQuery.data.content.length > 0 && (
+          {rows.length === 0 ? (
+            <div className="browse-empty-state">
+              <h4>No mutations found</h4>
+              <p>Try broadening your search or clearing filters.</p>
+            </div>
+          ) : (
             <>
-              <DataTable data={variantsQuery.data.content} columns={columns} />
+              <div className="markerdb-table-wrap">
+                <table className="markerdb-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Gene</th>
+                      {isCfDNA && <th>Cancer Type</th>}
+                      <th>Chr</th>
+                      <th>Start</th>
+                      <th>End</th>
+                      <th>Ref</th>
+                      <th>Alt</th>
+                      <th>Classification</th>
+                      <th>Type</th>
+                      <th>Sample</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.id}</td>
+                        <td><strong>{row.hugoSymbol}</strong></td>
+                        {isCfDNA && <td>{row.cancerType}</td>}
+                        <td>{row.chromosome}</td>
+                        <td>{row.startPosition}</td>
+                        <td>{row.endPosition}</td>
+                        <td className="mono-cell">{row.referenceAllele}</td>
+                        <td className="mono-cell">{row.tumorSeqAllele2}</td>
+                        <td>{row.variantClassification}</td>
+                        <td>{row.variantType}</td>
+                        <td style={{ fontSize: "0.82rem" }}>{row.tumorSampleBarcode}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
               <div className="pagination-bar">
-                <button className="button-secondary" disabled={variantsQuery.data.first}
-                  onClick={() => changePage(Math.max(submittedPage - 1, 1))}>Previous</button>
-                <span>Page {variantsQuery.data.page} / {Math.max(variantsQuery.data.totalPages, 1)}</span>
-                <button className="button-secondary" disabled={variantsQuery.data.last}
-                  onClick={() => changePage(submittedPage + 1)}>Next</button>
+                <button className="button-secondary" type="button" disabled={currentPage <= 1} onClick={() => goToPage(currentPage - 1)}>
+                  Previous
+                </button>
+                <span>Page {currentPage} / {totalPages}</span>
+                <button className="button-secondary" type="button" disabled={currentPage >= totalPages} onClick={() => goToPage(currentPage + 1)}>
+                  Next
+                </button>
               </div>
             </>
           )}
-        </>
+        </section>
       )}
+    </div>
+  );
+}
+
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="markerdb-filter-group">
+      <p>{title}</p>
+      <div className="markerdb-check-grid">{children}</div>
     </div>
   );
 }

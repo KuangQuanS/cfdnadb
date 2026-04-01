@@ -248,3 +248,25 @@ export interface CancerAsset {
   sizeBytes: number;
   assetUrl: string;
 }
+
+export interface MafMutation {
+  id: number;
+  hugoSymbol: string;
+  cancerType: string;
+  chromosome: string;
+  startPosition: string;
+  endPosition: string;
+  referenceAllele: string;
+  tumorSeqAllele2: string;
+  variantClassification: string;
+  variantType: string;
+  tumorSampleBarcode: string;
+}
+
+export interface MafFilterOptions {
+  source: string;
+  cancerTypes: string[];
+  chromosomes: string[];
+  variantClassifications: string[];
+  variantTypes: string[];
+}

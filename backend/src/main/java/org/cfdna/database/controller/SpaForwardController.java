@@ -14,6 +14,8 @@ public class SpaForwardController {
             "/about",
             "/vcf-demo",
             "/gene-search",
+            "/gene-search/{markerDbId}",
+            "/mutation-analysis",
             "/charts",
             "/studies/{id}"
     })

@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getCancerSummary, getDatabaseStats } from "../api/client";
 import type { CancerSummary, DatabaseStats } from "../types/api";
@@ -57,9 +56,6 @@ export function HeroCarousel() {
               need to explore somatic mutations identified from plasma cell-free
               DNA across multiple cancer cohorts.
             </p>
-            <Link to="/browse" className="button-primary portal-hero-cta">
-              Explore Variant Database
-            </Link>
           </div>
 
           <div className="portal-hero-section">
@@ -104,19 +100,6 @@ export function HeroCarousel() {
               );
             })}
           </div>
-
-          <h3 className="portal-chart-title" style={{ marginTop: 32 }}>Processing Status</h3>
-          <div className="portal-status-grid">
-            {cohorts.map((c) => (
-              <div key={c.cancer} className="portal-status-row">
-                <span className="portal-status-dot" style={{ background: COHORT_COLORS[c.cancer] }} />
-                <span className="portal-status-name">{COHORT_LABELS[c.cancer] ?? c.cancer}</span>
-                <span className={`portal-status-badge ${c.annotatedStatus === "Completed" ? "complete" : "pending"}`}>
-                  {c.annotatedStatus === "Completed" ? "Annotated" : "Pending"}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>
@@ -129,12 +112,12 @@ export function HeroCarousel() {
 function BodySilhouette({ cohorts }: { cohorts: CancerSummary[] }) {
   const cohortSet = new Set(cohorts.map((c) => c.cancer));
 
-  const labels: { cancer: string; label: string; top: string; left: string; lineAngle: "left" | "right" }[] = [
-    { cancer: "Lung", label: "Lung", top: "22%", left: "78%", lineAngle: "right" },
-    { cancer: "Breast", label: "Breast", top: "28%", left: "8%", lineAngle: "left" },
-    { cancer: "Liver", label: "Liver", top: "38%", left: "78%", lineAngle: "right" },
-    { cancer: "Pdac", label: "Pancreas", top: "44%", left: "8%", lineAngle: "left" },
-    { cancer: "Colonrector", label: "Colorectal", top: "52%", left: "78%", lineAngle: "right" },
+  const labels: { cancer: string; label: string; top: string; left: string }[] = [
+    { cancer: "Lung", label: "Lung", top: "22%", left: "78%" },
+    { cancer: "Breast", label: "Breast", top: "28%", left: "8%" },
+    { cancer: "Liver", label: "Liver", top: "38%", left: "78%" },
+    { cancer: "Pdac", label: "Pancreas", top: "44%", left: "8%" },
+    { cancer: "Colonrector", label: "Colorectal", top: "52%", left: "78%" },
   ];
 
   return (

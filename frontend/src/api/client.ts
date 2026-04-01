@@ -5,6 +5,8 @@ import type {
   DownloadAsset,
   FilterOptions,
   LabelCount,
+  MafFilterOptions,
+  MafMutation,
   Overview,
   PagedResponse,
   BiomarkerRecord,
@@ -68,11 +70,15 @@ async function request<T>(path: string): Promise<T> {
 }
 
 async function requestLive<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`);
+  const url = `${API_BASE}${path}`;
+  console.log("[requestLive] =>", url);
+  const response = await fetch(url);
+  console.log("[requestLive] <=", response.status, url);
   if (!response.ok) {
     throw new Error(`Request failed with ${response.status}`);
   }
   const payload = (await response.json()) as ApiResponse<T>;
+  console.log("[requestLive] data:", payload.data);
   return payload.data;
 }
 
@@ -201,4 +207,32 @@ export function getChromDistribution(cancer: string) {
 export function getSampleBurden(cancer: string, limit = 30) {
   const params = new URLSearchParams({ cancer, limit: String(limit) });
   return request<LabelCount[]>(`/api/v1/variants/sample-burden?${params.toString()}`);
+}
+
+export interface MafQueryFilters {
+  source?: string;
+  gene?: string;
+  cancerType?: string;
+  chromosome?: string;
+  variantClass?: string;
+  variantType?: string;
+  page?: number;
+  size?: number;
+}
+
+export function queryMafMutations(filters: MafQueryFilters) {
+  const params = new URLSearchParams();
+  params.set("source", filters.source ?? "cfDNA");
+  params.set("page", String(filters.page ?? 1));
+  params.set("size", String(filters.size ?? 20));
+  if (filters.gene) params.set("gene", filters.gene);
+  if (filters.cancerType) params.set("cancerType", filters.cancerType);
+  if (filters.chromosome) params.set("chromosome", filters.chromosome);
+  if (filters.variantClass) params.set("variantClass", filters.variantClass);
+  if (filters.variantType) params.set("variantType", filters.variantType);
+  return requestLive<PagedResponse<MafMutation>>(`/api/v1/maf-mutations?${params.toString()}`);
+}
+
+export function getMafFilterOptions(source: string) {
+  return requestLive<MafFilterOptions>(`/api/v1/maf-mutations/filter-options?source=${encodeURIComponent(source)}`);
 }

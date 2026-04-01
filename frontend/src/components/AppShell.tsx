@@ -1,17 +1,64 @@
-import { NavLink, Link } from "react-router-dom";
-import type { PropsWithChildren } from "react";
+import { useEffect, useRef, useState, type PropsWithChildren } from "react";
+import { useIsFetching } from "@tanstack/react-query";
+import { NavLink, Link, useLocation } from "react-router-dom";
+import { PageLoader } from "./PageLoader";
 
 const navItems = [
   { to: "/", label: "Home" },
   { to: "/browse", label: "Browse" },
+  { to: "/gene-search", label: "Gene Search" },
   { to: "/mutation-analysis", label: "Mutation Analysis" },
   { to: "/downloads", label: "Downloads" },
   { to: "/about", label: "About" }
 ];
 
 export function AppShell({ children }: PropsWithChildren) {
+  const location = useLocation();
+  const activeFetches = useIsFetching();
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
+  const firstRenderRef = useRef(true);
+  const shownAtRef = useRef(0);
+
+  useEffect(() => {
+    if (firstRenderRef.current) {
+      firstRenderRef.current = false;
+      return;
+    }
+
+    setRouteLoading(true);
+    const timer = window.setTimeout(() => setRouteLoading(false), 260);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname]);
+
+  const busy = routeLoading || activeFetches > 0;
+
+  useEffect(() => {
+    let timer: number | undefined;
+
+    if (busy && !showLoader) {
+      timer = window.setTimeout(() => {
+        shownAtRef.current = Date.now();
+        setShowLoader(true);
+      }, 120);
+    } else if (!busy && showLoader) {
+      const elapsed = Date.now() - shownAtRef.current;
+      timer = window.setTimeout(() => setShowLoader(false), Math.max(0, 240 - elapsed));
+    }
+
+    if (!busy && !showLoader) {
+      setShowLoader(false);
+    }
+
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [busy, showLoader]);
+
   return (
     <div className="app-shell">
+      {showLoader ? <PageLoader overlay message={routeLoading ? "Loading page..." : "Loading data..."} /> : null}
+
       <header className="site-header">
         <div className="header-container">
           <div className="title-area">
@@ -33,7 +80,7 @@ export function AppShell({ children }: PropsWithChildren) {
         </div>
       </header>
 
-      <main className="page-content">{children}</main>
+      <main className={`page-content${showLoader ? " page-content-loading" : ""}`}>{children}</main>
 
       <footer className="site-footer">
         <div className="footer-main">
