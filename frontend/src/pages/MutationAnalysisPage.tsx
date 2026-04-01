@@ -97,12 +97,12 @@ export function MutationAnalysisPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const cancer = searchParams.get("cancer") ?? DEFAULT_CANCER;
 
+  const assetsQ = useQuery({ queryKey: ["cancer-assets", cancer], queryFn: () => getCancerAssets(cancer) });
   const funcQ = useQuery({ queryKey: ["func-dist", cancer], queryFn: () => getFuncDistribution(cancer) });
   const exonicQ = useQuery({ queryKey: ["exonic-dist", cancer], queryFn: () => getExonicDistribution(cancer) });
   const chromQ = useQuery({ queryKey: ["chrom-dist", cancer], queryFn: () => getChromDistribution(cancer) });
   const burdenQ = useQuery({ queryKey: ["sample-burden", cancer], queryFn: () => getSampleBurden(cancer, 20) });
   const topGeneQ = useQuery({ queryKey: ["top-genes", cancer, 15], queryFn: () => getTopGenes(cancer, 15) });
-  const assetsQ = useQuery({ queryKey: ["cancer-assets", cancer], queryFn: () => getCancerAssets(cancer) });
   const breastTopQ = useQuery({ queryKey: ["top-genes", "Breast", 20], queryFn: () => getTopGenes("Breast", 20) });
   const colonTopQ = useQuery({ queryKey: ["top-genes", "Colonrector", 20], queryFn: () => getTopGenes("Colonrector", 20) });
 
@@ -112,15 +112,15 @@ export function MutationAnalysisPage() {
     setSearchParams(params);
   };
 
-  const loading = funcQ.isLoading || topGeneQ.isLoading;
-  const noData = !loading && funcQ.data?.length === 0 && topGeneQ.data?.length === 0;
+  const chartsLoading = funcQ.isLoading || topGeneQ.isLoading;
+  const noData = !chartsLoading && funcQ.data?.length === 0 && topGeneQ.data?.length === 0;
 
   return (
     <div className="page-stack">
       <SectionHeader
         eyebrow="Mutation Analysis"
-        title="Cohort variant statistics and PDF reports"
-        description="Statistical charts from aggregate multianno files plus downloadable PDF plots. Currently available for Breast and Colorectal cohorts."
+        title="Cohort mutation plots and variant statistics"
+        description="maftools-generated PDF plots served directly from the data server, plus interactive charts from aggregate multianno files."
       />
 
       <section className="filter-panel">
@@ -135,54 +135,10 @@ export function MutationAnalysisPage() {
         )}
       </section>
 
-      {loading && <p className="panel-note">Loading charts...</p>}
-
-      {/* Top genes */}
-      {topGeneQ.data && topGeneQ.data.length > 0 && (
-        <ChartCard
-          title={`${cancer} — Top 15 mutated genes`}
-          option={buildTopGeneOption(topGeneQ.data.map((d) => ({ label: d.gene, count: d.count })), cancer)}
-        />
-      )}
-
-      {/* Func + Exonic */}
-      {!loading && (funcQ.data?.length ?? 0) > 0 && (
-        <div className="chart-row-2col">
-          <ChartCard title={`${cancer} — Variant functional region`} option={buildPieOption(funcQ.data!)} />
-          {exonicQ.data && exonicQ.data.length > 0 && (
-            <ChartCard title={`${cancer} — Exonic mutation type`} option={buildHBarOption(exonicQ.data, "Variants")} />
-          )}
-        </div>
-      )}
-
-      {/* Chromosome distribution */}
-      {chromQ.data && chromQ.data.length > 0 && (
-        <ChartCard title={`${cancer} — Variants per chromosome`} option={buildChromBarOption(chromQ.data)} />
-      )}
-
-      {/* Sample burden */}
-      {burdenQ.data && burdenQ.data.length > 0 && (
-        <ChartCard title={`${cancer} — Top 20 samples by mutation burden`} option={buildHBarOption(burdenQ.data, "Variants")} />
-      )}
-
-      {/* Cross-cohort comparison */}
-      {breastTopQ.data && colonTopQ.data && breastTopQ.data.length > 0 && colonTopQ.data.length > 0 && (
-        <section className="page-stack compact-gap">
-          <SectionHeader eyebrow="Cross-cohort" title="Breast vs Colorectal — top mutated genes" />
-          <ChartCard
-            title="Breast vs Colonrector gene comparison"
-            option={buildCompareOption(
-              breastTopQ.data.map((d) => ({ label: d.gene, count: d.count })),
-              colonTopQ.data.map((d) => ({ label: d.gene, count: d.count }))
-            )}
-          />
-        </section>
-      )}
-
-      {/* PDF assets */}
+      {/* PDF plot gallery — served from server filesystem via API */}
       <section className="page-stack compact-gap">
-        <SectionHeader eyebrow="PDF Reports" title="Plot and TCGA previews" />
-        {assetsQ.isLoading && <p className="panel-note">Loading PDF assets...</p>}
+        <SectionHeader eyebrow={`${cancer} · maftools`} title="Mutation Plot Gallery" />
+        {assetsQ.isLoading && <p className="panel-note">Loading plots...</p>}
         {assetsQ.data && assetsQ.data.length > 0 ? (
           <div className="pdf-grid">
             {assetsQ.data.map((asset) => (
@@ -203,11 +159,51 @@ export function MutationAnalysisPage() {
           </div>
         ) : assetsQ.data && assetsQ.data.length === 0 ? (
           <section className="detail-card empty-card">
-            <h3>No PDF reports available</h3>
-            <p>{cancer} has no discoverable Plot or TCGA PDF files.</p>
+            <h3>No plots available</h3>
+            <p>{cancer} has no discoverable PDF files in Plot/ or TCGA/.</p>
           </section>
         ) : null}
       </section>
+
+      {/* Interactive variant charts */}
+      {chartsLoading && <p className="panel-note">Loading charts...</p>}
+
+      {topGeneQ.data && topGeneQ.data.length > 0 && (
+        <ChartCard
+          title={`${cancer} — Top 15 mutated genes`}
+          option={buildTopGeneOption(topGeneQ.data.map((d) => ({ label: d.gene, count: d.count })), cancer)}
+        />
+      )}
+
+      {!chartsLoading && (funcQ.data?.length ?? 0) > 0 && (
+        <div className="chart-row-2col">
+          <ChartCard title={`${cancer} — Variant functional region`} option={buildPieOption(funcQ.data!)} />
+          {exonicQ.data && exonicQ.data.length > 0 && (
+            <ChartCard title={`${cancer} — Exonic mutation type`} option={buildHBarOption(exonicQ.data, "Variants")} />
+          )}
+        </div>
+      )}
+
+      {chromQ.data && chromQ.data.length > 0 && (
+        <ChartCard title={`${cancer} — Variants per chromosome`} option={buildChromBarOption(chromQ.data)} />
+      )}
+
+      {burdenQ.data && burdenQ.data.length > 0 && (
+        <ChartCard title={`${cancer} — Top 20 samples by mutation burden`} option={buildHBarOption(burdenQ.data, "Variants")} />
+      )}
+
+      {breastTopQ.data && colonTopQ.data && breastTopQ.data.length > 0 && colonTopQ.data.length > 0 && (
+        <section className="page-stack compact-gap">
+          <SectionHeader eyebrow="Cross-cohort" title="Breast vs Colorectal — top mutated genes" />
+          <ChartCard
+            title="Breast vs Colonrector gene comparison"
+            option={buildCompareOption(
+              breastTopQ.data.map((d) => ({ label: d.gene, count: d.count })),
+              colonTopQ.data.map((d) => ({ label: d.gene, count: d.count }))
+            )}
+          />
+        </section>
+      )}
     </div>
   );
 }

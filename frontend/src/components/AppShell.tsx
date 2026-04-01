@@ -4,7 +4,6 @@ import type { PropsWithChildren } from "react";
 const navItems = [
   { to: "/", label: "Home" },
   { to: "/browse", label: "Browse" },
-  { to: "/gene-search", label: "Gene Search" },
   { to: "/mutation-analysis", label: "Mutation Analysis" },
   { to: "/downloads", label: "Downloads" },
   { to: "/about", label: "About" }
