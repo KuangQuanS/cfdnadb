@@ -13,12 +13,18 @@ public class MafMutationDto {
     private final String variantClassification;
     private final String variantType;
     private final String tumorSampleBarcode;
+    private final String transcript;
+    private final String exon;
+    private final String aaChange;
+    private final String functionalRegion;
+    private final String exonicFunction;
 
     public MafMutationDto(long id, String hugoSymbol, String cancerType, String chromosome,
                           String startPosition, String endPosition,
                           String referenceAllele, String tumorSeqAllele2,
                           String variantClassification, String variantType,
-                          String tumorSampleBarcode) {
+                          String tumorSampleBarcode, String transcript, String exon,
+                          String aaChange, String functionalRegion, String exonicFunction) {
         this.id = id;
         this.hugoSymbol = hugoSymbol;
         this.cancerType = cancerType;
@@ -30,6 +36,11 @@ public class MafMutationDto {
         this.variantClassification = variantClassification;
         this.variantType = variantType;
         this.tumorSampleBarcode = tumorSampleBarcode;
+        this.transcript = transcript;
+        this.exon = exon;
+        this.aaChange = aaChange;
+        this.functionalRegion = functionalRegion;
+        this.exonicFunction = exonicFunction;
     }
 
     public long getId() { return id; }
@@ -43,4 +54,9 @@ public class MafMutationDto {
     public String getVariantClassification() { return variantClassification; }
     public String getVariantType() { return variantType; }
     public String getTumorSampleBarcode() { return tumorSampleBarcode; }
+    public String getTranscript() { return transcript; }
+    public String getExon() { return exon; }
+    public String getAaChange() { return aaChange; }
+    public String getFunctionalRegion() { return functionalRegion; }
+    public String getExonicFunction() { return exonicFunction; }
 }

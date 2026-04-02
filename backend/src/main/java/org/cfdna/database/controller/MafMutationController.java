@@ -3,8 +3,11 @@ package org.cfdna.database.controller;
 import org.cfdna.database.dto.ApiResponse;
 import org.cfdna.database.dto.MafFilterOptionsDto;
 import org.cfdna.database.dto.MafMutationDto;
+import org.cfdna.database.dto.MafSummaryDto;
 import org.cfdna.database.dto.PagedResponse;
 import org.cfdna.database.service.DuckDbService;
+
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,19 +27,49 @@ public class MafMutationController {
     public ApiResponse<PagedResponse<MafMutationDto>> queryMutations(
             @RequestParam(defaultValue = "cfDNA") String source,
             @RequestParam(required = false) String gene,
-            @RequestParam(required = false) String cancerType,
-            @RequestParam(required = false) String chromosome,
-            @RequestParam(required = false) String variantClass,
-            @RequestParam(required = false) String variantType,
+            @RequestParam(required = false) String sample,
+            @RequestParam(required = false) List<String> cancerType,
+            @RequestParam(required = false) List<String> chromosome,
+            @RequestParam(required = false) List<String> variantClass,
+            @RequestParam(required = false) List<String> variantType,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.success(
-                duckDbService.queryMafMutations(source, gene, cancerType, chromosome, variantClass, variantType, page, size));
+                duckDbService.queryMafMutations(source, gene, sample, cancerType, chromosome, variantClass, variantType, page, size));
     }
 
     @GetMapping("/filter-options")
     public ApiResponse<MafFilterOptionsDto> filterOptions(
             @RequestParam(defaultValue = "cfDNA") String source) {
         return ApiResponse.success(duckDbService.getMafFilterOptions(source));
+    }
+
+    @GetMapping("/summary")
+    public ApiResponse<MafSummaryDto> summary(
+            @RequestParam(defaultValue = "cfDNA") String source,
+            @RequestParam(required = false) String gene,
+            @RequestParam(required = false) String sample,
+            @RequestParam(required = false) List<String> cancerType,
+            @RequestParam(required = false) List<String> chromosome,
+            @RequestParam(required = false) List<String> variantClass,
+            @RequestParam(required = false) List<String> variantType) {
+        return ApiResponse.success(
+                duckDbService.getMafSummary(source, gene, sample, cancerType, chromosome, variantClass, variantType));
+    }
+
+    @GetMapping("/gene-suggestions")
+    public ApiResponse<List<String>> geneSuggestions(
+            @RequestParam(defaultValue = "cfDNA") String source,
+            @RequestParam String q,
+            @RequestParam(defaultValue = "10") int limit) {
+        return ApiResponse.success(duckDbService.getMafSuggestions(source, "Hugo_Symbol", q, limit));
+    }
+
+    @GetMapping("/sample-suggestions")
+    public ApiResponse<List<String>> sampleSuggestions(
+            @RequestParam(defaultValue = "cfDNA") String source,
+            @RequestParam String q,
+            @RequestParam(defaultValue = "10") int limit) {
+        return ApiResponse.success(duckDbService.getMafSuggestions(source, "Tumor_Sample_Barcode", q, limit));
     }
 }

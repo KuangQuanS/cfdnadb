@@ -261,6 +261,11 @@ export interface MafMutation {
   variantClassification: string;
   variantType: string;
   tumorSampleBarcode: string;
+  transcript: string;
+  exon: string;
+  aaChange: string;
+  functionalRegion: string;
+  exonicFunction: string;
 }
 
 export interface MafFilterOptions {
@@ -269,4 +274,11 @@ export interface MafFilterOptions {
   chromosomes: string[];
   variantClassifications: string[];
   variantTypes: string[];
+}
+
+export interface MafSummary {
+  source: string;
+  totalVariants: number;
+  totalSamples: number;
+  totalGenes: number;
 }

@@ -5,7 +5,14 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./styles/index.css";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1
+    }
+  }
+});
 const basePath = (import.meta.env.VITE_APP_BASE_PATH ?? import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "/";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

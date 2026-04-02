@@ -9,11 +9,14 @@ import org.cfdna.database.dto.GeneVariantDto;
 import org.cfdna.database.dto.LabelCountDto;
 import org.cfdna.database.dto.MafFilterOptionsDto;
 import org.cfdna.database.dto.MafMutationDto;
+import org.cfdna.database.dto.MafSummaryDto;
 import org.cfdna.database.dto.PagedResponse;
 import org.cfdna.database.dto.TopGeneDto;
 import org.cfdna.database.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -34,13 +37,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 @Service
 public class DuckDbService {
 
     private static final Logger log = LoggerFactory.getLogger(DuckDbService.class);
-    private static final Path DEFAULT_DATA_DIR = Path.of("/400T/cfdandb");
+    private static final Path DEFAULT_DATA_DIR = Path.of("/400T/cfdnadb");
     private static final List<String> CANCERS = List.of("Breast", "Colonrector", "Liver", "Lung", "Pdac");
     private static final List<String> REQUIRED_MULTIANNO_COLUMNS = List.of(
             "Chr",
@@ -54,13 +58,30 @@ public class DuckDbService {
     );
 
     private final Path dataDir;
+    private final String mafDbFileName;
 
-    public DuckDbService() {
-        this(DEFAULT_DATA_DIR);
+    @Autowired
+    public DuckDbService(@Value("${app.data-dir:/400T/cfdnadb}") String dataDir,
+                         @Value("${app.maf-db-file:maf.duckdb}") String mafDbFileName) {
+        this(Path.of(dataDir), mafDbFileName);
     }
 
     public DuckDbService(Path dataDir) {
+        this(dataDir, "maf.duckdb");
+    }
+
+    public DuckDbService(Path dataDir, String mafDbFileName) {
         this.dataDir = dataDir;
+        this.mafDbFileName = mafDbFileName;
+        ensureDuckDbDriverLoaded();
+    }
+
+    private void ensureDuckDbDriverLoaded() {
+        try {
+            Class.forName("org.duckdb.DuckDBDriver");
+        } catch (ClassNotFoundException exception) {
+            throw new IllegalStateException("DuckDB JDBC driver is not available on the application classpath.", exception);
+        }
     }
 
     public List<CancerSummaryDto> getCancerSummary() {
@@ -551,114 +572,150 @@ public class DuckDbService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cancer asset not found: " + fileName));
     }
 
-    // ---- MAF Mutation queries (cfDNA_MAF_Mutations.tsv / TCGA_maf_mutation.tsv) ----
+    // ---- MAF Mutation queries (.duckdb database) ----
 
-    private static final String CFDNA_MAF_FILE = "cfDNA_MAF_Mutations.tsv";
-    private static final String TCGA_MAF_FILE = "TCGA_maf_mutation.tsv";
+    private static final String MAF_DB_DEFAULT_FILE = "maf.duckdb";
+    private static final String CFDNA_MAF_TABLE = "cfdna_maf";
+    private static final String TCGA_MAF_TABLE = "tcga_maf";
 
-    private Path resolveMafFile(String source) {
-        if ("TCGA".equalsIgnoreCase(source)) return dataDir.resolve(TCGA_MAF_FILE);
-        return dataDir.resolve(CFDNA_MAF_FILE);
+    private Path resolveMafDatabaseFile() {
+        return dataDir.resolve(mafDbFileName == null || mafDbFileName.isBlank() ? MAF_DB_DEFAULT_FILE : mafDbFileName);
     }
 
     private boolean isTcga(String source) {
         return "TCGA".equalsIgnoreCase(source);
     }
 
+    private String resolveMafTable(String source) {
+        return isTcga(source) ? TCGA_MAF_TABLE : CFDNA_MAF_TABLE;
+    }
+
+    private Connection openMafConnection() throws SQLException {
+        Path mafDb = resolveMafDatabaseFile().toAbsolutePath();
+        return DriverManager.getConnection("jdbc:duckdb:" + mafDb.toString());
+    }
+
+    private boolean mafDatabaseAvailable() {
+        Path mafDb = resolveMafDatabaseFile();
+        return Files.isRegularFile(mafDb) && Files.isReadable(mafDb);
+    }
+
+    private boolean mafTableExists(Connection connection, String tableName) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'main' AND table_name = ?")) {
+            statement.setString(1, tableName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1) > 0;
+            }
+        }
+    }
+
     public MafFilterOptionsDto getMafFilterOptions(String source) {
-        Path mafFile = resolveMafFile(source);
-        log.info("[MAF] getMafFilterOptions source={}, resolved path={}, exists={}, isFile={}, readable={}",
-                source, mafFile.toAbsolutePath(),
-                Files.exists(mafFile), Files.isRegularFile(mafFile), Files.isReadable(mafFile));
-        if (!Files.isRegularFile(mafFile)) {
-            log.warn("[MAF] File not found or not a regular file: {}", mafFile.toAbsolutePath());
+        Path mafDb = resolveMafDatabaseFile();
+        String table = resolveMafTable(source);
+        log.info("[MAF] getMafFilterOptions source={}, db={}, exists={}, table={}",
+                source, mafDb.toAbsolutePath(), mafDatabaseAvailable(), table);
+        if (!mafDatabaseAvailable()) {
+            log.warn("[MAF] Database file not found: {}", mafDb.toAbsolutePath());
             return new MafFilterOptionsDto(source, List.of(), List.of(), List.of(), List.of());
         }
-        String fp = toDuckDbPath(mafFile);
-        log.info("[MAF] DuckDB path for filter-options: {}", fp);
+
         List<String> cancerTypes = new ArrayList<>();
         List<String> chromosomes = new ArrayList<>();
         List<String> variantClassifications = new ArrayList<>();
         List<String> variantTypes = new ArrayList<>();
 
-        try (Connection conn = DriverManager.getConnection("jdbc:duckdb:");
+        try (Connection conn = openMafConnection();
              Statement stmt = conn.createStatement()) {
+            if (!mafTableExists(conn, table)) {
+                log.warn("[MAF] Table not found in {}: {}", mafDb.toAbsolutePath(), table);
+                return new MafFilterOptionsDto(source, List.of(), List.of(), List.of(), List.of());
+            }
 
             if (!isTcga(source)) {
                 try (ResultSet rs = stmt.executeQuery(
-                        String.format("SELECT DISTINCT Cancer_Type FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) WHERE Cancer_Type IS NOT NULL ORDER BY Cancer_Type", fp))) {
+                        "SELECT DISTINCT cancer_type FROM " + table +
+                                " WHERE NULLIF(TRIM(cancer_type), '') IS NOT NULL ORDER BY cancer_type")) {
                     while (rs.next()) cancerTypes.add(rs.getString(1));
                 }
             }
             try (ResultSet rs = stmt.executeQuery(
-                    String.format("SELECT DISTINCT CAST(Chromosome AS VARCHAR) AS c FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) WHERE Chromosome IS NOT NULL ORDER BY c", fp))) {
+                    "SELECT DISTINCT chromosome FROM " + table +
+                            " WHERE NULLIF(TRIM(chromosome), '') IS NOT NULL ORDER BY chromosome")) {
                 while (rs.next()) chromosomes.add(rs.getString(1));
             }
             try (ResultSet rs = stmt.executeQuery(
-                    String.format("SELECT DISTINCT Variant_Classification FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) WHERE Variant_Classification IS NOT NULL ORDER BY Variant_Classification", fp))) {
+                    "SELECT DISTINCT variant_classification FROM " + table +
+                            " WHERE NULLIF(TRIM(variant_classification), '') IS NOT NULL ORDER BY variant_classification")) {
                 while (rs.next()) variantClassifications.add(rs.getString(1));
             }
             try (ResultSet rs = stmt.executeQuery(
-                    String.format("SELECT DISTINCT Variant_Type FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) WHERE Variant_Type IS NOT NULL ORDER BY Variant_Type", fp))) {
+                    "SELECT DISTINCT variant_type FROM " + table +
+                            " WHERE NULLIF(TRIM(variant_type), '') IS NOT NULL ORDER BY variant_type")) {
                 while (rs.next()) variantTypes.add(rs.getString(1));
             }
-            log.info("[MAF] filter-options loaded: cancerTypes={}, chromosomes={}, variantClassifications={}, variantTypes={}",
-                    cancerTypes.size(), chromosomes.size(), variantClassifications.size(), variantTypes.size());
+            log.info("[MAF] filter-options loaded from {}: cancerTypes={}, chromosomes={}, variantClassifications={}, variantTypes={}",
+                    table, cancerTypes.size(), chromosomes.size(), variantClassifications.size(), variantTypes.size());
         } catch (SQLException e) {
             log.error("[MAF] SQL failed for filter-options source={}: {}", source, e.getMessage(), e);
         }
         return new MafFilterOptionsDto(source, cancerTypes, chromosomes, variantClassifications, variantTypes);
     }
 
-    public PagedResponse<MafMutationDto> queryMafMutations(String source, String gene, String cancerType,
-                                                            String chromosome, String variantClass, String variantType,
+    public PagedResponse<MafMutationDto> queryMafMutations(String source, String gene, String sample, List<String> cancerTypes,
+                                                            List<String> chromosomes, List<String> variantClasses, List<String> variantTypes,
                                                             int page, int pageSize) {
-        Path mafFile = resolveMafFile(source);
-        log.info("[MAF] queryMafMutations source={}, path={}, exists={}", source, mafFile.toAbsolutePath(), Files.isRegularFile(mafFile));
-        if (!Files.isRegularFile(mafFile)) {
-            log.warn("[MAF] File not found: {}", mafFile.toAbsolutePath());
+        Path mafDb = resolveMafDatabaseFile();
+        String table = resolveMafTable(source);
+        log.info("[MAF] queryMafMutations source={}, db={}, exists={}, table={}",
+                source, mafDb.toAbsolutePath(), mafDatabaseAvailable(), table);
+        if (!mafDatabaseAvailable()) {
+            log.warn("[MAF] Database file not found: {}", mafDb.toAbsolutePath());
             return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
         }
-        String fp = toDuckDbPath(mafFile);
         boolean tcga = isTcga(source);
 
         boolean hasGene = gene != null && !gene.isBlank();
-        boolean hasCancer = !tcga && cancerType != null && !cancerType.isBlank();
-        boolean hasChrom = chromosome != null && !chromosome.isBlank();
-        boolean hasVarClass = variantClass != null && !variantClass.isBlank();
-        boolean hasVarType = variantType != null && !variantType.isBlank();
+        boolean hasSample = sample != null && !sample.isBlank();
+        List<String> normalizedCancerTypes = normalizeFilterValues(cancerTypes);
+        List<String> normalizedChromosomes = normalizeFilterValues(chromosomes);
+        List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
+        List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
 
-        List<String> conditions = new ArrayList<>();
-        if (hasGene) conditions.add("LOWER(COALESCE(Hugo_Symbol, '')) LIKE ?");
-        if (hasCancer) conditions.add("Cancer_Type = ?");
-        if (hasChrom) conditions.add("CAST(Chromosome AS VARCHAR) = ?");
-        if (hasVarClass) conditions.add("Variant_Classification = ?");
-        if (hasVarType) conditions.add("Variant_Type = ?");
-        String where = conditions.isEmpty() ? "" : "WHERE " + String.join(" AND ", conditions) + " ";
+        String where = buildMafWhereClause(hasGene, hasSample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
 
-        String cancerCol = tcga ? "''" : "COALESCE(Cancer_Type, '')";
-        String countSql = String.format("SELECT COUNT(*) AS total FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) ", fp) + where;
-        String dataSql = String.format("SELECT " +
-                "  COALESCE(Hugo_Symbol, '') AS hugo_symbol, " +
-                "  %s AS cancer_type, " +
-                "  COALESCE(CAST(Chromosome AS VARCHAR), '') AS chromosome, " +
-                "  COALESCE(CAST(Start_Position AS VARCHAR), '') AS start_position, " +
-                "  COALESCE(CAST(End_Position AS VARCHAR), '') AS end_position, " +
-                "  COALESCE(Reference_Allele, '') AS reference_allele, " +
-                "  COALESCE(Tumor_Seq_Allele2, '') AS tumor_seq_allele2, " +
-                "  COALESCE(Variant_Classification, '') AS variant_classification, " +
-                "  COALESCE(Variant_Type, '') AS variant_type, " +
-                "  COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '') AS tumor_sample_barcode " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) " +
-                "%s" +
-                "ORDER BY hugo_symbol ASC, chromosome ASC " +
-                "LIMIT ? OFFSET ?", cancerCol, fp, where);
+        String countSql = "SELECT COUNT(*) AS total FROM " + table + " " + where;
+        String dataSql = "SELECT " +
+                "  COALESCE(hugo_symbol, '') AS hugo_symbol, " +
+                "  COALESCE(cancer_type, '') AS cancer_type, " +
+                "  COALESCE(chromosome, '') AS chromosome, " +
+                "  COALESCE(start_position, '') AS start_position, " +
+                "  COALESCE(end_position, '') AS end_position, " +
+                "  COALESCE(reference_allele, '') AS reference_allele, " +
+                "  COALESCE(tumor_seq_allele2, '') AS tumor_seq_allele2, " +
+                "  COALESCE(variant_classification, '') AS variant_classification, " +
+                "  COALESCE(variant_type, '') AS variant_type, " +
+                "  COALESCE(tumor_sample_barcode, '') AS tumor_sample_barcode, " +
+                "  COALESCE(transcript, '') AS transcript, " +
+                "  COALESCE(exon, '') AS exon, " +
+                "  COALESCE(aa_change, '') AS aa_change, " +
+                "  COALESCE(functional_region, '') AS functional_region, " +
+                "  COALESCE(exonic_function, '') AS exonic_function " +
+                "FROM " + table + " " +
+                where +
+                "ORDER BY hugo_symbol ASC, chromosome ASC, TRY_CAST(start_position AS BIGINT) ASC NULLS LAST " +
+                "LIMIT ? OFFSET ?";
 
-        try (Connection conn = DriverManager.getConnection("jdbc:duckdb:")) {
+        try (Connection conn = openMafConnection()) {
+            if (!mafTableExists(conn, table)) {
+                log.warn("[MAF] Table not found in {}: {}", mafDb.toAbsolutePath(), table);
+                return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+            }
             long totalRows;
             try (PreparedStatement countStmt = conn.prepareStatement(countSql)) {
                 int idx = 1;
-                idx = bindMafParams(countStmt, idx, hasGene, gene, hasCancer, cancerType, hasChrom, chromosome, hasVarClass, variantClass, hasVarType, variantType);
+                idx = bindMafParams(countStmt, idx, hasGene, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
                 try (ResultSet rs = countStmt.executeQuery()) {
                     rs.next();
                     totalRows = rs.getLong("total");
@@ -672,7 +729,7 @@ public class DuckDbService {
             List<MafMutationDto> content = new ArrayList<>();
             try (PreparedStatement dataStmt = conn.prepareStatement(dataSql)) {
                 int idx = 1;
-                idx = bindMafParams(dataStmt, idx, hasGene, gene, hasCancer, cancerType, hasChrom, chromosome, hasVarClass, variantClass, hasVarType, variantType);
+                idx = bindMafParams(dataStmt, idx, hasGene, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
                 dataStmt.setInt(idx++, pageSize);
                 dataStmt.setInt(idx, offset);
                 try (ResultSet rs = dataStmt.executeQuery()) {
@@ -689,7 +746,12 @@ public class DuckDbService {
                                 rs.getString("tumor_seq_allele2"),
                                 rs.getString("variant_classification"),
                                 rs.getString("variant_type"),
-                                rs.getString("tumor_sample_barcode")));
+                                rs.getString("tumor_sample_barcode"),
+                                rs.getString("transcript"),
+                                rs.getString("exon"),
+                                rs.getString("aa_change"),
+                                rs.getString("functional_region"),
+                                rs.getString("exonic_function")));
                     }
                 }
             }
@@ -703,18 +765,155 @@ public class DuckDbService {
         }
     }
 
+    public MafSummaryDto getMafSummary(String source, String gene, String sample, List<String> cancerTypes,
+                                       List<String> chromosomes, List<String> variantClasses, List<String> variantTypes) {
+        Path mafDb = resolveMafDatabaseFile();
+        String table = resolveMafTable(source);
+        log.info("[MAF] getMafSummary source={}, db={}, exists={}, table={}",
+                source, mafDb.toAbsolutePath(), mafDatabaseAvailable(), table);
+        if (!mafDatabaseAvailable()) {
+            log.warn("[MAF] Database file not found: {}", mafDb.toAbsolutePath());
+            return new MafSummaryDto(source, 0, 0, 0);
+        }
+
+        boolean tcga = isTcga(source);
+
+        boolean hasGene = gene != null && !gene.isBlank();
+        boolean hasSample = sample != null && !sample.isBlank();
+        List<String> normalizedCancerTypes = normalizeFilterValues(cancerTypes);
+        List<String> normalizedChromosomes = normalizeFilterValues(chromosomes);
+        List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
+        List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
+
+        String where = buildMafWhereClause(hasGene, hasSample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
+        String summarySql =
+                "SELECT " +
+                        "COUNT(*) AS total_variants, " +
+                        "COUNT(DISTINCT NULLIF(tumor_sample_barcode, '')) AS total_samples, " +
+                        "COUNT(DISTINCT NULLIF(hugo_symbol, '')) AS total_genes " +
+                        "FROM " + table + " " + where;
+
+        try (Connection conn = openMafConnection()) {
+            if (!mafTableExists(conn, table)) {
+                log.warn("[MAF] Table not found in {}: {}", mafDb.toAbsolutePath(), table);
+                return new MafSummaryDto(source, 0, 0, 0);
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(summarySql)) {
+                bindMafParams(stmt, 1, hasGene, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return new MafSummaryDto(
+                                source,
+                                rs.getLong("total_variants"),
+                                rs.getLong("total_samples"),
+                                rs.getLong("total_genes")
+                        );
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            log.error("[MAF] SQL summary failed for source={}: {}", source, e.getMessage(), e);
+        }
+
+        return new MafSummaryDto(source, 0, 0, 0);
+    }
+
+    public List<String> getMafSuggestions(String source, String columnName, String q, int limit) {
+        Path mafDb = resolveMafDatabaseFile();
+        String table = resolveMafTable(source);
+        if (!mafDatabaseAvailable() || q == null || q.isBlank()) {
+            return List.of();
+        }
+
+        String normalizedColumn = resolveMafSuggestionColumn(columnName);
+        String sql =
+                "SELECT DISTINCT " + normalizedColumn + " AS value " +
+                        "FROM " + table + " " +
+                        "WHERE LOWER(COALESCE(" + normalizedColumn + ", '')) LIKE ? " +
+                        "AND NULLIF(TRIM(COALESCE(" + normalizedColumn + ", '')), '') IS NOT NULL " +
+                        "ORDER BY value ASC LIMIT ?";
+
+        List<String> values = new ArrayList<>();
+        try (Connection conn = openMafConnection()) {
+            if (!mafTableExists(conn, table)) {
+                log.warn("[MAF] Table not found in {}: {}", mafDb.toAbsolutePath(), table);
+                return List.of();
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, "%" + q.trim().toLowerCase(Locale.ROOT) + "%");
+                stmt.setInt(2, Math.max(1, Math.min(limit, 20)));
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        values.add(rs.getString("value"));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            log.error("[MAF] Suggestions failed for source={}, column={}: {}", source, columnName, e.getMessage(), e);
+        }
+        return values;
+    }
+
+    private String resolveMafSuggestionColumn(String columnName) {
+        if ("Tumor_Sample_Barcode".equalsIgnoreCase(columnName)) {
+            return "tumor_sample_barcode";
+        }
+        return "hugo_symbol";
+    }
+
+    private String buildMafWhereClause(boolean hasGene, boolean hasSample, List<String> cancerTypes,
+                                       List<String> chromosomes, List<String> variantClasses, List<String> variantTypes,
+                                       boolean tcga) {
+        List<String> conditions = new ArrayList<>();
+        if (hasGene) conditions.add("LOWER(COALESCE(hugo_symbol, '')) LIKE ?");
+        if (hasSample) conditions.add("LOWER(COALESCE(tumor_sample_barcode, '')) LIKE ?");
+        if (!tcga && !cancerTypes.isEmpty()) conditions.add(buildInClause("cancer_type", cancerTypes.size()));
+        if (!chromosomes.isEmpty()) conditions.add(buildInClause("chromosome", chromosomes.size()));
+        if (!variantClasses.isEmpty()) conditions.add(buildInClause("variant_classification", variantClasses.size()));
+        if (!variantTypes.isEmpty()) conditions.add(buildInClause("variant_type", variantTypes.size()));
+        return conditions.isEmpty() ? "" : "WHERE " + String.join(" AND ", conditions) + " ";
+    }
+
     private int bindMafParams(PreparedStatement stmt, int idx,
                               boolean hasGene, String gene,
-                              boolean hasCancer, String cancerType,
-                              boolean hasChrom, String chromosome,
-                              boolean hasVarClass, String variantClass,
-                              boolean hasVarType, String variantType) throws SQLException {
+                              boolean hasSample, String sample,
+                              List<String> cancerTypes,
+                              List<String> chromosomes,
+                              List<String> variantClasses,
+                              List<String> variantTypes,
+                              boolean tcga) throws SQLException {
         if (hasGene) stmt.setString(idx++, "%" + gene.trim().toLowerCase(Locale.ROOT) + "%");
-        if (hasCancer) stmt.setString(idx++, cancerType.trim());
-        if (hasChrom) stmt.setString(idx++, chromosome.trim());
-        if (hasVarClass) stmt.setString(idx++, variantClass.trim());
-        if (hasVarType) stmt.setString(idx++, variantType.trim());
+        if (hasSample) stmt.setString(idx++, "%" + sample.trim().toLowerCase(Locale.ROOT) + "%");
+        if (!tcga) {
+            idx = bindListParams(stmt, idx, cancerTypes);
+        }
+        idx = bindListParams(stmt, idx, chromosomes);
+        idx = bindListParams(stmt, idx, variantClasses);
+        idx = bindListParams(stmt, idx, variantTypes);
         return idx;
+    }
+
+    private int bindListParams(PreparedStatement stmt, int idx, List<String> values) throws SQLException {
+        for (String value : values) {
+            stmt.setString(idx++, value);
+        }
+        return idx;
+    }
+
+    private String buildInClause(String column, int size) {
+        return column + " IN (" + String.join(", ", java.util.Collections.nCopies(size, "?")) + ")";
+    }
+
+    private List<String> normalizeFilterValues(List<String> values) {
+        if (values == null) {
+            return List.of();
+        }
+        return values.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
     }
 
     private CancerSummaryDto buildCancerSummary(String cancer) {

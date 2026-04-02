@@ -14,7 +14,9 @@ const navItems = [
 
 export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
-  const activeFetches = useIsFetching();
+  const activePendingFetches = useIsFetching({
+    predicate: (query) => query.state.fetchStatus === "fetching" && query.state.data === undefined
+  });
   const [routeLoading, setRouteLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const firstRenderRef = useRef(true);
@@ -31,7 +33,7 @@ export function AppShell({ children }: PropsWithChildren) {
     return () => window.clearTimeout(timer);
   }, [location.pathname]);
 
-  const busy = routeLoading || activeFetches > 0;
+  const busy = routeLoading || activePendingFetches > 0;
 
   useEffect(() => {
     let timer: number | undefined;
