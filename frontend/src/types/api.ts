@@ -282,3 +282,8 @@ export interface MafSummary {
   totalSamples: number;
   totalGenes: number;
 }
+
+export interface StatisticsSource {
+  source: string;
+  hasGenePlots: boolean;
+}

@@ -21,7 +21,9 @@
 }
 
 .gdc-hero-inner {
-  max-width: 1400px;
+  max-width: 1140px;
+  width: 100%;
+  padding: 0 32px;
   margin: 0 auto;
   position: relative;
   z-index: 2;
@@ -275,17 +277,32 @@
 
 /* Main Content */
 .portal-home {
-  background: #F8FAFC;
-  padding: 64px 28px 120px;
-  min-height: 50vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.portal-search-section,
-.portal-modules-section,
-.portal-data-section,
-.portal-about-section {
-  max-width: 1440px;
-  margin: 0 auto 80px;
+.portal-search-section {
+  background: radial-gradient(circle at top right, #ffffff, #fdfcfc);
+  padding: 56px 28px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.portal-modules-section {
+  background: #F8FAFC;
+  padding: 80px 28px;
+}
+
+.portal-data-section {
+  background: #FFFFFF;
+  padding: 80px 28px;
+  border-top: 1px solid #E2E8F0;
+}
+
+.portal-section-inner {
+  max-width: 1140px;
+  width: 100%;
+  padding: 0 32px;
+  margin: 0 auto;
 }
 
 /* Search */
@@ -293,17 +310,17 @@
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  padding: 40px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  padding: 48px 56px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .portal-search-header {
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
 .portal-search-header h2 {
   margin: 0 0 8px;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   color: #0F172A;
   font-weight: 700;
 }
@@ -311,7 +328,7 @@
 .portal-search-header p {
   margin: 0;
   color: #64748B;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
 }
 
 .portal-query-builder {
@@ -353,29 +370,30 @@
 .portal-query-field input {
   border: none;
   background: transparent;
-  font-size: 1.05rem;
+  font-size: 1.25rem;
   color: #0F172A;
   font-weight: 500;
   outline: none;
-  padding: 4px 0;
+  padding: 8px 0;
   width: 100%;
 }
 
 .portal-query-divider {
   width: 1px;
-  height: 32px;
+  height: 44px;
   background: #CBD5E1;
-  margin: 0 8px;
+  margin: 0 16px;
 }
 
 .portal-query-submit {
   background: #2563EB;
   color: #FFF;
   border: none;
-  padding: 0 32px;
-  height: 48px;
+  padding: 0 40px;
+  height: 56px;
   border-radius: 4px;
   font-weight: 600;
+  font-size: 1.1rem;
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -411,13 +429,13 @@
 .portal-section-title {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  margin-bottom: 48px;
+  align-items: flex-start;
+  text-align: left;
+  margin-bottom: 24px;
 }
 
 .portal-section-title h2 {
-  font-size: 1.75rem;
+  font-size: 1.7rem;
   color: #0F172A;
   margin: 0 0 12px;
 }
@@ -430,9 +448,9 @@
 }
 
 .section-subtitle {
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   color: #64748B;
-  font-size: 1.05rem;
+  font-size: 1rem;
 }
 
 /* Modules */
@@ -557,22 +575,21 @@
 
 /* About */
 .portal-about-section {
-  background: #F1F5F9;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  padding: 48px;
+  background: #0F172A;
+  padding: 80px 28px;
   text-align: center;
+  border-top: 1px solid #1E293B;
 }
 
 .portal-about-content h2 {
   margin: 0 0 16px;
-  color: #0F172A;
+  color: #FFFFFF;
 }
 
 .portal-about-content p {
   max-width: 800px;
   margin: 0 auto 32px;
-  color: #475569;
+  color: #94A3B8;
   font-size: 1.05rem;
   line-height: 1.7;
 }
@@ -584,20 +601,21 @@
 }
 
 .portal-about-actions .btn-solid {
-  background: #0F172A;
+  background: #2563EB;
   color: #FFF;
   padding: 10px 24px;
   border-radius: 4px;
   text-decoration: none;
   font-weight: 600;
   font-size: 0.95rem;
+  border: 1px solid #1D4ED8;
 }
 
-.portal-about-actions .btn-solid:hover { background: #1E293B; color: #FFF; }
+.portal-about-actions .btn-solid:hover { background: #1D4ED8; color: #FFF; }
 
 .portal-about-actions .btn-outline {
-  border: 1px solid #CBD5E1;
-  color: #0F172A;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #F8FAFC;
   padding: 10px 24px;
   border-radius: 4px;
   text-decoration: none;
@@ -605,7 +623,7 @@
   font-size: 0.95rem;
 }
 
-.portal-about-actions .btn-outline:hover { background: #E2E8F0; }
+.portal-about-actions .btn-outline:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.4); }
 
 @media (max-width: 900px) {
   .portal-query-input-group {

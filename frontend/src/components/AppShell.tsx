@@ -6,7 +6,7 @@ const navItems = [
   { to: "/", label: "Home" },
   { to: "/browse", label: "Browse" },
   { to: "/gene-search", label: "Gene Search" },
-  { to: "/mutation-analysis", label: "Mutation Analysis" },
+  { to: "/statistics", label: "Statistics" },
   { to: "/downloads", label: "Downloads" },
   { to: "/about", label: "About" }
 ];

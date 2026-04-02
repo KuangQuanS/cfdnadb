@@ -10,7 +10,7 @@ const GeneMarkerDetailPage = lazy(() => import("./pages/GeneMarkerDetailPage").t
 const StudyDetailPage = lazy(() => import("./pages/StudyDetailPage").then((module) => ({ default: module.StudyDetailPage })));
 const DownloadsPage = lazy(() => import("./pages/DownloadsPage").then((module) => ({ default: module.DownloadsPage })));
 const AboutPage = lazy(() => import("./pages/AboutPage").then((module) => ({ default: module.AboutPage })));
-const MutationAnalysisPage = lazy(() => import("./pages/MutationAnalysisPage").then((module) => ({ default: module.MutationAnalysisPage })));
+const StatisticsPage = lazy(() => import("./pages/StatisticsPage").then((module) => ({ default: module.StatisticsPage })));
 
 export default function App() {
   return (
@@ -21,7 +21,7 @@ export default function App() {
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/gene-search" element={<GeneSearchPage />} />
           <Route path="/gene-search/:markerDbId" element={<GeneMarkerDetailPage />} />
-          <Route path="/mutation-analysis" element={<MutationAnalysisPage />} />
+          <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="/studies/:id" element={<StudyDetailPage />} />
           <Route path="/downloads" element={<DownloadsPage />} />
           <Route path="/about" element={<AboutPage />} />

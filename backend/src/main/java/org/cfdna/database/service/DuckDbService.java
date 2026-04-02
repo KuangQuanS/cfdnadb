@@ -1058,6 +1058,172 @@ public class DuckDbService {
         return path.toString().replace("\\", "/").replace("'", "''");
     }
 
+    // ---- Statistics page: data-source-aware plot discovery ----
+
+    private static final List<String> DATA_SOURCES = List.of("Private_cfDNA", "GEO", "TCGA");
+
+    /**
+     * Resolve the plot directory for a given cancer + source.
+     * Private_cfDNA → {cancer}/Private_cfDNA/Plot/
+     * GEO           → {cancer}/GEO/Plot/
+     * TCGA          → {cancer}/TCGA/
+     * Overview      → {cancer}/Plot/
+     */
+    private Path resolveStatisticsPlotDir(String cancer, String source) {
+        Path cancerDir = resolveCancerDir(cancer);
+        switch (source) {
+            case "Private_cfDNA": return cancerDir.resolve("Private_cfDNA").resolve("Plot");
+            case "GEO":          return cancerDir.resolve("GEO").resolve("Plot");
+            case "TCGA":         return cancerDir.resolve("TCGA");
+            case "Overview":     return cancerDir.resolve("Plot");
+            default: throw new IllegalArgumentException("Unknown data source: " + source);
+        }
+    }
+
+    /** List data sources that have at least one PDF plot for a cancer. */
+    public List<String> getStatisticsSources(String cancer) {
+        String validated = validateCancer(cancer);
+        List<String> sources = new ArrayList<>();
+        for (String src : DATA_SOURCES) {
+            Path plotDir = resolveStatisticsPlotDir(validated, src);
+            if (Files.isDirectory(plotDir) && hasDirectPdfFiles(plotDir)) {
+                sources.add(src);
+            }
+        }
+        // Also check top-level Plot/ (for cancers without sub-source dirs)
+        Path overviewDir = resolveStatisticsPlotDir(validated, "Overview");
+        if (Files.isDirectory(overviewDir) && hasDirectPdfFiles(overviewDir)) {
+            sources.add("Overview");
+        }
+        return sources;
+    }
+
+    private boolean hasDirectPdfFiles(Path dir) {
+        try (Stream<Path> stream = Files.list(dir)) {
+            return stream.anyMatch(p -> Files.isRegularFile(p) &&
+                    p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".pdf"));
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    /** List PDF plots (not in gene subfolders) for a cancer + source. */
+    public List<CancerAssetDto> getStatisticsPlots(String cancer, String source) {
+        String validated = validateCancer(cancer);
+        Path plotDir = resolveStatisticsPlotDir(validated, source);
+        if (!Files.isDirectory(plotDir)) {
+            return List.of();
+        }
+        try (Stream<Path> stream = Files.list(plotDir)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".pdf"))
+                    .sorted()
+                    .map(path -> {
+                        try {
+                            long sizeBytes = Files.size(path);
+                            String fileName = path.getFileName().toString();
+                            String assetUrl = "/api/v1/statistics/" + validated + "/plots/file?source=" +
+                                    UriUtils.encodeQueryParam(source, StandardCharsets.UTF_8) + "&fileName=" +
+                                    UriUtils.encodeQueryParam(fileName, StandardCharsets.UTF_8);
+                            return new CancerAssetDto(source, humanizeFileName(fileName), fileName, sizeBytes, assetUrl);
+                        } catch (IOException e) {
+                            throw new IllegalStateException("Failed to inspect " + path, e);
+                        }
+                    })
+                    .toList();
+        } catch (IOException e) {
+            log.warn("Failed to list statistics plots for {}/{}", cancer, source, e);
+            return List.of();
+        }
+    }
+
+    /** Serve a specific statistics plot PDF file. */
+    public CancerAssetResource loadStatisticsPlot(String cancer, String source, String fileName) {
+        String validated = validateCancer(cancer);
+        Path plotDir = resolveStatisticsPlotDir(validated, source);
+        Path filePath = plotDir.resolve(fileName);
+        if (!Files.isRegularFile(filePath)) {
+            throw new ResourceNotFoundException("Plot not found: " + source + "/" + fileName);
+        }
+        try {
+            long size = Files.size(filePath);
+            return new CancerAssetResource(new FileSystemResource(filePath), fileName, "application/pdf", size);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read " + filePath, e);
+        }
+    }
+
+    /** Find the gene lollipop plot subfolder within a plot directory. */
+    private Path findGenePlotFolder(String cancer, String source) {
+        Path plotDir = resolveStatisticsPlotDir(cancer, source);
+        if (!Files.isDirectory(plotDir)) return null;
+        try (Stream<Path> stream = Files.list(plotDir)) {
+            return stream
+                    .filter(Files::isDirectory)
+                    .filter(d -> {
+                        // Check if directory contains lollipop_*.pdf files
+                        try (Stream<Path> inner = Files.list(d)) {
+                            return inner.anyMatch(f -> f.getFileName().toString().startsWith("lollipop_"));
+                        } catch (IOException e) {
+                            return false;
+                        }
+                    })
+                    .findFirst()
+                    .orElse(null);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    /** List gene names available as lollipop plots, filtered by query prefix. */
+    public List<String> getGenePlotNames(String cancer, String source, String query) {
+        String validated = validateCancer(cancer);
+        Path geneDir = findGenePlotFolder(validated, source);
+        if (geneDir == null) return List.of();
+        String q = (query == null) ? "" : query.trim().toLowerCase(Locale.ROOT);
+        try (Stream<Path> stream = Files.list(geneDir)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .map(p -> p.getFileName().toString())
+                    .filter(n -> n.startsWith("lollipop_") && n.endsWith(".pdf"))
+                    .map(n -> n.substring("lollipop_".length(), n.length() - ".pdf".length()))
+                    .filter(gene -> q.isEmpty() || gene.toLowerCase(Locale.ROOT).startsWith(q))
+                    .sorted()
+                    .limit(50)
+                    .toList();
+        } catch (IOException e) {
+            log.warn("Failed to list gene plots for {}/{}", cancer, source, e);
+            return List.of();
+        }
+    }
+
+    /** Check if gene lollipop plots are available for a cancer + source. */
+    public boolean hasGenePlots(String cancer, String source) {
+        String validated = validateCancer(cancer);
+        return findGenePlotFolder(validated, source) != null;
+    }
+
+    /** Serve a specific gene lollipop plot PDF. */
+    public CancerAssetResource loadGenePlot(String cancer, String source, String gene) {
+        String validated = validateCancer(cancer);
+        Path geneDir = findGenePlotFolder(validated, source);
+        if (geneDir == null) {
+            throw new ResourceNotFoundException("No gene plot folder for " + cancer + "/" + source);
+        }
+        String fileName = "lollipop_" + gene + ".pdf";
+        Path filePath = geneDir.resolve(fileName);
+        if (!Files.isRegularFile(filePath)) {
+            throw new ResourceNotFoundException("Gene plot not found: " + gene);
+        }
+        try {
+            long size = Files.size(filePath);
+            return new CancerAssetResource(new FileSystemResource(filePath), fileName, "application/pdf", size);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read " + filePath, e);
+        }
+    }
+
     public static final class CancerAssetResource {
         private final Resource resource;
         private final String fileName;

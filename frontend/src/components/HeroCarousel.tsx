@@ -57,22 +57,22 @@ export function HeroCarousel() {
             </div>
             <div className="gdc-metrics-pill">
               <div className="gdc-metric">
-                 <div className="gdc-metric-icon cohort-icon"></div>
+                 <div className="gdc-metric-icon cohort-icon">📁</div>
                  <span className="gdc-num">{stats.cohortCount}</span>
                  <span className="gdc-label">Cohorts</span>
               </div>
               <div className="gdc-metric">
-                 <div className="gdc-metric-icon site-icon"></div>
+                 <div className="gdc-metric-icon site-icon">🧪</div>
                  <span className="gdc-num">{formatNumber(stats.totalSamples)}</span>
                  <span className="gdc-label">Samples</span>
               </div>
               <div className="gdc-metric">
-                 <div className="gdc-metric-icon gene-icon"></div>
+                 <div className="gdc-metric-icon gene-icon">🧬</div>
                  <span className="gdc-num">{formatNumber(stats.totalGenes)}</span>
                  <span className="gdc-label">Genes</span>
               </div>
               <div className="gdc-metric">
-                 <div className="gdc-metric-icon variant-icon"></div>
+                 <div className="gdc-metric-icon variant-icon">🔬</div>
                  <span className="gdc-num">{formatNumber(stats.totalVariants)}</span>
                  <span className="gdc-label">Mutations</span>
               </div>

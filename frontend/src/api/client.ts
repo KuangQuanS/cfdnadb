@@ -18,7 +18,8 @@ import type {
   CancerSummary,
   GeneVariant,
   GeneSummary,
-  TopGene
+  TopGene,
+  StatisticsSource
 } from "../types/api";
 import {
   downloadsMock,
@@ -260,4 +261,25 @@ export function getMafGeneSuggestions(source: string, q: string, limit = 10) {
 export function getMafSampleSuggestions(source: string, q: string, limit = 10) {
   const params = new URLSearchParams({ source, q, limit: String(limit) });
   return requestLive<string[]>(`/api/v1/maf-mutations/sample-suggestions?${params.toString()}`);
+}
+
+// ---- Statistics page ----
+
+export function getStatisticsSources(cancer: string) {
+  return requestLive<StatisticsSource[]>(`/api/v1/statistics/${encodeURIComponent(cancer)}/sources`);
+}
+
+export function getStatisticsPlots(cancer: string, source: string) {
+  const params = new URLSearchParams({ source });
+  return requestLive<CancerAsset[]>(`/api/v1/statistics/${encodeURIComponent(cancer)}/plots?${params.toString()}`);
+}
+
+export function getStatisticsGenes(cancer: string, source: string, query: string) {
+  const params = new URLSearchParams({ source, query });
+  return requestLive<string[]>(`/api/v1/statistics/${encodeURIComponent(cancer)}/genes?${params.toString()}`);
+}
+
+export function getStatisticsGenePlotUrl(cancer: string, source: string, gene: string) {
+  const params = new URLSearchParams({ source, gene });
+  return `${API_BASE}/api/v1/statistics/${encodeURIComponent(cancer)}/gene-plot?${params.toString()}`;
 }
