@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { getMafGeneDetail, queryMafGeneMutations } from "../api/client";
+import { getMafFilterOptions, getMafGeneDetail, queryMafGeneMutations } from "../api/client";
 import { formatNumber } from "../utils/format";
 
 const PAGE_SIZE = 25;
@@ -17,6 +18,38 @@ export function GeneMarkerDetailPage() {
   const variantTypes = searchParams.getAll("variantType");
   const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1);
   const isCfDNA = source === "cfDNA";
+  const [sampleInput, setSampleInput] = useState(sample);
+  const [selectedCancer, setSelectedCancer] = useState(cancerTypes[0] ?? "");
+  const [selectedChromosome, setSelectedChromosome] = useState(chromosomes[0] ?? "");
+  const [selectedClass, setSelectedClass] = useState(variantClasses[0] ?? "");
+  const [selectedType, setSelectedType] = useState(variantTypes[0] ?? "");
+
+  useEffect(() => {
+    setSampleInput(sample);
+  }, [sample]);
+
+  useEffect(() => {
+    setSelectedCancer(cancerTypes[0] ?? "");
+  }, [cancerTypes]);
+
+  useEffect(() => {
+    setSelectedChromosome(chromosomes[0] ?? "");
+  }, [chromosomes]);
+
+  useEffect(() => {
+    setSelectedClass(variantClasses[0] ?? "");
+  }, [variantClasses]);
+
+  useEffect(() => {
+    setSelectedType(variantTypes[0] ?? "");
+  }, [variantTypes]);
+
+  const filterQ = useQuery({
+    queryKey: ["maf-filter-options", source],
+    queryFn: () => getMafFilterOptions(source),
+    staleTime: 10 * 60_000,
+    placeholderData: keepPreviousData
+  });
 
   const summaryQ = useQuery({
     queryKey: ["maf-gene-detail", source, geneSymbol, sample, cancerTypes, chromosomes, variantClasses, variantTypes],
@@ -79,6 +112,26 @@ export function GeneMarkerDetailPage() {
   const goToPage = (nextPage: number) => {
     const next = new URLSearchParams(searchParams);
     next.set("page", String(nextPage));
+    setSearchParams(next);
+  };
+
+  const submitTableFilter = (event?: FormEvent) => {
+    event?.preventDefault();
+    const next = new URLSearchParams();
+    next.set("source", source);
+    if (sampleInput.trim()) next.set("sample", sampleInput.trim());
+    if (selectedCancer) next.append("cancerType", selectedCancer);
+    if (selectedChromosome) next.append("chromosome", selectedChromosome);
+    if (selectedClass) next.append("variantClass", selectedClass);
+    if (selectedType) next.append("variantType", selectedType);
+    next.set("page", "1");
+    setSearchParams(next);
+  };
+
+  const clearTableFilter = () => {
+    const next = new URLSearchParams();
+    next.set("source", source);
+    next.set("page", "1");
     setSearchParams(next);
   };
 
@@ -157,6 +210,64 @@ export function GeneMarkerDetailPage() {
             This table is the detailed view behind the aggregated gene row.
           </div>
         </div>
+
+        <form className="maf-detail-filterbar" onSubmit={submitTableFilter}>
+          <label className="maf-detail-filter-field maf-detail-filter-grow">
+            <span>Sample Barcode</span>
+            <input
+              value={sampleInput}
+              onChange={(event) => setSampleInput(event.target.value)}
+              placeholder="Filter by sample barcode"
+            />
+          </label>
+
+          {isCfDNA ? (
+            <label className="maf-detail-filter-field">
+              <span>Cancer</span>
+              <select value={selectedCancer} onChange={(event) => setSelectedCancer(event.target.value)}>
+                <option value="">All</option>
+                {(filterQ.data?.cancerTypes ?? []).map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          <label className="maf-detail-filter-field">
+            <span>Chromosome</span>
+            <select value={selectedChromosome} onChange={(event) => setSelectedChromosome(event.target.value)}>
+              <option value="">All</option>
+              {(filterQ.data?.chromosomes ?? []).map((option) => (
+                <option key={option} value={option}>{formatChromosome(option)}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="maf-detail-filter-field">
+            <span>Class</span>
+            <select value={selectedClass} onChange={(event) => setSelectedClass(event.target.value)}>
+              <option value="">All</option>
+              {(filterQ.data?.variantClassifications ?? []).map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="maf-detail-filter-field">
+            <span>Type</span>
+            <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+              <option value="">All</option>
+              {(filterQ.data?.variantTypes ?? []).map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="maf-detail-filter-actions">
+            <button className="button-primary" type="submit">Apply</button>
+            <button className="button-secondary" type="button" onClick={clearTableFilter}>Reset</button>
+          </div>
+        </form>
 
         {dataQ.isLoading ? <p className="panel-note">Loading mutation records...</p> : null}
         {dataQ.isError ? (
