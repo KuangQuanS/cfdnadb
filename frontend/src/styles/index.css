@@ -2192,65 +2192,198 @@ button, input, select { font: inherit; }
   background: var(--bg-soft);
 }
 
-/* Statistics page: full-width one-per-row PDF layout */
-.stat-pdf-list {
+/* Statistics page */
+.statistics-page {
+  gap: 32px;
+}
+
+.statistics-toolbar-card {
+  padding: 22px 26px;
+  display: grid;
+  gap: 18px;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.statistics-toolbar-top {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 18px;
+  align-items: end;
+}
+
+.statistics-toolbar-field,
+.statistics-toolbar-group {
+  display: grid;
+  gap: 8px;
+}
+
+.statistics-toolbar-label,
+.statistics-toolbar-field span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #607088;
+}
+
+.statistics-toolbar-field select {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #cfd7e6;
+  border-radius: 4px;
+  background: #fff;
+  color: #253851;
+  font-weight: 700;
+  outline: none;
+}
+
+.statistics-toolbar-field select:focus {
+  border-color: #4f73b8;
+  box-shadow: 0 0 0 3px rgba(79, 115, 184, 0.1);
+}
+
+.statistics-source-tabs {
   display: flex;
-  flex-direction: column;
-  gap: 28px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.statistics-source-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid #cfd7e6;
+  border-radius: 999px;
+  background: #fff;
+  color: #45556d;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.statistics-source-tab small {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7b8ba2;
+}
+
+.statistics-source-tab:hover {
+  border-color: #4f73b8;
+  color: #2f4f84;
+}
+
+.statistics-source-tab.active {
+  background: #2c3a85;
+  border-color: #2c3a85;
+  color: #fff;
+}
+
+.statistics-source-tab.active small {
+  color: rgba(255,255,255,0.72);
+}
+
+.statistics-toolbar-meta {
+  display: grid;
+  gap: 4px;
+  padding-top: 16px;
+  border-top: 1px solid #dde5f0;
+}
+
+.statistics-toolbar-meta strong {
+  color: #223a70;
+  font-size: 1rem;
+}
+
+.statistics-toolbar-meta p {
+  margin: 0;
+  color: #66758e;
+  line-height: 1.6;
+}
+
+.statistics-section-block {
+  display: grid;
+  gap: 18px;
+}
+
+.statistics-section-heading {
+  display: grid;
+  gap: 6px;
+}
+
+.statistics-section-heading h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: #243d73;
+}
+
+.statistics-section-copy {
+  margin: 0;
+  color: #66758e;
+  line-height: 1.65;
+  max-width: 920px;
+}
+
+.statistics-pdf-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  align-items: stretch;
 }
 
 .stat-pdf-card {
   background: var(--panel);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  padding: 24px;
+  border-radius: 3px;
+  border: 1px solid #d8e1ef;
+  box-shadow: none;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  overflow: hidden;
+  min-height: 640px;
+}
+
+.statistics-panel-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e3eaf4;
+  background: #f5f7fa;
+}
+
+.statistics-panel-header-soft {
+  border-top: 1px solid #e3eaf4;
+  border-bottom: 1px solid #e3eaf4;
 }
 
 .stat-pdf-title {
   margin: 0;
-  font-size: 1.05rem;
-  color: var(--ink);
+  font-size: 0.96rem;
+  color: #314563;
+}
+
+.statistics-panel-note {
+  margin: 8px 0 0;
+  color: #6a7890;
+  line-height: 1.55;
+  font-size: 0.86rem;
+}
+
+.statistics-pdf-shell {
+  padding: 14px;
+  background: #eef2f7;
+  flex: 1;
+  display: flex;
 }
 
 .stat-pdf-frame {
   width: 100%;
-  height: 680px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  height: 100%;
+  min-height: 500px;
+  border: 1px solid #d9e1ec;
   background: var(--bg-soft);
-}
-
-/* Data source tabs */
-.source-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.source-tab {
-  padding: 8px 20px;
-  border: 2px solid var(--line);
-  border-radius: var(--radius-pill);
-  background: var(--panel);
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.source-tab:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.source-tab.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
 }
 
 /* Gene search autocomplete */
@@ -2262,15 +2395,16 @@ button, input, select { font: inherit; }
 .gene-search-box input {
   width: 100%;
   padding: 10px 16px;
-  border: 2px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid #cfd7e6;
+  border-radius: 4px;
   font-size: 0.95rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .gene-search-box input:focus {
-  border-color: var(--accent);
+  border-color: #4f73b8;
+  box-shadow: 0 0 0 3px rgba(79, 115, 184, 0.1);
 }
 
 .gene-suggestions {
@@ -2303,22 +2437,191 @@ button, input, select { font: inherit; }
 
 .gene-plot-viewer {
   background: var(--panel);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  padding: 24px;
-}
-
-.gene-plot-viewer h3 {
-  margin: 0 0 16px;
-  font-size: 1.05rem;
+  border: 1px solid #d8e1ef;
+  border-radius: 3px;
+  box-shadow: none;
+  padding: 0;
 }
 
 .gene-plot-frame {
   width: 100%;
-  min-height: 500px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  min-height: 720px;
+  border: none;
   background: var(--bg-soft);
+}
+
+.statistics-gene-panel {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.statistics-gene-panel .statistics-panel-header {
+  display: grid;
+  gap: 8px;
+}
+
+.statistics-gene-panel .statistics-panel-header h2 {
+  margin: 0;
+  font-size: 1.7rem;
+  color: #243d73;
+}
+
+.statistics-panel-copy {
+  margin: 0;
+  color: #66758e;
+  line-height: 1.6;
+}
+
+.statistics-gene-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border-bottom: 1px solid #e3eaf4;
+}
+
+.statistics-gene-search-box {
+  max-width: 520px;
+  flex: 1;
+}
+
+.statistics-gene-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.statistics-gene-submit {
+  min-width: 120px;
+}
+
+.statistics-selected-gene {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #2f4f84;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.statistics-gene-explainer {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e3eaf4;
+  background: #fbfcfe;
+}
+
+.statistics-gene-explainer p {
+  margin: 0;
+  color: #65758d;
+  line-height: 1.6;
+}
+
+.statistics-gene-viewer {
+  border: none;
+}
+
+.statistics-gene-frame {
+  min-height: 860px;
+}
+
+.statistics-inline-pdf {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  background: #eef2f7;
+}
+
+.statistics-inline-pdf-page {
+  display: flex;
+  justify-content: center;
+}
+
+.statistics-inline-pdf-page canvas {
+  max-width: 100%;
+  height: auto !important;
+  border: 1px solid #d8e1ef;
+  box-shadow: 0 10px 24px rgba(18, 35, 78, 0.08);
+  background: #fff;
+}
+
+.statistics-inline-pdf-caption {
+  margin: 0;
+  color: #6a7890;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.statistics-gene-empty {
+  display: grid;
+  place-items: center;
+  min-height: 340px;
+  padding: 32px 20px;
+  text-align: center;
+  color: #65758d;
+  background: #fbfcfe;
+}
+
+.statistics-gene-empty strong {
+  color: #334b73;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.statistics-gene-empty p {
+  margin: 0;
+  max-width: 520px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1100px) {
+  .statistics-toolbar-top {
+    grid-template-columns: 1fr;
+  }
+
+  .statistics-pdf-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .statistics-toolbar-card {
+    padding: 18px;
+  }
+
+  .statistics-gene-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .statistics-gene-search-box {
+    max-width: none;
+  }
+
+  .statistics-gene-actions {
+    justify-content: space-between;
+  }
+
+  .statistics-selected-gene {
+    width: fit-content;
+  }
+
+  .stat-pdf-frame {
+    height: 420px;
+  }
+
+  .statistics-gene-frame {
+    min-height: 620px;
+  }
+
+  .statistics-inline-pdf {
+    padding: 14px;
+  }
 }
 
 .pipeline-card {
