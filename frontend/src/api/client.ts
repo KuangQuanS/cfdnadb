@@ -6,6 +6,7 @@ import type {
   FilterOptions,
   LabelCount,
   MafFilterOptions,
+  MafGeneSummary,
   MafSummary,
   MafMutation,
   Overview,
@@ -237,6 +238,20 @@ export function queryMafMutations(filters: MafQueryFilters) {
   return requestLive<PagedResponse<MafMutation>>(`/api/v1/maf-mutations?${params.toString()}`);
 }
 
+export function queryMafGenes(filters: MafQueryFilters) {
+  const params = new URLSearchParams();
+  params.set("source", filters.source ?? "cfDNA");
+  params.set("page", String(filters.page ?? 1));
+  params.set("size", String(filters.size ?? 20));
+  if (filters.gene) params.set("gene", filters.gene);
+  if (filters.sample) params.set("sample", filters.sample);
+  for (const value of filters.cancerType ?? []) params.append("cancerType", value);
+  for (const value of filters.chromosome ?? []) params.append("chromosome", value);
+  for (const value of filters.variantClass ?? []) params.append("variantClass", value);
+  for (const value of filters.variantType ?? []) params.append("variantType", value);
+  return requestLive<PagedResponse<MafGeneSummary>>(`/api/v1/maf-mutations/genes?${params.toString()}`);
+}
+
 export function getMafFilterOptions(source: string) {
   return requestLive<MafFilterOptions>(`/api/v1/maf-mutations/filter-options?source=${encodeURIComponent(source)}`);
 }
@@ -261,6 +276,30 @@ export function getMafGeneSuggestions(source: string, q: string, limit = 10) {
 export function getMafSampleSuggestions(source: string, q: string, limit = 10) {
   const params = new URLSearchParams({ source, q, limit: String(limit) });
   return requestLive<string[]>(`/api/v1/maf-mutations/sample-suggestions?${params.toString()}`);
+}
+
+export function getMafGeneDetail(gene: string, filters: Omit<MafQueryFilters, "gene" | "page" | "size">) {
+  const params = new URLSearchParams();
+  params.set("source", filters.source ?? "cfDNA");
+  if (filters.sample) params.set("sample", filters.sample);
+  for (const value of filters.cancerType ?? []) params.append("cancerType", value);
+  for (const value of filters.chromosome ?? []) params.append("chromosome", value);
+  for (const value of filters.variantClass ?? []) params.append("variantClass", value);
+  for (const value of filters.variantType ?? []) params.append("variantType", value);
+  return requestLive<MafGeneSummary>(`/api/v1/maf-mutations/genes/${encodeURIComponent(gene)}?${params.toString()}`);
+}
+
+export function queryMafGeneMutations(gene: string, filters: Omit<MafQueryFilters, "gene">) {
+  const params = new URLSearchParams();
+  params.set("source", filters.source ?? "cfDNA");
+  params.set("page", String(filters.page ?? 1));
+  params.set("size", String(filters.size ?? 20));
+  if (filters.sample) params.set("sample", filters.sample);
+  for (const value of filters.cancerType ?? []) params.append("cancerType", value);
+  for (const value of filters.chromosome ?? []) params.append("chromosome", value);
+  for (const value of filters.variantClass ?? []) params.append("variantClass", value);
+  for (const value of filters.variantType ?? []) params.append("variantType", value);
+  return requestLive<PagedResponse<MafMutation>>(`/api/v1/maf-mutations/genes/${encodeURIComponent(gene)}/mutations?${params.toString()}`);
 }
 
 // ---- Statistics page ----

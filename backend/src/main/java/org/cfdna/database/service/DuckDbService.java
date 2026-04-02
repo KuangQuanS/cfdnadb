@@ -8,6 +8,7 @@ import org.cfdna.database.dto.GeneSummaryDto;
 import org.cfdna.database.dto.GeneVariantDto;
 import org.cfdna.database.dto.LabelCountDto;
 import org.cfdna.database.dto.MafFilterOptionsDto;
+import org.cfdna.database.dto.MafGeneSummaryDto;
 import org.cfdna.database.dto.MafMutationDto;
 import org.cfdna.database.dto.MafSummaryDto;
 import org.cfdna.database.dto.PagedResponse;
@@ -663,6 +664,277 @@ public class DuckDbService {
         return new MafFilterOptionsDto(source, cancerTypes, chromosomes, variantClassifications, variantTypes);
     }
 
+    public PagedResponse<MafGeneSummaryDto> queryMafGenes(String source, String gene, String sample, List<String> cancerTypes,
+                                                          List<String> chromosomes, List<String> variantClasses, List<String> variantTypes,
+                                                          int page, int pageSize) {
+        Path mafDb = resolveMafDatabaseFile();
+        String table = resolveMafTable(source);
+        log.info("[MAF] queryMafGenes source={}, db={}, exists={}, table={}",
+                source, mafDb.toAbsolutePath(), mafDatabaseAvailable(), table);
+        if (!mafDatabaseAvailable()) {
+            log.warn("[MAF] Database file not found: {}", mafDb.toAbsolutePath());
+            return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+        }
+
+        boolean tcga = isTcga(source);
+        boolean hasGene = gene != null && !gene.isBlank();
+        boolean hasSample = sample != null && !sample.isBlank();
+        List<String> normalizedCancerTypes = normalizeFilterValues(cancerTypes);
+        List<String> normalizedChromosomes = normalizeFilterValues(chromosomes);
+        List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
+        List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
+        String where = buildMafWhereClause(hasGene, hasSample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
+        String nonBlankGeneCondition = "NULLIF(TRIM(COALESCE(hugo_symbol, '')), '') IS NOT NULL";
+        String groupedWhere = where.isEmpty() ? "WHERE " + nonBlankGeneCondition + " " : where + "AND " + nonBlankGeneCondition + " ";
+
+        String coordinateExpr =
+                "CASE " +
+                        "WHEN NULLIF(TRIM(COALESCE(chromosome, '')), '') IS NOT NULL AND NULLIF(TRIM(COALESCE(start_position, '')), '') IS NOT NULL " +
+                        "THEN COALESCE(chromosome, '') || ':' || COALESCE(start_position, '') || " +
+                        "CASE " +
+                        "WHEN NULLIF(TRIM(COALESCE(end_position, '')), '') IS NOT NULL AND COALESCE(end_position, '') <> COALESCE(start_position, '') " +
+                        "THEN '-' || COALESCE(end_position, '') " +
+                        "ELSE '' END " +
+                        "ELSE NULL END";
+
+        String countSql =
+                "SELECT COUNT(*) AS total FROM (" +
+                        "SELECT hugo_symbol FROM " + table + " " + groupedWhere +
+                        "GROUP BY hugo_symbol" +
+                        ") gene_rows";
+
+        String dataSql =
+                "SELECT " +
+                        "COALESCE(hugo_symbol, '') AS hugo_symbol, " +
+                        "COUNT(*) AS total_variants, " +
+                        "COUNT(DISTINCT NULLIF(tumor_sample_barcode, '')) AS total_samples, " +
+                        "COUNT(DISTINCT " + coordinateExpr + ") AS total_coordinates " +
+                        "FROM " + table + " " +
+                        groupedWhere +
+                        "GROUP BY hugo_symbol " +
+                        "ORDER BY total_variants DESC, hugo_symbol ASC " +
+                        "LIMIT ? OFFSET ?";
+
+        try (Connection conn = openMafConnection()) {
+            if (!mafTableExists(conn, table)) {
+                log.warn("[MAF] Table not found in {}: {}", mafDb.toAbsolutePath(), table);
+                return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+            }
+
+            long totalRows;
+            try (PreparedStatement countStmt = conn.prepareStatement(countSql)) {
+                bindMafParams(countStmt, 1, hasGene, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
+                try (ResultSet rs = countStmt.executeQuery()) {
+                    rs.next();
+                    totalRows = rs.getLong("total");
+                }
+            }
+            if (totalRows == 0) {
+                return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+            }
+
+            int offset = Math.max(page - 1, 0) * pageSize;
+            List<MafGeneSummaryDto> content = new ArrayList<>();
+            try (PreparedStatement dataStmt = conn.prepareStatement(dataSql)) {
+                int idx = bindMafParams(dataStmt, 1, hasGene, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
+                dataStmt.setInt(idx++, pageSize);
+                dataStmt.setInt(idx, offset);
+                try (ResultSet rs = dataStmt.executeQuery()) {
+                    while (rs.next()) {
+                        String geneSymbol = rs.getString("hugo_symbol");
+                        content.add(buildMafGeneSummaryDto(
+                                conn,
+                                table,
+                                geneSymbol,
+                                rs.getLong("total_variants"),
+                                rs.getLong("total_samples"),
+                                rs.getLong("total_coordinates"),
+                                hasSample,
+                                sample,
+                                normalizedCancerTypes,
+                                normalizedChromosomes,
+                                normalizedVariantClasses,
+                                normalizedVariantTypes,
+                                tcga));
+                    }
+                }
+            }
+
+            int totalPages = (int) Math.ceil(totalRows / (double) pageSize);
+            boolean first = page <= 1;
+            boolean last = totalPages == 0 || page >= totalPages;
+            return new PagedResponse<>(content, page, pageSize, totalRows, totalPages, first, last);
+        } catch (SQLException e) {
+            log.error("[MAF] Gene summary query failed for source={}: {}", source, e.getMessage(), e);
+            return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+        }
+    }
+
+    public MafGeneSummaryDto getMafGeneDetail(String source, String gene, String sample, List<String> cancerTypes,
+                                              List<String> chromosomes, List<String> variantClasses, List<String> variantTypes) {
+        Path mafDb = resolveMafDatabaseFile();
+        String table = resolveMafTable(source);
+        if (!mafDatabaseAvailable()) {
+            throw new ResourceNotFoundException("MAF database is not available.");
+        }
+
+        boolean tcga = isTcga(source);
+        boolean hasSample = sample != null && !sample.isBlank();
+        List<String> normalizedCancerTypes = normalizeFilterValues(cancerTypes);
+        List<String> normalizedChromosomes = normalizeFilterValues(chromosomes);
+        List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
+        List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
+
+        String coordinateExpr =
+                "CASE " +
+                        "WHEN NULLIF(TRIM(COALESCE(chromosome, '')), '') IS NOT NULL AND NULLIF(TRIM(COALESCE(start_position, '')), '') IS NOT NULL " +
+                        "THEN COALESCE(chromosome, '') || ':' || COALESCE(start_position, '') || " +
+                        "CASE " +
+                        "WHEN NULLIF(TRIM(COALESCE(end_position, '')), '') IS NOT NULL AND COALESCE(end_position, '') <> COALESCE(start_position, '') " +
+                        "THEN '-' || COALESCE(end_position, '') " +
+                        "ELSE '' END " +
+                        "ELSE NULL END";
+
+        String where = buildMafExactGeneWhereClause(hasSample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
+        String sql =
+                "SELECT " +
+                        "COUNT(*) AS total_variants, " +
+                        "COUNT(DISTINCT NULLIF(tumor_sample_barcode, '')) AS total_samples, " +
+                        "COUNT(DISTINCT " + coordinateExpr + ") AS total_coordinates " +
+                        "FROM " + table + " " + where;
+
+        try (Connection conn = openMafConnection()) {
+            if (!mafTableExists(conn, table)) {
+                throw new ResourceNotFoundException("MAF table is unavailable for source " + source + ".");
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                bindMafExactGeneParams(stmt, 1, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next() && rs.getLong("total_variants") > 0) {
+                        return buildMafGeneSummaryDto(
+                                conn,
+                                table,
+                                gene,
+                                rs.getLong("total_variants"),
+                                rs.getLong("total_samples"),
+                                rs.getLong("total_coordinates"),
+                                hasSample,
+                                sample,
+                                normalizedCancerTypes,
+                                normalizedChromosomes,
+                                normalizedVariantClasses,
+                                normalizedVariantTypes,
+                                tcga);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            log.error("[MAF] Gene detail query failed for source={}, gene={}: {}", source, gene, e.getMessage(), e);
+        }
+
+        throw new ResourceNotFoundException("Gene " + gene + " was not found in the current MAF view.");
+    }
+
+    public PagedResponse<MafMutationDto> queryMafMutationsByGene(String source, String gene, String sample, List<String> cancerTypes,
+                                                                 List<String> chromosomes, List<String> variantClasses, List<String> variantTypes,
+                                                                 int page, int pageSize) {
+        Path mafDb = resolveMafDatabaseFile();
+        String table = resolveMafTable(source);
+        log.info("[MAF] queryMafMutationsByGene source={}, gene={}, db={}, exists={}, table={}",
+                source, gene, mafDb.toAbsolutePath(), mafDatabaseAvailable(), table);
+        if (!mafDatabaseAvailable()) {
+            log.warn("[MAF] Database file not found: {}", mafDb.toAbsolutePath());
+            return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+        }
+
+        boolean tcga = isTcga(source);
+        boolean hasSample = sample != null && !sample.isBlank();
+        List<String> normalizedCancerTypes = normalizeFilterValues(cancerTypes);
+        List<String> normalizedChromosomes = normalizeFilterValues(chromosomes);
+        List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
+        List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
+
+        String where = buildMafExactGeneWhereClause(hasSample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
+        String countSql = "SELECT COUNT(*) AS total FROM " + table + " " + where;
+        String dataSql = "SELECT " +
+                "  COALESCE(hugo_symbol, '') AS hugo_symbol, " +
+                "  COALESCE(cancer_type, '') AS cancer_type, " +
+                "  COALESCE(chromosome, '') AS chromosome, " +
+                "  COALESCE(start_position, '') AS start_position, " +
+                "  COALESCE(end_position, '') AS end_position, " +
+                "  COALESCE(reference_allele, '') AS reference_allele, " +
+                "  COALESCE(tumor_seq_allele2, '') AS tumor_seq_allele2, " +
+                "  COALESCE(variant_classification, '') AS variant_classification, " +
+                "  COALESCE(variant_type, '') AS variant_type, " +
+                "  COALESCE(tumor_sample_barcode, '') AS tumor_sample_barcode, " +
+                "  COALESCE(transcript, '') AS transcript, " +
+                "  COALESCE(exon, '') AS exon, " +
+                "  COALESCE(aa_change, '') AS aa_change, " +
+                "  COALESCE(functional_region, '') AS functional_region, " +
+                "  COALESCE(exonic_function, '') AS exonic_function " +
+                "FROM " + table + " " +
+                where +
+                "ORDER BY chromosome ASC, TRY_CAST(start_position AS BIGINT) ASC NULLS LAST, tumor_sample_barcode ASC " +
+                "LIMIT ? OFFSET ?";
+
+        try (Connection conn = openMafConnection()) {
+            if (!mafTableExists(conn, table)) {
+                log.warn("[MAF] Table not found in {}: {}", mafDb.toAbsolutePath(), table);
+                return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+            }
+
+            long totalRows;
+            try (PreparedStatement countStmt = conn.prepareStatement(countSql)) {
+                bindMafExactGeneParams(countStmt, 1, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
+                try (ResultSet rs = countStmt.executeQuery()) {
+                    rs.next();
+                    totalRows = rs.getLong("total");
+                }
+            }
+            if (totalRows == 0) {
+                return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+            }
+
+            int offset = Math.max(page - 1, 0) * pageSize;
+            List<MafMutationDto> content = new ArrayList<>();
+            try (PreparedStatement dataStmt = conn.prepareStatement(dataSql)) {
+                int idx = bindMafExactGeneParams(dataStmt, 1, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
+                dataStmt.setInt(idx++, pageSize);
+                dataStmt.setInt(idx, offset);
+                try (ResultSet rs = dataStmt.executeQuery()) {
+                    long rowId = offset;
+                    while (rs.next()) {
+                        content.add(new MafMutationDto(
+                                ++rowId,
+                                rs.getString("hugo_symbol"),
+                                rs.getString("cancer_type"),
+                                rs.getString("chromosome"),
+                                rs.getString("start_position"),
+                                rs.getString("end_position"),
+                                rs.getString("reference_allele"),
+                                rs.getString("tumor_seq_allele2"),
+                                rs.getString("variant_classification"),
+                                rs.getString("variant_type"),
+                                rs.getString("tumor_sample_barcode"),
+                                rs.getString("transcript"),
+                                rs.getString("exon"),
+                                rs.getString("aa_change"),
+                                rs.getString("functional_region"),
+                                rs.getString("exonic_function")));
+                    }
+                }
+            }
+
+            int totalPages = (int) Math.ceil(totalRows / (double) pageSize);
+            boolean first = page <= 1;
+            boolean last = totalPages == 0 || page >= totalPages;
+            return new PagedResponse<>(content, page, pageSize, totalRows, totalPages, first, last);
+        } catch (SQLException e) {
+            log.error("[MAF] Gene mutation table query failed for source={}, gene={}: {}", source, gene, e.getMessage(), e);
+            return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+        }
+    }
+
     public PagedResponse<MafMutationDto> queryMafMutations(String source, String gene, String sample, List<String> cancerTypes,
                                                             List<String> chromosomes, List<String> variantClasses, List<String> variantTypes,
                                                             int page, int pageSize) {
@@ -861,6 +1133,112 @@ public class DuckDbService {
         return "hugo_symbol";
     }
 
+    private MafGeneSummaryDto buildMafGeneSummaryDto(Connection conn,
+                                                     String table,
+                                                     String geneSymbol,
+                                                     long totalVariants,
+                                                     long totalSamples,
+                                                     long totalCoordinates,
+                                                     boolean hasSample,
+                                                     String sample,
+                                                     List<String> cancerTypes,
+                                                     List<String> chromosomes,
+                                                     List<String> variantClasses,
+                                                     List<String> variantTypes,
+                                                     boolean tcga) throws SQLException {
+        String coordinateValueExpr =
+                "CASE " +
+                        "WHEN NULLIF(TRIM(COALESCE(chromosome, '')), '') IS NOT NULL AND NULLIF(TRIM(COALESCE(start_position, '')), '') IS NOT NULL " +
+                        "THEN COALESCE(chromosome, '') || ':' || COALESCE(start_position, '') || " +
+                        "CASE " +
+                        "WHEN NULLIF(TRIM(COALESCE(end_position, '')), '') IS NOT NULL AND COALESCE(end_position, '') <> COALESCE(start_position, '') " +
+                        "THEN '-' || COALESCE(end_position, '') " +
+                        "ELSE '' END " +
+                        "ELSE '' END";
+        String alleleValueExpr =
+                "CASE " +
+                        "WHEN NULLIF(TRIM(COALESCE(reference_allele, '')), '') IS NOT NULL AND NULLIF(TRIM(COALESCE(tumor_seq_allele2, '')), '') IS NOT NULL " +
+                        "THEN COALESCE(reference_allele, '') || '>' || COALESCE(tumor_seq_allele2, '') " +
+                        "ELSE '' END";
+        String annotationValueExpr =
+                "TRIM(CONCAT_WS(' | ', NULLIF(functional_region, ''), NULLIF(exonic_function, ''), NULLIF(exon, ''), NULLIF(aa_change, '')))";
+
+        String cancerPreview = tcga
+                ? "-"
+                : joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
+                "COALESCE(cancer_type, '')", "COALESCE(cancer_type, '')", "value ASC", 4));
+        String samplePreview = joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
+                "COALESCE(tumor_sample_barcode, '')", "COALESCE(tumor_sample_barcode, '')", "value ASC", 4));
+        String coordinatePreview = joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
+                coordinateValueExpr, coordinateValueExpr, "value ASC", 4));
+        String allelesPreview = joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
+                alleleValueExpr, alleleValueExpr, "value ASC", 4));
+        String classesPreview = joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
+                "COALESCE(variant_classification, '')", "COALESCE(variant_classification, '')", "value ASC", 4));
+        String typesPreview = joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
+                "COALESCE(variant_type, '')", "COALESCE(variant_type, '')", "value ASC", 4));
+        String annotationPreview = tcga
+                ? "-"
+                : joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, false,
+                annotationValueExpr, annotationValueExpr, "value ASC", 4));
+
+        return new MafGeneSummaryDto(
+                geneSymbol,
+                totalVariants,
+                totalSamples,
+                totalCoordinates,
+                cancerPreview,
+                samplePreview,
+                coordinatePreview,
+                allelesPreview,
+                classesPreview,
+                typesPreview,
+                annotationPreview);
+    }
+
+    private List<String> fetchMafGenePreviewValues(Connection conn,
+                                                   String table,
+                                                   String geneSymbol,
+                                                   boolean hasSample,
+                                                   String sample,
+                                                   List<String> cancerTypes,
+                                                   List<String> chromosomes,
+                                                   List<String> variantClasses,
+                                                   List<String> variantTypes,
+                                                   boolean tcga,
+                                                   String valueExpression,
+                                                   String blankCheckExpression,
+                                                   String orderBy,
+                                                   int limit) throws SQLException {
+        String where = buildMafExactGeneWhereClause(hasSample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga);
+        String sql =
+                "SELECT DISTINCT " + valueExpression + " AS value " +
+                        "FROM " + table + " " +
+                        where +
+                        "AND NULLIF(TRIM(" + blankCheckExpression + "), '') IS NOT NULL " +
+                        "ORDER BY " + orderBy + " " +
+                        "LIMIT ?";
+
+        List<String> values = new ArrayList<>();
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            int idx = bindMafExactGeneParams(stmt, 1, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga);
+            stmt.setInt(idx, Math.max(1, limit));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String value = rs.getString("value");
+                    if (value != null && !value.isBlank()) {
+                        values.add(value);
+                    }
+                }
+            }
+        }
+        return values;
+    }
+
+    private String joinPreview(List<String> values) {
+        return values.isEmpty() ? "-" : String.join(", ", values);
+    }
+
     private String buildMafWhereClause(boolean hasGene, boolean hasSample, List<String> cancerTypes,
                                        List<String> chromosomes, List<String> variantClasses, List<String> variantTypes,
                                        boolean tcga) {
@@ -874,6 +1252,19 @@ public class DuckDbService {
         return conditions.isEmpty() ? "" : "WHERE " + String.join(" AND ", conditions) + " ";
     }
 
+    private String buildMafExactGeneWhereClause(boolean hasSample, List<String> cancerTypes,
+                                                List<String> chromosomes, List<String> variantClasses, List<String> variantTypes,
+                                                boolean tcga) {
+        List<String> conditions = new ArrayList<>();
+        conditions.add("LOWER(COALESCE(hugo_symbol, '')) = ?");
+        if (hasSample) conditions.add("LOWER(COALESCE(tumor_sample_barcode, '')) LIKE ?");
+        if (!tcga && !cancerTypes.isEmpty()) conditions.add(buildInClause("cancer_type", cancerTypes.size()));
+        if (!chromosomes.isEmpty()) conditions.add(buildInClause("chromosome", chromosomes.size()));
+        if (!variantClasses.isEmpty()) conditions.add(buildInClause("variant_classification", variantClasses.size()));
+        if (!variantTypes.isEmpty()) conditions.add(buildInClause("variant_type", variantTypes.size()));
+        return "WHERE " + String.join(" AND ", conditions) + " ";
+    }
+
     private int bindMafParams(PreparedStatement stmt, int idx,
                               boolean hasGene, String gene,
                               boolean hasSample, String sample,
@@ -883,6 +1274,25 @@ public class DuckDbService {
                               List<String> variantTypes,
                               boolean tcga) throws SQLException {
         if (hasGene) stmt.setString(idx++, "%" + gene.trim().toLowerCase(Locale.ROOT) + "%");
+        if (hasSample) stmt.setString(idx++, "%" + sample.trim().toLowerCase(Locale.ROOT) + "%");
+        if (!tcga) {
+            idx = bindListParams(stmt, idx, cancerTypes);
+        }
+        idx = bindListParams(stmt, idx, chromosomes);
+        idx = bindListParams(stmt, idx, variantClasses);
+        idx = bindListParams(stmt, idx, variantTypes);
+        return idx;
+    }
+
+    private int bindMafExactGeneParams(PreparedStatement stmt, int idx,
+                                       String gene,
+                                       boolean hasSample, String sample,
+                                       List<String> cancerTypes,
+                                       List<String> chromosomes,
+                                       List<String> variantClasses,
+                                       List<String> variantTypes,
+                                       boolean tcga) throws SQLException {
+        stmt.setString(idx++, gene.trim().toLowerCase(Locale.ROOT));
         if (hasSample) stmt.setString(idx++, "%" + sample.trim().toLowerCase(Locale.ROOT) + "%");
         if (!tcga) {
             idx = bindListParams(stmt, idx, cancerTypes);

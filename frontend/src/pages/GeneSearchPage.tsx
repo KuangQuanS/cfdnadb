@@ -5,9 +5,9 @@ import {
   getMafGeneSuggestions,
   getMafSampleSuggestions,
   getMafSummary,
-  queryMafMutations
+  queryMafGenes
 } from "../api/client";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { formatNumber } from "../utils/format";
 
 const PAGE_SIZE = 25;
@@ -15,14 +15,14 @@ const SOURCE_OPTIONS = ["cfDNA", "TCGA"] as const;
 
 const SOURCE_COPY: Record<(typeof SOURCE_OPTIONS)[number], { title: string; description: string; note: string }> = {
   cfDNA: {
-    title: "cfDNA MAF Workbench",
-    description: "Search plasma-derived mutation calls with cohort-level labels and transcript-aware annotation.",
-    note: "cfDNA supports Cancer Type plus transcript, exon, amino-acid change, and functional annotation."
+    title: "cfDNA Gene Workbench",
+    description: "Search plasma-derived mutation calls in a gene-centric table and expand into sample-level mutation detail only when needed.",
+    note: "The main table is one gene per row. Multi-value columns summarize cohort labels, sample barcodes, coordinates, classes, and annotations for the current filtered gene set."
   },
   TCGA: {
-    title: "TCGA MAF Workbench",
-    description: "Browse the TCGA mutation matrix using the same query surface, with the core MAF columns only.",
-    note: "TCGA does not include Cancer Type or transcript annotation in the current file."
+    title: "TCGA Gene Workbench",
+    description: "Browse TCGA mutations with the same gene-centric surface, then open any gene to inspect its sample-level mutation records.",
+    note: "TCGA keeps the shared MAF core columns, so the gene summary focuses on sample, coordinate, alleles, class, and type."
   }
 };
 
@@ -77,9 +77,9 @@ export function GeneSearchPage() {
   });
 
   const dataQ = useQuery({
-    queryKey: ["maf-mutations", source, gene, sample, cancerTypes, chromosomes, variantClasses, variantTypes, page],
+    queryKey: ["maf-genes", source, gene, sample, cancerTypes, chromosomes, variantClasses, variantTypes, page],
     queryFn: () =>
-      queryMafMutations({
+      queryMafGenes({
         source,
         gene: gene || undefined,
         sample: sample || undefined,
@@ -126,11 +126,13 @@ export function GeneSearchPage() {
     [cancerTypes, chromosomes, variantClasses, variantTypes]
   );
 
-  const pagePreview = useMemo(() => {
-    const sampleCount = new Set(rows.map((row) => row.tumorSampleBarcode).filter(Boolean)).size;
-    const geneCount = new Set(rows.map((row) => row.hugoSymbol).filter(Boolean)).size;
-    return { sampleCount, geneCount };
-  }, [rows]);
+  const pagePreview = useMemo(
+    () => ({
+      geneCount: rows.length,
+      variantCount: rows.reduce((sum, row) => sum + row.totalVariants, 0)
+    }),
+    [rows]
+  );
 
   const mutateSearchParams = (mutator: (params: URLSearchParams) => void) => {
     const next = new URLSearchParams();
@@ -192,6 +194,17 @@ export function GeneSearchPage() {
     const next = new URLSearchParams(searchParams);
     next.set("page", String(nextPage));
     setSearchParams(next);
+  };
+
+  const buildDetailLink = (geneSymbol: string) => {
+    const params = new URLSearchParams();
+    params.set("source", source);
+    if (sample) params.set("sample", sample);
+    for (const value of cancerTypes) params.append("cancerType", value);
+    for (const value of chromosomes) params.append("chromosome", value);
+    for (const value of variantClasses) params.append("variantClass", value);
+    for (const value of variantTypes) params.append("variantType", value);
+    return `/gene-search/${encodeURIComponent(geneSymbol)}?${params.toString()}`;
   };
 
   return (
@@ -295,7 +308,7 @@ export function GeneSearchPage() {
         <SummaryCard
           label="Matched Genes"
           value={summaryQ.isLoading ? "..." : formatNumber(summary?.totalGenes ?? 0)}
-          helper="Distinct Hugo_Symbol"
+          helper="One row per gene below"
         />
         <SummaryCard
           label={isCfDNA ? "Cancer Cohorts" : "Variant Classes"}
@@ -325,7 +338,7 @@ export function GeneSearchPage() {
         </div>
         {rows.length > 0 ? (
           <p className="maf-preview-text">
-            Current page preview: {formatNumber(pagePreview.geneCount)} genes, {formatNumber(pagePreview.sampleCount)} samples.
+            Current page preview: {formatNumber(pagePreview.geneCount)} genes covering {formatNumber(pagePreview.variantCount)} filtered variants on this page.
           </p>
         ) : null}
       </section>
@@ -333,34 +346,34 @@ export function GeneSearchPage() {
       <section className="maf-results-panel">
         <div className="maf-results-header">
           <div>
-            <h3>Mutation Table</h3>
+            <h3>Gene Summary Table</h3>
             <p>
               Showing {totalElements === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + PAGE_SIZE, totalElements)} of{" "}
-              {formatNumber(totalElements)} rows
+              {formatNumber(totalElements)} genes
             </p>
           </div>
           <div className="maf-results-hint">
-            {isCfDNA ? "cfDNA table includes transcript-level annotation." : "TCGA table shows the shared MAF core columns."}
+            Click any gene to open its sample-level mutation detail page.
           </div>
         </div>
 
-        {dataQ.isLoading ? <p className="panel-note">Loading mutations...</p> : null}
+        {dataQ.isLoading ? <p className="panel-note">Loading gene summaries...</p> : null}
         {dataQ.isError ? (
           <p className="panel-note" style={{ color: "#c0392b" }}>
-            Failed to load mutation data.
+            Failed to load gene summaries.
           </p>
         ) : null}
 
         {!dataQ.isLoading && !dataQ.isError ? (
           rows.length === 0 ? (
             <div className="browse-empty-state">
-              <h4>No mutations found</h4>
+              <h4>No genes found</h4>
               <p>Try broadening the query or removing one of the active filters.</p>
             </div>
           ) : (
             <>
               <div className="maf-table-wrap">
-                <table className="maf-table">
+                <table className="maf-table maf-gene-table">
                   <thead>
                     <tr>
                       <th>Gene</th>
@@ -375,30 +388,40 @@ export function GeneSearchPage() {
                   </thead>
                   <tbody>
                     {rows.map((row) => (
-                      <tr key={`${row.id}-${row.hugoSymbol}-${row.startPosition}`}>
+                      <tr key={`${row.hugoSymbol}-${row.totalVariants}`}>
                         <td>
-                          <div className="maf-cell-title">{row.hugoSymbol}</div>
-                          {row.transcript ? <div className="maf-cell-sub">{row.transcript}</div> : null}
+                          <div className="maf-cell-title">
+                            <Link className="maf-gene-link" to={buildDetailLink(row.hugoSymbol)}>
+                              {row.hugoSymbol}
+                            </Link>
+                          </div>
+                          <div className="maf-cell-sub">
+                            {formatNumber(row.totalVariants)} variants · {formatNumber(row.totalSamples)} samples · {formatNumber(row.totalCoordinates)} sites
+                          </div>
                         </td>
-                        {isCfDNA ? <td>{row.cancerType || "-"}</td> : null}
-                        <td className="maf-mono-cell">{row.tumorSampleBarcode}</td>
-                        <td className="maf-mono-cell">
-                          {formatChromosome(row.chromosome)}:{row.startPosition}
-                          {row.endPosition && row.endPosition !== row.startPosition ? `-${row.endPosition}` : ""}
-                        </td>
-                        <td className="maf-mono-cell">
-                          {row.referenceAllele} &rarr; {row.tumorSeqAllele2}
-                        </td>
-                        <td>{row.variantClassification}</td>
-                        <td>{row.variantType}</td>
                         {isCfDNA ? (
                           <td>
-                            <div className="maf-annotation-block">
-                              {row.functionalRegion ? <span>{row.functionalRegion}</span> : null}
-                              {row.exonicFunction ? <span>{row.exonicFunction}</span> : null}
-                              {row.exon ? <span>{row.exon}</span> : null}
-                              {row.aaChange ? <span className="maf-mono-cell">{row.aaChange}</span> : null}
-                            </div>
+                            <PreviewValue value={row.cancerTypesPreview} />
+                          </td>
+                        ) : null}
+                        <td>
+                          <PreviewValue value={row.sampleBarcodesPreview} mono />
+                        </td>
+                        <td>
+                          <PreviewValue value={row.coordinatePreview} mono />
+                        </td>
+                        <td>
+                          <PreviewValue value={row.allelesPreview} mono />
+                        </td>
+                        <td>
+                          <PreviewValue value={row.variantClassesPreview} />
+                        </td>
+                        <td>
+                          <PreviewValue value={row.variantTypesPreview} />
+                        </td>
+                        {isCfDNA ? (
+                          <td>
+                            <PreviewValue value={row.annotationPreview} mono />
                           </td>
                         ) : null}
                       </tr>
@@ -508,6 +531,10 @@ function MultiSelectGroup({
       </div>
     </div>
   );
+}
+
+function PreviewValue({ value, mono = false }: { value: string; mono?: boolean }) {
+  return <div className={`maf-preview-value${mono ? " maf-mono-cell" : ""}`}>{value || "-"}</div>;
 }
 
 function SummaryCard({

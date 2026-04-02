@@ -5288,6 +5288,21 @@ button:disabled:hover {
   word-break: break-all;
 }
 
+.maf-gene-link {
+  color: #21447f;
+  text-decoration: none;
+}
+
+.maf-gene-link:hover {
+  text-decoration: underline;
+}
+
+.maf-preview-value {
+  color: #41506a;
+  line-height: 1.65;
+  word-break: break-word;
+}
+
 .maf-mono-cell {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.82rem;
@@ -5310,6 +5325,43 @@ button:disabled:hover {
   line-height: 1.4;
 }
 
+.maf-detail-page {
+  gap: 18px;
+}
+
+.maf-detail-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.maf-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.maf-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.maf-detail-block {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #e1e7f0;
+  border-radius: 4px;
+  background: #fafcff;
+}
+
+.maf-detail-block > span {
+  font-size: 0.77rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #74839a;
+}
+
 @media (max-width: 1280px) {
   .maf-summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5318,6 +5370,10 @@ button:disabled:hover {
   .maf-summary-card:nth-child(2n) {
     border-right: none;
   }
+
+  .maf-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -5325,6 +5381,10 @@ button:disabled:hover {
   .maf-results-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .maf-detail-header {
+    grid-template-columns: 1fr;
   }
 
   .maf-results-hint {
@@ -5354,5 +5414,9 @@ button:disabled:hover {
   .maf-toolbar-actions .button-primary,
   .maf-toolbar-actions .button-secondary {
     flex: 1;
+  }
+
+  .maf-detail-grid {
+    grid-template-columns: 1fr;
   }
 }

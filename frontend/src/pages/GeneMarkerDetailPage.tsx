@@ -1,469 +1,283 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
-import ReactECharts from "echarts-for-react";
-import type { EChartsOption } from "echarts";
-import { getMarkerRecord, type MarkerSeriesGroup } from "../data/markerdbMock";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { getMafGeneDetail, queryMafGeneMutations } from "../api/client";
 import { formatNumber } from "../utils/format";
 
-const CHROMOSOME_LABELS = [
-  "chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8",
-  "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16",
-  "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY"
-];
-
-function quantile(values: number[], q: number) {
-  const sorted = [...values].sort((a, b) => a - b);
-  const position = (sorted.length - 1) * q;
-  const base = Math.floor(position);
-  const rest = position - base;
-  const next = sorted[base + 1] ?? sorted[base];
-  return sorted[base] + rest * (next - sorted[base]);
-}
-
-function summarize(values: number[]) {
-  const sorted = [...values].sort((a, b) => a - b);
-  return [sorted[0], quantile(sorted, 0.25), quantile(sorted, 0.5), quantile(sorted, 0.75), sorted[sorted.length - 1]];
-}
-
-function buildProfileOption(title: string, groups: MarkerSeriesGroup[]): EChartsOption {
-  return {
-    color: groups.map((group) => group.color),
-    tooltip: { trigger: "item" },
-    grid: { left: 55, right: 25, top: 40, bottom: 60 },
-    xAxis: {
-      type: "category",
-      data: groups.map((group) => group.label),
-      axisLabel: { fontSize: 11, rotate: 18 }
-    },
-    yAxis: {
-      type: "value",
-      name: "Signal (a.u.)",
-      nameTextStyle: { fontSize: 11 }
-    },
-    series: [
-      {
-        type: "boxplot",
-        data: groups.map((group) => summarize(group.values)),
-        itemStyle: {
-          borderColor: "#4f6ba8",
-          color: "rgba(127, 161, 236, 0.45)"
-        }
-      }
-    ],
-    title: {
-      text: title,
-      left: "center",
-      textStyle: { fontSize: 14, fontWeight: 700, color: "#1f2d4a" }
-    }
-  };
-}
-
-function buildComparisonOption(groups: MarkerSeriesGroup[]): EChartsOption {
-  return {
-    color: groups.map((group) => group.color),
-    tooltip: { trigger: "item" },
-    grid: { left: 60, right: 30, top: 28, bottom: 80 },
-    xAxis: {
-      type: "category",
-      data: groups.map((group) => group.label),
-      axisLabel: { rotate: 42, fontSize: 11 }
-    },
-    yAxis: {
-      type: "value",
-      name: "Signal (a.u.)",
-      nameTextStyle: { fontSize: 11 }
-    },
-    series: [
-      {
-        type: "boxplot",
-        data: groups.map((group) => summarize(group.values)),
-        itemStyle: {
-          borderColor: "#5a6985",
-          color: "rgba(114, 135, 175, 0.45)"
-        }
-      },
-      ...groups.map((group, groupIndex) => ({
-        type: "scatter" as const,
-        data: group.values.map((value, valueIndex) => [groupIndex, Number((value + (valueIndex % 5) * 0.14 - 0.28).toFixed(2))]),
-        symbolSize: 7,
-        itemStyle: { color: group.color, opacity: 0.8 }
-      }))
-    ]
-  };
-}
+const PAGE_SIZE = 25;
 
 export function GeneMarkerDetailPage() {
-  const { markerDbId = "" } = useParams();
-  const detailQuery = useQuery({
-    queryKey: ["markerdb-detail", markerDbId],
-    queryFn: () => getMarkerRecord(markerDbId),
-    enabled: markerDbId.length > 0
+  const { geneSymbol = "" } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const source = normalizeSource(searchParams.get("source"));
+  const sample = searchParams.get("sample") ?? "";
+  const cancerTypes = searchParams.getAll("cancerType");
+  const chromosomes = searchParams.getAll("chromosome");
+  const variantClasses = searchParams.getAll("variantClass");
+  const variantTypes = searchParams.getAll("variantType");
+  const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1);
+  const isCfDNA = source === "cfDNA";
+
+  const summaryQ = useQuery({
+    queryKey: ["maf-gene-detail", source, geneSymbol, sample, cancerTypes, chromosomes, variantClasses, variantTypes],
+    queryFn: () =>
+      getMafGeneDetail(geneSymbol, {
+        source,
+        sample: sample || undefined,
+        cancerType: cancerTypes,
+        chromosome: chromosomes,
+        variantClass: variantClasses,
+        variantType: variantTypes
+      }),
+    placeholderData: keepPreviousData
   });
 
-  const detail = detailQuery.data;
-  const [selection, setSelection] = useState({
-    omics: "",
-    featureType: "",
-    collection: "",
-    specimen: "",
-    element: ""
+  const dataQ = useQuery({
+    queryKey: ["maf-gene-mutations", source, geneSymbol, sample, cancerTypes, chromosomes, variantClasses, variantTypes, page],
+    queryFn: () =>
+      queryMafGeneMutations(geneSymbol, {
+        source,
+        sample: sample || undefined,
+        cancerType: cancerTypes,
+        chromosome: chromosomes,
+        variantClass: variantClasses,
+        variantType: variantTypes,
+        page,
+        size: PAGE_SIZE
+      }),
+    placeholderData: keepPreviousData
   });
-  const [confirmedSelection, setConfirmedSelection] = useState(selection);
-  const [selectedFeature, setSelectedFeature] = useState("");
-  const [selectedChromosome, setSelectedChromosome] = useState("");
 
-  useEffect(() => {
-    if (!detail) return;
-    const next = {
-      omics: detail.selectedOmics,
-      featureType: detail.selectedFeatureType,
-      collection: detail.selectedCollection,
-      specimen: detail.selectedSpecimen,
-      element: detail.selectedElement
-    };
-    setSelection(next);
-    setConfirmedSelection(next);
-    setSelectedFeature(detail.selectedFeature);
-    setSelectedChromosome(detail.selectedChromosome);
-  }, [detail]);
+  const rows = dataQ.data?.content ?? [];
+  const totalElements = dataQ.data?.totalElements ?? 0;
+  const totalPages = dataQ.data?.totalPages ?? 1;
+  const currentPage = Math.min(page, totalPages || 1);
+  const startIndex = totalElements === 0 ? 0 : (currentPage - 1) * PAGE_SIZE;
+  const summary = summaryQ.data;
 
-  const comparisonGroups = useMemo(() => detail?.comparisonGroups ?? [], [detail]);
+  const buildBackLink = () => {
+    const params = new URLSearchParams();
+    params.set("source", source);
+    params.set("gene", geneSymbol);
+    if (sample) params.set("sample", sample);
+    for (const value of cancerTypes) params.append("cancerType", value);
+    for (const value of chromosomes) params.append("chromosome", value);
+    for (const value of variantClasses) params.append("variantClass", value);
+    for (const value of variantTypes) params.append("variantType", value);
+    return `/gene-search?${params.toString()}`;
+  };
 
-  if (detailQuery.isLoading) {
-    return <p className="panel-note">Loading marker card...</p>;
+  const activeTags = [
+    { label: "Source", value: source },
+    ...(sample ? [{ label: "Sample", value: sample }] : []),
+    ...cancerTypes.map((value) => ({ label: "Cancer", value })),
+    ...chromosomes.map((value) => ({ label: "Chr", value: formatChromosome(value) })),
+    ...variantClasses.map((value) => ({ label: "Class", value })),
+    ...variantTypes.map((value) => ({ label: "Type", value }))
+  ];
+
+  const goToPage = (nextPage: number) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("page", String(nextPage));
+    setSearchParams(next);
+  };
+
+  if (summaryQ.isLoading) {
+    return <p className="panel-note">Loading gene detail...</p>;
   }
 
-  if (detailQuery.isError || !detail) {
+  if (summaryQ.isError || !summary) {
     return (
-      <section className="detail-card empty-card">
-        <h3>Marker card unavailable</h3>
-        <p>The requested MarkerDB entry could not be found in the current placeholder collection.</p>
+      <section className="maf-results-panel">
+        <h3>Gene detail unavailable</h3>
+        <p className="panel-note">The selected gene could not be resolved in the current MAF view.</p>
+        <Link className="button-secondary" to="/gene-search">Back to Gene Search</Link>
       </section>
     );
   }
 
   return (
-    <div className="page-stack markerdb-detail-page">
-      <section className="markerdb-detail-title">
-        <div>
+    <div className="page-stack maf-page maf-detail-page">
+      <section className="maf-hero maf-detail-header">
+        <div className="maf-hero-copy">
+          <span className="maf-eyebrow">Gene Detail</span>
+          <h2>{geneSymbol}</h2>
           <p>
-            Showing biomarker card for <strong>{detail.record.variantName}</strong> in <strong>{detail.record.geneName}</strong>
+            Sample-level mutation records for the selected gene. This page expands the aggregated gene row into concrete
+            barcodes, loci, alleles, classes, and annotations for the current filtered cohort view.
           </p>
-          <span className="markerdb-detail-subline">
-            <Link to="/gene-search">Back to browsing biomarkers</Link>
-          </span>
+        </div>
+        <div className="maf-detail-actions">
+          <Link className="button-secondary" to={buildBackLink()}>Back to Gene Search</Link>
         </div>
       </section>
 
-      <section className="detail-card markerdb-jumpbar">
-        <strong>Jump To Section:</strong>
-        <div className="markerdb-jump-links">
-          <a href="#marker-conditions">Conditions</a>
-          <a href="#marker-identification">Identification</a>
-          <a href="#marker-analysis">Analysis</a>
-          <a href="#marker-locus">DNA Locus</a>
-          <a href="#marker-related">Related</a>
+      <section className="maf-summary-strip" aria-label="Gene Summary">
+        <SummaryCard label="Gene" value={summary.hugoSymbol} helper="Selected HUGO symbol" />
+        <SummaryCard label="Variants" value={formatNumber(summary.totalVariants)} helper="Filtered mutation records" />
+        <SummaryCard label="Samples" value={formatNumber(summary.totalSamples)} helper="Distinct Tumor_Sample_Barcode" />
+        <SummaryCard label="Sites" value={formatNumber(summary.totalCoordinates)} helper="Distinct genomic coordinates" />
+      </section>
+
+      <section className="maf-active-panel">
+        <div className="maf-active-header">
+          <h3>Gene Overview</h3>
+          <span>{source}</span>
+        </div>
+        <div className="maf-active-tags">
+          {activeTags.map((tag) => (
+            <span key={`${tag.label}-${tag.value}`} className="maf-tag">
+              <strong>{tag.label}:</strong> {tag.value}
+            </span>
+          ))}
+        </div>
+        <div className="maf-detail-grid">
+          {isCfDNA ? (
+            <InfoBlock label="Cancer Preview" value={summary.cancerTypesPreview} />
+          ) : null}
+          <InfoBlock label="Sample Preview" value={summary.sampleBarcodesPreview} mono />
+          <InfoBlock label="Coordinate Preview" value={summary.coordinatePreview} mono />
+          <InfoBlock label="Alleles Preview" value={summary.allelesPreview} mono />
+          <InfoBlock label="Class Preview" value={summary.variantClassesPreview} />
+          <InfoBlock label="Type Preview" value={summary.variantTypesPreview} />
+          {isCfDNA ? <InfoBlock label="Annotation Preview" value={summary.annotationPreview} mono /> : null}
         </div>
       </section>
 
-      <DetailSection id="marker-record" title="Record Information">
-        <DetailTable
-          rows={[
-            ["Version", detail.version],
-            ["Created at", detail.createdAt],
-            ["Updated at", detail.updatedAt],
-            ["MarkerDB ID", detail.record.markerDbId]
-          ]}
-        />
-      </DetailSection>
-
-      <DetailSection id="marker-conditions" title="Conditions">
-        <DetailTable
-          rows={[
-            ["Associated conditions", detail.record.associatedConditions.join(", ")],
-            ["Condition hierarchy", detail.conditionsHierarchy.join(" > ")],
-            ["Cancer cohort", detail.record.cancer === "Colonrector" ? "Colorectal" : detail.record.cancer]
-          ]}
-        />
-      </DetailSection>
-
-      <DetailSection id="marker-identification" title="Sequence Variant Identification">
-        <DetailTable
-          rows={[
-            ["Sequence Variant", detail.record.variantName],
-            ["Target gene", `${detail.record.geneName} (${detail.record.geneSymbol})`],
-            ["Genome location (hg38)", detail.record.genomeLocation],
-            ["Description", detail.record.description],
-            ["Organism", detail.organism]
-          ]}
-        />
-      </DetailSection>
-
-      <section className="detail-card markerdb-basic-card">
-        <div className="markerdb-basic-card-title">Basic Information</div>
-        <div className="markerdb-basic-grid">
-          <InfoPair label="HGNC Symbol" value={detail.record.geneSymbol} />
-          <InfoPair label="NCBI" value={<a href={detail.links[0].url} target="_blank" rel="noreferrer">{detail.links[0].label}</a>} />
-          <InfoPair label="Ensembl Id" value={detail.record.ensemblId} />
-          <InfoPair label="Gene Biotype" value={detail.record.geneBiotype} />
-          <InfoPair label="Genome Location (hg38)" value={detail.record.genomeLocation} />
-          <InfoPair label="Specimen" value={detail.record.specimen} />
-        </div>
-      </section>
-
-      <section className="detail-card markerdb-analysis-card" id="marker-analysis">
-        <div className="markerdb-basic-card-title">Analysis</div>
-        <div className="markerdb-note-box">
-          <strong>Notes:</strong>
-          <p>Explore gene data statistics across omics, feature types, collections, specimen sources, and elements. Select options and confirm to refresh the analysis view.</p>
-        </div>
-
-        <div className="markerdb-selection-board">
-          <SelectionColumn title="Omics" options={detail.omicsOptions} value={selection.omics} onSelect={(value) => setSelection((current) => ({ ...current, omics: value }))} />
-          <SelectionColumn title="Feature Type" options={detail.featureTypeOptions} value={selection.featureType} onSelect={(value) => setSelection((current) => ({ ...current, featureType: value }))} />
-          <SelectionColumn title="Collection" options={detail.collectionOptions} value={selection.collection} onSelect={(value) => setSelection((current) => ({ ...current, collection: value }))} />
-          <SelectionColumn title="Specimen" options={detail.specimenOptions} value={selection.specimen} onSelect={(value) => setSelection((current) => ({ ...current, specimen: value }))} />
-          <SelectionColumn title="Element" options={detail.elementOptions} value={selection.element} onSelect={(value) => setSelection((current) => ({ ...current, element: value }))} />
-        </div>
-
-        <div className="markerdb-confirm-row">
-          <button className="button-secondary" type="button" onClick={() => setConfirmedSelection(selection)}>Confirm</button>
-        </div>
-
-        <div className="markerdb-note-box markerdb-note-box-soft">
-          <strong>IMPORTANT:</strong>
-          <p>The charts below use the current confirmed options: {confirmedSelection.omics} / {confirmedSelection.featureType} / {confirmedSelection.collection} / {confirmedSelection.specimen} / {confirmedSelection.element}.</p>
-        </div>
-
-        <div className="markerdb-chart-section">
-          <h3>{confirmedSelection.featureType} Profile</h3>
-          <div className="markerdb-note-box">
-            <strong>Notes:</strong>
-            <p>Shown here are profile distributions for the selected gene across representative disease conditions in the selected collection.</p>
+      <section className="maf-results-panel">
+        <div className="maf-results-header">
+          <div>
+            <h3>Sample-level Mutation Records</h3>
+            <p>
+              Showing {totalElements === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + PAGE_SIZE, totalElements)} of{" "}
+              {formatNumber(totalElements)} rows for {geneSymbol}
+            </p>
           </div>
-          <p className="markerdb-breadcrumb">
-            {confirmedSelection.omics} / {confirmedSelection.featureType} / {confirmedSelection.collection} / {confirmedSelection.specimen} / {confirmedSelection.element}
+          <div className="maf-results-hint">
+            This table is the detailed view behind the aggregated gene row.
+          </div>
+        </div>
+
+        {dataQ.isLoading ? <p className="panel-note">Loading mutation records...</p> : null}
+        {dataQ.isError ? (
+          <p className="panel-note" style={{ color: "#c0392b" }}>
+            Failed to load mutation detail.
           </p>
-          <ReactECharts option={buildProfileOption(`${detail.record.geneSymbol} profile`, detail.profileGroups)} style={{ height: 390 }} />
-        </div>
+        ) : null}
 
-        <div className="markerdb-chart-section">
-          <h3>{confirmedSelection.featureType} Comparison</h3>
-          <div className="markerdb-note-box">
-            <strong>Notes:</strong>
-            <p>Using a Mann-Whitney-like comparison placeholder, this module contrasts two representative disease groups for the selected biomarker profile.</p>
-          </div>
-          <div className="markerdb-compare-form">
-            <label>
-              Disease 1
-              <select value={comparisonGroups[0]?.label ?? ""} disabled>
-                {comparisonGroups.map((group) => <option key={group.label}>{group.label}</option>)}
-              </select>
-            </label>
-            <label>
-              Disease 2
-              <select value={comparisonGroups[1]?.label ?? ""} disabled>
-                {comparisonGroups.map((group) => <option key={group.label}>{group.label}</option>)}
-              </select>
-            </label>
-            <button className="button-secondary" type="button" disabled>Draw</button>
-          </div>
-          <ReactECharts option={buildComparisonOption(comparisonGroups)} style={{ height: 360 }} />
-        </div>
-      </section>
-
-      <section className="detail-card markerdb-track-card" id="marker-locus">
-        <div className="markerdb-basic-card-title">DNA Locus Browser</div>
-        <div className="markerdb-note-box">
-          <strong>Notes:</strong>
-          <p>You can select tracks from the feature list and inspect chromosome-wide signal placement for the current biomarker card.</p>
-        </div>
-
-        <div className="markerdb-track-shell">
-          <aside className="markerdb-track-sidebar">
-            <div className="markerdb-track-sidebar-title">Feature</div>
-            {detail.trackFeatures.map((feature) => (
-              <button
-                key={feature}
-                type="button"
-                className={`markerdb-track-item${feature === selectedFeature ? " active" : ""}`}
-                onClick={() => setSelectedFeature(feature)}
-              >
-                {feature}
-              </button>
-            ))}
-
-            <div className="markerdb-track-sidebar-title">Tracks</div>
-            <div className="markerdb-track-empty">Please select</div>
-          </aside>
-
-          <div className="markerdb-track-main">
-            <div className="markerdb-track-controls">
-              <div className="markerdb-track-left">
-                <strong>IGV</strong>
-                <span>hg38</span>
-                <select value={selectedChromosome} onChange={(event) => setSelectedChromosome(event.target.value)}>
-                  {CHROMOSOME_LABELS.map((chromosome) => <option key={chromosome} value={chromosome}>{chromosome}</option>)}
-                </select>
-                <input value={detail.record.geneSymbol} readOnly />
-              </div>
-              <div className="markerdb-track-right">
-                <button type="button">Cursor Guide</button>
-                <button type="button" className="active">Track Labels</button>
-                <button type="button">Save SVG</button>
-              </div>
+        {!dataQ.isLoading && !dataQ.isError ? (
+          rows.length === 0 ? (
+            <div className="browse-empty-state">
+              <h4>No mutation rows found</h4>
+              <p>Try broadening the filters or return to the gene summary table.</p>
             </div>
+          ) : (
+            <>
+              <div className="maf-table-wrap">
+                <table className="maf-table">
+                  <thead>
+                    <tr>
+                      <th>Gene</th>
+                      {isCfDNA ? <th>Cancer</th> : null}
+                      <th>Sample Barcode</th>
+                      <th>Coordinate</th>
+                      <th>Alleles</th>
+                      <th>Class</th>
+                      <th>Type</th>
+                      {isCfDNA ? <th>Annotation</th> : null}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <tr key={`${row.id}-${row.hugoSymbol}-${row.startPosition}-${row.tumorSampleBarcode}`}>
+                        <td>
+                          <div className="maf-cell-title">{row.hugoSymbol}</div>
+                          {row.transcript ? <div className="maf-cell-sub">{row.transcript}</div> : null}
+                        </td>
+                        {isCfDNA ? <td>{row.cancerType || "-"}</td> : null}
+                        <td className="maf-mono-cell">{row.tumorSampleBarcode}</td>
+                        <td className="maf-mono-cell">
+                          {formatChromosome(row.chromosome)}:{row.startPosition}
+                          {row.endPosition && row.endPosition !== row.startPosition ? `-${row.endPosition}` : ""}
+                        </td>
+                        <td className="maf-mono-cell">
+                          {row.referenceAllele} &rarr; {row.tumorSeqAllele2}
+                        </td>
+                        <td>{row.variantClassification}</td>
+                        <td>{row.variantType}</td>
+                        {isCfDNA ? (
+                          <td>
+                            <div className="maf-annotation-block">
+                              {row.functionalRegion ? <span>{row.functionalRegion}</span> : null}
+                              {row.exonicFunction ? <span>{row.exonicFunction}</span> : null}
+                              {row.exon ? <span>{row.exon}</span> : null}
+                              {row.aaChange ? <span className="maf-mono-cell">{row.aaChange}</span> : null}
+                            </div>
+                          </td>
+                        ) : null}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-            <div className="markerdb-chromosome-strip">
-              {CHROMOSOME_LABELS.map((chromosome) => (
-                <button
-                  key={chromosome}
-                  type="button"
-                  className={chromosome === selectedChromosome ? "active" : ""}
-                  onClick={() => setSelectedChromosome(chromosome)}
-                >
-                  {chromosome.replace("chr", "")}
+              <div className="pagination-bar">
+                <button className="button-secondary" type="button" disabled={currentPage <= 1} onClick={() => goToPage(currentPage - 1)}>
+                  Previous
                 </button>
-              ))}
-            </div>
-
-            <div className="markerdb-track-lanes">
-              {detail.trackLanes.map((lane) => (
-                <div key={lane.id} className="markerdb-lane-row">
-                  <div className="markerdb-lane-label">{lane.label}</div>
-                  <div className="markerdb-lane-segments">
-                    {lane.bars.map((bar, index) => {
-                      const chromosome = CHROMOSOME_LABELS[index];
-                      return (
-                        <button
-                          key={`${lane.id}-${chromosome}`}
-                          type="button"
-                          className={`markerdb-lane-segment${chromosome === selectedChromosome ? " active" : ""}`}
-                          style={{
-                            backgroundImage: "repeating-linear-gradient(90deg, rgba(24, 34, 176, 0.92) 0 2px, transparent 2px 6px)",
-                            opacity: Math.min(1, 0.28 + bar / 22)
-                          }}
-                          onClick={() => setSelectedChromosome(chromosome)}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="markerdb-locus-view">
-              <div className="markerdb-locus-ruler">
-                {Array.from({ length: 10 }, (_, index) => (
-                  <span key={index}>{index + 1}</span>
-                ))}
+                <span>Page {currentPage} / {totalPages}</span>
+                <button className="button-secondary" type="button" disabled={currentPage >= totalPages} onClick={() => goToPage(currentPage + 1)}>
+                  Next
+                </button>
               </div>
-              <div className="markerdb-locus-track">
-                <div className="markerdb-locus-line" />
-                <div className="markerdb-locus-marker" style={{ left: "62%" }}>
-                  <span>{detail.record.markerDbId}</span>
-                </div>
-              </div>
-              <p className="markerdb-locus-caption">
-                {selectedFeature} on {selectedChromosome} at {detail.record.chromosome}:{formatNumber(detail.record.position)}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="detail-card markerdb-related-card" id="marker-related">
-        <div className="markerdb-basic-card-title">Related Biomarkers</div>
-        {detail.relatedMarkers.length === 0 ? (
-          <div className="markerdb-related-empty">No biomarker related to gene {detail.record.geneSymbol} was found in the current collection.</div>
-        ) : (
-          <div className="markerdb-related-links">
-            {detail.relatedMarkers.map((markerId) => (
-              <Link key={markerId} to={`/gene-search/${markerId}`}>{markerId}</Link>
-            ))}
-          </div>
-        )}
+            </>
+          )
+        ) : null}
       </section>
     </div>
   );
 }
 
-function DetailSection({
-  id,
-  title,
-  children
-}: {
-  id: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="detail-card markerdb-detail-section" id={id}>
-      <div className="markerdb-section-title">{title}</div>
-      {children}
-    </section>
-  );
+function normalizeSource(value: string | null) {
+  return value === "TCGA" ? "TCGA" : "cfDNA";
 }
 
-function DetailTable({
-  rows
-}: {
-  rows: [string, ReactNode][];
-}) {
-  return (
-    <table className="markerdb-detail-table">
-      <tbody>
-        {rows.map(([label, value]) => (
-          <tr key={label}>
-            <th>{label}</th>
-            <td>{value}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+function formatChromosome(value: string) {
+  if (!value) return "-";
+  return value.startsWith("chr") ? value : `chr${value}`;
 }
 
-function InfoPair({
+function SummaryCard({
   label,
-  value
+  value,
+  helper
 }: {
   label: string;
-  value: ReactNode;
+  value: string;
+  helper: string;
 }) {
   return (
-    <div className="markerdb-info-pair">
+    <div className="maf-summary-card">
       <span>{label}</span>
       <strong>{value}</strong>
+      <p>{helper}</p>
     </div>
   );
 }
 
-function SelectionColumn({
-  title,
-  options,
+function InfoBlock({
+  label,
   value,
-  onSelect
+  mono = false
 }: {
-  title: string;
-  options: string[];
+  label: string;
   value: string;
-  onSelect: (value: string) => void;
+  mono?: boolean;
 }) {
   return (
-    <div className="markerdb-selection-column">
-      <h4>{title}</h4>
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          className={`markerdb-selection-option${option === value ? " active" : ""}`}
-          onClick={() => onSelect(option)}
-        >
-          {option}
-        </button>
-      ))}
+    <div className="maf-detail-block">
+      <span>{label}</span>
+      <div className={`maf-preview-value${mono ? " maf-mono-cell" : ""}`}>{value || "-"}</div>
     </div>
   );
 }

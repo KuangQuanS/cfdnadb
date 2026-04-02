@@ -20,7 +20,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/gene-search" element={<GeneSearchPage />} />
-          <Route path="/gene-search/:markerDbId" element={<GeneMarkerDetailPage />} />
+          <Route path="/gene-search/:geneSymbol" element={<GeneMarkerDetailPage />} />
           <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="/studies/:id" element={<StudyDetailPage />} />
           <Route path="/downloads" element={<DownloadsPage />} />

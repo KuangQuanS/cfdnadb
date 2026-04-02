@@ -283,6 +283,20 @@ export interface MafSummary {
   totalGenes: number;
 }
 
+export interface MafGeneSummary {
+  hugoSymbol: string;
+  totalVariants: number;
+  totalSamples: number;
+  totalCoordinates: number;
+  cancerTypesPreview: string;
+  sampleBarcodesPreview: string;
+  coordinatePreview: string;
+  allelesPreview: string;
+  variantClassesPreview: string;
+  variantTypesPreview: string;
+  annotationPreview: string;
+}
+
 export interface StatisticsSource {
   source: string;
   hasGenePlots: boolean;
