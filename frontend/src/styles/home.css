@@ -5,7 +5,7 @@
   position: relative;
   background: radial-gradient(circle at 50% 50%, #e0ecfd 0%, #bacfee 100%);
   color: #2c3e50;
-  padding: 40px 24px 60px;
+  padding: 40px 100px 60px;
   overflow: hidden;
   border-bottom: 3px solid #e2e8f0;
 }
@@ -21,9 +21,9 @@
 }
 
 .gdc-hero-inner {
-  max-width: 1140px;
+  max-width: none;
   width: 100%;
-  padding: 0 32px;
+  padding: 0 20px;
   margin: 0 auto;
   position: relative;
   z-index: 2;
@@ -283,25 +283,25 @@
 
 .portal-search-section {
   background: radial-gradient(circle at top right, #ffffff, #fdfcfc);
-  padding: 56px 28px;
+  padding: 56px 0;
   border-bottom: 1px solid #E2E8F0;
 }
 
 .portal-modules-section {
   background: #F8FAFC;
-  padding: 80px 28px;
+  padding: 72px 0;
 }
 
 .portal-data-section {
   background: #FFFFFF;
-  padding: 80px 28px;
+  padding: 72px 0;
   border-top: 1px solid #E2E8F0;
 }
 
 .portal-section-inner {
-  max-width: 1140px;
-  width: 100%;
-  padding: 0 32px;
+  max-width: none;
+  width: min(1500px, calc(100vw - 400px));
+  padding: 0;
   margin: 0 auto;
 }
 
@@ -457,7 +457,7 @@
 .portal-modules-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  gap: 18px;
 }
 
 .portal-module-card {
@@ -522,7 +522,7 @@
 .portal-data-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  gap: 18px;
 }
 
 .portal-data-item {
@@ -576,7 +576,7 @@
 /* About */
 .portal-about-section {
   background: #0F172A;
-  padding: 80px 28px;
+  padding: 72px 0;
   text-align: center;
   border-top: 1px solid #1E293B;
 }
@@ -626,6 +626,9 @@
 .portal-about-actions .btn-outline:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.4); }
 
 @media (max-width: 900px) {
+  .gdc-hero {
+    padding: 32px 0 48px;
+  }
   .portal-query-input-group {
     flex-direction: column;
     align-items: stretch;
@@ -638,5 +641,15 @@
   .portal-modules-grid,
   .portal-data-grid {
     grid-template-columns: 1fr;
+  }
+  .portal-search-section,
+  .portal-modules-section,
+  .portal-data-section,
+  .portal-about-section {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .portal-section-inner {
+    width: 100%;
   }
 }
