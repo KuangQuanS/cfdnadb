@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type PropsWithChildren } from "react";
-import { useIsFetching } from "@tanstack/react-query";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { PageLoader } from "./PageLoader";
 
@@ -14,9 +13,6 @@ const navItems = [
 
 export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
-  const activePendingFetches = useIsFetching({
-    predicate: (query) => query.state.fetchStatus === "fetching" && query.state.data === undefined
-  });
   const [routeLoading, setRouteLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const firstRenderRef = useRef(true);
@@ -33,7 +29,7 @@ export function AppShell({ children }: PropsWithChildren) {
     return () => window.clearTimeout(timer);
   }, [location.pathname]);
 
-  const busy = routeLoading || activePendingFetches > 0;
+  const busy = routeLoading;
 
   useEffect(() => {
     let timer: number | undefined;
@@ -59,7 +55,7 @@ export function AppShell({ children }: PropsWithChildren) {
 
   return (
     <div className="app-shell">
-      {showLoader ? <PageLoader overlay message={routeLoading ? "Loading page..." : "Loading data..."} /> : null}
+      {showLoader ? <PageLoader overlay message="Loading page..." /> : null}
 
       <header className="site-header">
         <div className="header-container">
@@ -89,14 +85,8 @@ export function AppShell({ children }: PropsWithChildren) {
           <div className="footer-brand">
             <p className="footer-logo">cfDNA Atlas</p>
             <p>
-              A curated database of somatic mutations identified from circulating cell-free DNA across multiple cancer cohorts. Built to support liquid biopsy research, biomarker discovery, and cross-cohort comparative genomics.
+              Somatic mutation atlas for plasma cell-free DNA across multiple cancer cohorts.
             </p>
-            <div className="badge-row">
-              <span className="badge">hg38</span>
-              <span className="badge">ANNOVAR</span>
-              <span className="badge">MuTect2</span>
-              <span className="badge warm">cfDNA</span>
-            </div>
           </div>
 
           <div className="footer-col">
@@ -104,17 +94,6 @@ export function AppShell({ children }: PropsWithChildren) {
             <ul>
               {navItems.map((item) => (
                 <li key={item.to}><Link to={item.to}>{item.label}</Link></li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="footer-col">
-            <h4>Cohorts</h4>
-            <ul>
-              {["Breast", "Colorectal", "Liver", "Lung", "PDAC"].map((c) => (
-                <li key={c}>
-                  <Link to={`/mutation-analysis?cancer=${c === "Colorectal" ? "Colonrector" : c}`}>{c}</Link>
-                </li>
               ))}
             </ul>
           </div>

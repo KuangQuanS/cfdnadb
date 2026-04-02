@@ -62,13 +62,12 @@ export function HeroCarousel() {
             <h2 className="portal-hero-h2">Data Portal Summary</h2>
             <div className="portal-stats-bar">
               {[
-                { icon: "cohort", label: "Cohorts", value: String(stats.cohortCount) },
-                { icon: "sample", label: "Samples", value: formatNumber(stats.totalSamples) },
-                { icon: "variant", label: "Variants", value: formatNumber(stats.totalVariants) },
-                { icon: "gene", label: "Genes", value: formatNumber(stats.totalGenes) }
+                { label: "Cohorts", value: String(stats.cohortCount) },
+                { label: "Samples", value: formatNumber(stats.totalSamples) },
+                { label: "Variants", value: formatNumber(stats.totalVariants) },
+                { label: "Genes", value: formatNumber(stats.totalGenes) }
               ].map((s) => (
                 <div key={s.label} className="portal-stat-item">
-                  <PortalIcon type={s.icon} />
                   <strong>{s.value}</strong>
                   <span>{s.label}</span>
                 </div>
@@ -148,41 +147,3 @@ function BodySilhouette({ cohorts }: { cohorts: CancerSummary[] }) {
   );
 }
 
-/* ============================================================
-   Icons for the stats bar
-   ============================================================ */
-function PortalIcon({ type }: { type: string }) {
-  const style = { width: 32, height: 32, opacity: 0.8 };
-  switch (type) {
-    case "cohort":
-      return (
-        <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
-          <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
-        </svg>
-      );
-    case "sample":
-      return (
-        <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        </svg>
-      );
-    case "variant":
-      return (
-        <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-        </svg>
-      );
-    case "gene":
-      return (
-        <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <circle cx="12" cy="12" r="10" /><path d="M8 12h8M12 8v8" />
-        </svg>
-      );
-    default:
-      return null;
-  }
-}
