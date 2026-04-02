@@ -5388,6 +5388,10 @@ button:disabled:hover {
   flex: 1 1 280px;
 }
 
+.maf-detail-filter-autocomplete {
+  position: relative;
+}
+
 .maf-detail-filter-field input,
 .maf-detail-filter-field select {
   min-height: 40px;
@@ -5398,6 +5402,11 @@ button:disabled:hover {
   color: #30435f;
   font-size: 0.94rem;
   font-weight: 600;
+}
+
+.maf-detail-filter-autocomplete .maf-autocomplete-dropdown {
+  top: calc(100% + 4px);
+  z-index: 12;
 }
 
 .maf-detail-filter-actions {

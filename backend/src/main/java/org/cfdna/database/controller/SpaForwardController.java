@@ -9,12 +9,13 @@ public class SpaForwardController {
     @GetMapping({
             "/",
             "/browse",
+            "/statistics",
             "/downloads",
             "/visualizations",
             "/about",
             "/vcf-demo",
             "/gene-search",
-            "/gene-search/{markerDbId}",
+            "/gene-search/{geneSymbol}",
             "/mutation-analysis",
             "/charts",
             "/studies/{id}"

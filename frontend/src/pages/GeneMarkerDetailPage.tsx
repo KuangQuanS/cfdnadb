@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useDeferredValue, useEffect, useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { getMafFilterOptions, getMafGeneDetail, queryMafGeneMutations } from "../api/client";
+import { getMafFilterOptions, getMafGeneDetail, getMafSampleSuggestions, queryMafGeneMutations } from "../api/client";
 import { formatNumber } from "../utils/format";
 
 const PAGE_SIZE = 25;
@@ -23,6 +23,7 @@ export function GeneMarkerDetailPage() {
   const [selectedChromosome, setSelectedChromosome] = useState(chromosomes[0] ?? "");
   const [selectedClass, setSelectedClass] = useState(variantClasses[0] ?? "");
   const [selectedType, setSelectedType] = useState(variantTypes[0] ?? "");
+  const deferredSampleInput = useDeferredValue(sampleInput.trim());
 
   useEffect(() => {
     setSampleInput(sample);
@@ -48,6 +49,14 @@ export function GeneMarkerDetailPage() {
     queryKey: ["maf-filter-options", source],
     queryFn: () => getMafFilterOptions(source),
     staleTime: 10 * 60_000,
+    placeholderData: keepPreviousData
+  });
+
+  const sampleSuggestionsQ = useQuery({
+    queryKey: ["maf-sample-suggestions", source, deferredSampleInput],
+    queryFn: () => getMafSampleSuggestions(source, deferredSampleInput, 10),
+    enabled: deferredSampleInput.length >= 2,
+    staleTime: 60_000,
     placeholderData: keepPreviousData
   });
 
@@ -212,13 +221,28 @@ export function GeneMarkerDetailPage() {
         </div>
 
         <form className="maf-detail-filterbar" onSubmit={submitTableFilter}>
-          <label className="maf-detail-filter-field maf-detail-filter-grow">
+          <label className="maf-detail-filter-field maf-detail-filter-grow maf-detail-filter-autocomplete">
             <span>Sample Barcode</span>
             <input
               value={sampleInput}
               onChange={(event) => setSampleInput(event.target.value)}
               placeholder="Filter by sample barcode"
             />
+            {sampleInput.trim().length >= 2 && (sampleSuggestionsQ.isFetching || (sampleSuggestionsQ.data?.length ?? 0) > 0) ? (
+              <div className="maf-autocomplete-dropdown">
+                {sampleSuggestionsQ.isFetching ? <div className="maf-autocomplete-item muted">Loading...</div> : null}
+                {!sampleSuggestionsQ.isFetching && (sampleSuggestionsQ.data ?? []).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className="maf-autocomplete-item"
+                    onClick={() => setSampleInput(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </label>
 
           {isCfDNA ? (
