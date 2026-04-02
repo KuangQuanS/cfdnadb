@@ -3,25 +3,47 @@ import { Link, useNavigate } from "react-router-dom";
 import { HeroCarousel } from "../components/HeroCarousel";
 import { CANCER_OPTIONS, DEFAULT_CANCER, DEFAULT_GENE } from "../constants/cfdna";
 import { formatNumber } from "../utils/format";
+import "../styles/home.css";
 
 const DATA_SOURCES = [
   {
-    title: "Public cfDNA studies",
-    source: "Published GEO / PMID-curated cohorts",
+    title: "Public cfDNA Studies",
+    source: "GEO / PMID-curated",
     sampleCount: 476,
-    note: "Curated plasma cfDNA studies integrated into a harmonized variant search layer."
+    note: "Harmonized and curated external plasma cfDNA datasets."
   },
   {
-    title: "In-house cfDNA cohort",
-    source: "Lee Lab generated plasma sequencing data",
+    title: "In-house Cohort",
+    source: "Lee Lab",
     sampleCount: 1425,
-    note: "Self-generated cohort processed with the same calling and annotation pipeline used across the portal."
+    note: "Proprietary sequencing data processed via standardized pipeline."
   },
   {
-    title: "TCGA reference cohort",
-    source: "TCGA MAF mutation reference layer",
+    title: "TCGA Reference",
+    source: "TCGA MAF",
     sampleCount: 6579,
-    note: "Reference somatic mutation panel used for gene-level and cohort-level comparison."
+    note: "Baseline somatic mutation data for gene and cohort comparison."
+  }
+];
+
+const FEATURES = [
+  {
+    title: "Gene Search",
+    desc: "Targeted querying of somatic variants by gene symbol with comprehensive functional annotations.",
+    link: "/gene-search",
+    icon: "🔬",
+  },
+  {
+    title: "Statistical Analysis",
+    desc: "Interactive cohort-level mutation plots and gene-specific structural distribution visualization.",
+    link: "/statistics",
+    icon: "📊",
+  },
+  {
+    title: "Data Downloads",
+    desc: "Access annotated tables, MAF summaries, and raw standardized data for downstream research.",
+    link: "/downloads",
+    icon: "📥",
   }
 ];
 
@@ -39,94 +61,102 @@ export function HomePage() {
   return (
     <>
       <HeroCarousel />
-      <div className="page-stack home-page-stack">
-        <section className="home-search-band animate-fade-up">
-          <div className="home-search-shell">
-            <div className="home-search-copy">
-              <p className="section-eyebrow">Variant search</p>
-              <h2>Search cfDNA somatic variants by cohort and gene</h2>
-              <p className="section-description">
-                Query aggregated ANNOVAR-annotated multianno files across cancer cohorts. Enter a gene symbol to retrieve matched variant records with chromosomal coordinates, functional consequence, and per-sample barcode support.
-              </p>
+
+      <main className="portal-home">
+        {/* Unified Search Section */}
+        <section className="portal-search-section">
+          <div className="portal-search-container animate-fade-up">
+            <div className="portal-search-header">
+              <h2>Query Somatic Variants</h2>
+              <p>Search across multianno cohorts using standardized gene symbols</p>
             </div>
-            <form className="hero-search-form home-search-form" onSubmit={handleSearch}>
-              <div className="hero-search-grid home-search-grid">
-                <label className="hero-field">
-                  <span>Cancer cohort</span>
+            
+            <form className="portal-query-builder" onSubmit={handleSearch}>
+              <div className="portal-query-input-group">
+                <div className="portal-query-field cohort-select">
+                  <span className="field-label">Cohort</span>
                   <select name="cancer" defaultValue={DEFAULT_CANCER}>
-                    {CANCER_OPTIONS.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
+                    {CANCER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
-                </label>
-                <label className="hero-field hero-field-wide">
-                  <span>Gene symbol</span>
-                  <input name="gene" type="text" defaultValue={DEFAULT_GENE} placeholder="TP53, KRAS, EGFR, PIK3CA..." />
-                </label>
-                <button type="submit" className="button-primary search-button">Search</button>
+                </div>
+                <div className="portal-query-divider" />
+                <div className="portal-query-field gene-input">
+                  <span className="field-label">Gene Symbol</span>
+                  <input name="gene" type="text" defaultValue={DEFAULT_GENE} placeholder="e.g. TP53, KRAS, EGFR" />
+                </div>
+                <button type="submit" className="portal-query-submit">Search</button>
               </div>
             </form>
-            <div className="search-tags">
-              <span>Common queries:</span>
-              <Link to="/gene-search?cancer=Breast&gene=TP53">Breast / TP53</Link>
-              <Link to="/gene-search?cancer=Colonrector&gene=KRAS">Colorectal / KRAS</Link>
-              <Link to="/gene-search?cancer=Breast&gene=PIK3CA">Breast / PIK3CA</Link>
-              <Link to="/gene-search?cancer=Colonrector&gene=APC">Colorectal / APC</Link>
-            </div>
-            <div className="home-search-hints">
-              <span>Start with Gene Search for a known target gene.</span>
-              <span>Use Browse when you need cohort-wide exploration.</span>
-              <span>Use Mutation Analysis and Downloads for comparison and export.</span>
+            
+            <div className="portal-query-examples">
+              <span>Examples:</span>
+              <div className="example-links">
+                <Link to="/gene-search?cancer=Breast&gene=TP53">Breast / TP53</Link>
+                <Link to="/gene-search?cancer=Colonrector&gene=KRAS">Colorectal / KRAS</Link>
+                <Link to="/gene-search?cancer=Lung&gene=EGFR">Lung / EGFR</Link>
+              </div>
             </div>
           </div>
         </section>
 
-        <div className="home-info-grid animate-fade-up animate-fade-up-2">
-          <section className="home-flat-section home-flat-section-tight">
-            <div className="home-section-head">
-              <div>
-                <p className="section-eyebrow">Data foundation</p>
-                <h3>What is currently inside the portal</h3>
-              </div>
-            </div>
-            <p className="home-section-note">
-              The current release combines curated public cfDNA studies, internally generated plasma cfDNA data, and a TCGA mutation reference layer for direct lookup and comparative interpretation.
-            </p>
-            <div className="home-dataset-grid">
-              {DATA_SOURCES.map((item) => (
-                <article key={item.title} className="home-dataset-row">
-                  <div className="home-dataset-meta">
-                    <h4>{item.title}</h4>
-                    <p>{item.source}</p>
-                  </div>
-                  <div className="home-dataset-count">
-                    <strong>{formatNumber(item.sampleCount)}</strong>
-                    <span>samples</span>
-                  </div>
-                  <p className="home-dataset-note">{item.note}</p>
-                </article>
-              ))}
-            </div>
-          </section>
+        {/* Feature Modules */}
+        <section className="portal-modules-section animate-fade-up animate-fade-up-2">
+          <div className="portal-section-title">
+            <h2>Analytical Modules</h2>
+            <div className="title-underline" />
+          </div>
+          <div className="portal-modules-grid">
+            {FEATURES.map((f) => (
+              <Link key={f.title} to={f.link} className="portal-module-card">
+                <div className="module-icon">{f.icon}</div>
+                <div className="module-content">
+                  <h3>{f.title}</h3>
+                  <p>{f.desc}</p>
+                </div>
+                <div className="module-action">Explore &rarr;</div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
-          <section className="home-overview-section home-overview-panel">
-            <div className="home-section-head">
-              <div>
-                <p className="section-eyebrow">About this resource</p>
-                <h3>cfDNA Atlas</h3>
+        {/* Data Architecture */}
+        <section className="portal-data-section animate-fade-up animate-fade-up-3">
+          <div className="portal-section-title">
+            <h2>Data Architecture</h2>
+            <div className="title-underline" />
+            <p className="section-subtitle">Triple-layered harmonized somatic data for robust comparative analysis.</p>
+          </div>
+          <div className="portal-data-grid">
+            {DATA_SOURCES.map((d, i) => (
+              <div key={d.title} className="portal-data-item">
+                <div className="data-item-number">0{i + 1}</div>
+                <div className="data-item-details">
+                  <span className="data-count">{formatNumber(d.sampleCount)} Samples</span>
+                  <h4>{d.title}</h4>
+                  <p>{d.note}</p>
+                </div>
               </div>
-            </div>
-            <p className="home-reference-copy">
-              cfDNA Atlas is a somatic mutation database for plasma cell-free DNA across multiple cancer cohorts. It is designed for direct variant lookup, cohort-level exploration, and downstream comparative analysis in liquid biopsy research.
+            ))}
+          </div>
+        </section>
+
+        {/* Footer / About Note */}
+        <section className="portal-about-section animate-fade-up animate-fade-up-4">
+          <div className="portal-about-content">
+            <h2>About cfDNA Atlas</h2>
+            <p>
+              The cfDNA Atlas is an academic somatic mutation database indexing plasma cell-free DNA 
+              across diverse cancer cohorts. Built for precision oncology, the platform supports 
+              direct variant lookups, comprehensive cohort-level statistics, and downstream 
+              comparative computational analysis.
             </p>
-            <div className="home-reference-actions">
-              <Link to="/browse" className="button-secondary inline-button home-secondary-button">Browse variants</Link>
-              <Link to="/downloads" className="button-secondary inline-button home-secondary-button">Downloads</Link>
-              <Link to="/about" className="button-secondary inline-button home-secondary-button">Citation</Link>
+            <div className="portal-about-actions">
+              <Link to="/browse" className="btn-solid">Browse Data Matrix</Link>
+              <Link to="/downloads" className="btn-outline">Access Repositories</Link>
             </div>
-          </section>
-        </div>
-      </div>
+          </div>
+        </section>
+      </main>
     </>
   );
 }
