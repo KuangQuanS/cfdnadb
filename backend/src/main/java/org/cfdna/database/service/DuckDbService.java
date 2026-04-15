@@ -2,6 +2,7 @@ package org.cfdna.database.service;
 
 import org.cfdna.database.dto.CancerAssetDto;
 import org.cfdna.database.dto.CancerSummaryDto;
+import org.cfdna.database.dto.CohortFileDto;
 import org.cfdna.database.dto.DataFileDto;
 import org.cfdna.database.dto.DatabaseStatsDto;
 import org.cfdna.database.dto.GeneSummaryDto;
@@ -39,6 +40,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -199,8 +201,8 @@ public class DuckDbService {
                                                       String exonicFunc, String chr, String sample,
                                                       Long startMin, Long startMax,
                                                       int page, int pageSize) {
-        Path aggregateMultianno = resolveAggregateMultianno(validateCancer(cancer));
-        if (!Files.isRegularFile(aggregateMultianno) || !hasRequiredColumns(aggregateMultianno, REQUIRED_MULTIANNO_COLUMNS)) {
+        String readExpr = resolveMultiCancerReadExpr(cancer);
+        if (readExpr == null) {
             return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
         }
 
@@ -215,8 +217,7 @@ public class DuckDbService {
 
         String whereClause = buildVariantWhereClause(hasGene, hasFunc, hasExonic, hasChr, hasSample, hasStartMin, hasStartMax);
 
-        String countSql = "SELECT COUNT(*) AS total_rows FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) "
-                + whereClause;
+        String countSql = "SELECT COUNT(*) AS total_rows FROM " + readExpr + " " + whereClause;
         String dataSql = "SELECT " +
                 "  COALESCE(CAST(Chr AS VARCHAR), '') AS chr, " +
                 "  COALESCE(CAST(Start AS VARCHAR), '') AS start_pos, " +
@@ -228,13 +229,13 @@ public class DuckDbService {
                 "  COALESCE(CAST(\"Gene.refGene\" AS VARCHAR), '') AS gene_symbol, " +
                 "  COALESCE(CAST(\"AAChange.refGene\" AS VARCHAR), '') AS aa_change, " +
                 "  COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '') AS sample_barcode " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) " +
+                "FROM " + readExpr + " " +
                 whereClause +
                 "ORDER BY chr ASC, start_pos ASC LIMIT ? OFFSET ?";
 
         long totalRows;
         try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
-             PreparedStatement countStmt = connection.prepareStatement(countSql.formatted(toDuckDbPath(aggregateMultianno)))) {
+             PreparedStatement countStmt = connection.prepareStatement(countSql)) {
             int idx = 1;
             idx = bindBrowseParams(countStmt, idx, hasGene, normalizedGene, hasFunc, funcClass,
                     hasExonic, exonicFunc, hasChr, chr, hasSample, sample, hasStartMin, startMin, hasStartMax, startMax);
@@ -245,7 +246,7 @@ public class DuckDbService {
             if (totalRows == 0) return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
 
             List<GeneVariantDto> content = new ArrayList<>();
-            try (PreparedStatement dataStmt = connection.prepareStatement(dataSql.formatted(toDuckDbPath(aggregateMultianno), toDuckDbPath(aggregateMultianno)))) {
+            try (PreparedStatement dataStmt = connection.prepareStatement(dataSql)) {
                 int di = 1;
                 di = bindBrowseParams(dataStmt, di, hasGene, normalizedGene, hasFunc, funcClass,
                         hasExonic, exonicFunc, hasChr, chr, hasSample, sample, hasStartMin, startMin, hasStartMax, startMax);
@@ -352,9 +353,9 @@ public class DuckDbService {
                                            boolean hasStartMin, boolean hasStartMax) {
         List<String> conditions = new ArrayList<>();
         if (hasGene) conditions.add("POSITION(? IN LOWER(COALESCE(\"Gene.refGene\", ''))) > 0");
-        if (hasFunc) conditions.add("COALESCE(\"Func.refGene\", '') = ?");
-        if (hasExonic) conditions.add("COALESCE(\"ExonicFunc.refGene\", '') = ?");
-        if (hasChr) conditions.add("COALESCE(CAST(Chr AS VARCHAR), '') = ?");
+        if (hasFunc) conditions.add("TRIM(COALESCE(\"Func.refGene\", '')) IN (SELECT TRIM(UNNEST(string_split(?, ','))))");
+        if (hasExonic) conditions.add("TRIM(COALESCE(\"ExonicFunc.refGene\", '')) IN (SELECT TRIM(UNNEST(string_split(?, ','))))");
+        if (hasChr) conditions.add("TRIM(COALESCE(CAST(Chr AS VARCHAR), '')) IN (SELECT TRIM(UNNEST(string_split(?, ','))))");
         if (hasSample) conditions.add("COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '') = ?");
         if (hasStartMin) conditions.add("TRY_CAST(Start AS BIGINT) >= ?");
         if (hasStartMax) conditions.add("TRY_CAST(Start AS BIGINT) <= ?");
@@ -445,21 +446,19 @@ public class DuckDbService {
     }
 
     public List<String> getAllGenes(String cancer) {
-        Path aggregateMultianno = resolveAggregateMultianno(validateCancer(cancer));
-        if (!Files.isRegularFile(aggregateMultianno)) {
-            return List.of();
-        }
+        String readExpr = resolveMultiCancerReadExpr(cancer);
+        if (readExpr == null) return List.of();
         String sql = "SELECT DISTINCT TRIM(gene_name) AS gene " +
                 "FROM (" +
                 "  SELECT UNNEST(STRING_SPLIT(COALESCE(\"Gene.refGene\", ''), ';')) AS gene_name " +
-                "  FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true)" +
+                "  FROM " + readExpr +
                 ") split_genes " +
                 "WHERE TRIM(gene_name) <> '' AND TRIM(gene_name) <> '.' " +
                 "ORDER BY gene ASC";
         List<String> results = new ArrayList<>();
         try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
              Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(sql.formatted(toDuckDbPath(aggregateMultianno)))) {
+             ResultSet rs = statement.executeQuery(sql)) {
             while (rs.next()) results.add(rs.getString("gene"));
             return results;
         } catch (SQLException exception) {
@@ -469,24 +468,22 @@ public class DuckDbService {
     }
 
     public List<String> getGeneSuggestions(String cancer, String query, int limit) {
-        Path aggregateMultianno = resolveAggregateMultianno(validateCancer(cancer));
-        if (!Files.isRegularFile(aggregateMultianno) || query == null || query.isBlank()) {
-            return List.of();
-        }
+        String readExpr = resolveMultiCancerReadExpr(cancer);
+        if (readExpr == null || query == null || query.isBlank()) return List.of();
         String q = query.trim().toLowerCase(Locale.ROOT);
         String sql = "SELECT DISTINCT TRIM(gene_name) AS gene " +
                 "FROM (" +
                 "  SELECT UNNEST(STRING_SPLIT(COALESCE(\"Gene.refGene\", ''), ';')) AS gene_name " +
-                "  FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true)" +
+                "  FROM " + readExpr +
                 ") split_genes " +
                 "WHERE TRIM(gene_name) <> '' AND TRIM(gene_name) <> '.' " +
-                "  AND LOWER(TRIM(gene_name)) LIKE '%s%%' " +
+                "  AND LOWER(TRIM(gene_name)) LIKE '" + q + "%' " +
                 "ORDER BY gene ASC " +
-                "LIMIT %d";
+                "LIMIT " + limit;
         List<String> results = new ArrayList<>();
         try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
              Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(sql.formatted(toDuckDbPath(aggregateMultianno), q, limit))) {
+             ResultSet rs = statement.executeQuery(sql)) {
             while (rs.next()) {
                 results.add(rs.getString("gene"));
             }
@@ -500,7 +497,7 @@ public class DuckDbService {
     public List<LabelCountDto> getFuncDistribution(String cancer) {
         return queryLabelCounts(cancer,
                 "SELECT TRIM(COALESCE(\"Func.refGene\", '')) AS label, COUNT(*) AS cnt " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) " +
+                "FROM %s " +
                 "WHERE TRIM(COALESCE(\"Func.refGene\", '')) <> '' " +
                 "GROUP BY label ORDER BY cnt DESC");
     }
@@ -508,7 +505,7 @@ public class DuckDbService {
     public List<LabelCountDto> getExonicDistribution(String cancer) {
         return queryLabelCounts(cancer,
                 "SELECT TRIM(COALESCE(\"ExonicFunc.refGene\", '')) AS label, COUNT(*) AS cnt " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) " +
+                "FROM %s " +
                 "WHERE TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '' " +
                 "  AND TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '.' " +
                 "GROUP BY label ORDER BY cnt DESC");
@@ -517,7 +514,7 @@ public class DuckDbService {
     public List<LabelCountDto> getChromDistribution(String cancer) {
         return queryLabelCounts(cancer,
                 "SELECT TRIM(COALESCE(CAST(Chr AS VARCHAR), '')) AS label, COUNT(*) AS cnt " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) " +
+                "FROM %s " +
                 "WHERE TRIM(COALESCE(CAST(Chr AS VARCHAR), '')) <> '' " +
                 "GROUP BY label " +
                 "ORDER BY TRY_CAST(REGEXP_REPLACE(label, '^chr', '') AS INTEGER) NULLS LAST, label ASC");
@@ -526,17 +523,15 @@ public class DuckDbService {
     public List<LabelCountDto> getSampleBurden(String cancer, int limit) {
         return queryLabelCounts(cancer,
                 "SELECT TRIM(COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '')) AS label, COUNT(*) AS cnt " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) " +
+                "FROM %s " +
                 "WHERE TRIM(COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '')) <> '' " +
                 "GROUP BY label ORDER BY cnt DESC LIMIT " + limit);
     }
 
     private List<LabelCountDto> queryLabelCounts(String cancer, String sqlTemplate) {
-        Path aggregateMultianno = resolveAggregateMultianno(validateCancer(cancer));
-        if (!Files.isRegularFile(aggregateMultianno)) {
-            return List.of();
-        }
-        String sql = sqlTemplate.formatted(toDuckDbPath(aggregateMultianno));
+        String readExpr = resolveMultiCancerReadExpr(cancer);
+        if (readExpr == null) return List.of();
+        String sql = sqlTemplate.formatted(readExpr);
         List<LabelCountDto> results = new ArrayList<>();
         try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
              Statement statement = connection.createStatement();
@@ -1332,6 +1327,16 @@ public class DuckDbService {
         long filteredVcfCount = countFiles(cancerDir.resolve("filtered_vcf"), ".filtered.vcf.gz");
         long multiannoCount = countFiles(cancerDir.resolve("multianno"), ".hg38_multianno.txt");
         long somaticCount = countFiles(cancerDir.resolve("somatic_vcf"), "_somatic.vcf.gz");
+
+        for (String src : DATA_SOURCES) {
+            Path srcDir = cancerDir.resolve(src);
+            if (!Files.isDirectory(srcDir)) continue;
+            avinputCount += countFiles(srcDir.resolve("avinput"), ".avinput");
+            filteredVcfCount += countFiles(srcDir.resolve("filtered_vcf"), ".filtered.vcf.gz");
+            multiannoCount += countFiles(srcDir.resolve("multianno"), ".hg38_multianno.txt");
+            somaticCount += countFiles(srcDir.resolve("somatic_vcf"), "_somatic.vcf.gz");
+        }
+
         long plotAssetCount = countFiles(cancerDir.resolve("Plot"), ".pdf");
         long externalAssetCount = countAllFiles(cancerDir.resolve("TCGA")) + countAllFiles(cancerDir.resolve("GEO"));
         long sampleCount = Math.max(avinputCount, Math.max(filteredVcfCount, multiannoCount));
@@ -1404,6 +1409,30 @@ public class DuckDbService {
         return resolveCancerDir(cancer).resolve(cancer + "_all_sample_multianno.txt");
     }
 
+    /**
+     * Splits a potentially comma-separated cancer parameter, validates each,
+     * and returns a DuckDB read_csv_auto(...) expression covering all files.
+     * Returns null if no valid files exist.
+     */
+    private String resolveMultiCancerReadExpr(String cancerParam) {
+        String[] parts = cancerParam.split(",");
+        List<String> paths = new ArrayList<>();
+        for (String part : parts) {
+            String c = part.trim();
+            if (c.isEmpty() || !CANCERS.contains(c)) continue;
+            Path p = resolveAggregateMultianno(c);
+            if (Files.isRegularFile(p)) {
+                paths.add(toDuckDbPath(p));
+            }
+        }
+        if (paths.isEmpty()) return null;
+        if (paths.size() == 1) {
+            return "read_csv_auto('" + paths.get(0) + "', delim='\\t', header=true, ignore_errors=true)";
+        }
+        String fileList = paths.stream().map(p -> "'" + p + "'").collect(Collectors.joining(", "));
+        return "read_csv_auto([" + fileList + "], delim='\\t', header=true, ignore_errors=true, union_by_name=true)";
+    }
+
     private long countFiles(Path directory, String suffix) {
         if (!Files.isDirectory(directory)) {
             return 0;
@@ -1468,9 +1497,119 @@ public class DuckDbService {
         return path.toString().replace("\\", "/").replace("'", "''");
     }
 
-    // ---- Statistics page: data-source-aware plot discovery ----
+    // ---- Cohort files: per-source file listing for Browse Files tab ----
 
     private static final List<String> DATA_SOURCES = List.of("Private_cfDNA", "GEO", "TCGA");
+
+    private static final List<String> FILE_CATEGORIES = List.of("multianno", "filtered_vcf");
+
+    public List<CohortFileDto> listCohortFiles(String cancer, String source, String category) {
+        String validatedCancer = validateCancer(cancer);
+        List<CohortFileDto> files = new ArrayList<>();
+
+        List<String> sources = (source != null && !source.isBlank())
+                ? List.of(source)
+                : DATA_SOURCES;
+        List<String> categories = (category != null && !category.isBlank())
+                ? List.of(category)
+                : FILE_CATEGORIES;
+
+        for (String src : sources) {
+            if (!DATA_SOURCES.contains(src)) continue;
+            Path sourceDir = resolveCancerDir(validatedCancer).resolve(src);
+            if (!Files.isDirectory(sourceDir)) continue;
+
+            for (String cat : categories) {
+                Path catDir = sourceDir.resolve(cat);
+                if (!Files.isDirectory(catDir)) continue;
+
+                try (Stream<Path> stream = Files.walk(catDir)) {
+                    stream.filter(Files::isRegularFile)
+                            .sorted()
+                            .forEach(p -> {
+                                String fName = p.getFileName().toString();
+                                String sampleId = extractSampleId(fName, cat);
+                                long size = 0;
+                                try { size = Files.size(p); } catch (IOException ignored) {}
+                                String downloadUrl = "/api/v1/cohort/files/download/" +
+                                        validatedCancer + "/" + src + "/" + cat + "/" +
+                                        UriUtils.encodePathSegment(fName, StandardCharsets.UTF_8);
+                                files.add(new CohortFileDto(
+                                        validatedCancer, src, cat, fName,
+                                        humanizeFileName(fName), sampleId, size, downloadUrl));
+                            });
+                } catch (IOException e) {
+                    log.warn("Failed to scan {}/{}/{}", validatedCancer, src, cat, e);
+                }
+            }
+        }
+
+        // Also include cancer-level mutation summary if it exists
+        if (category == null || category.isBlank() || "mutations".equals(category)) {
+            Path mutationsFile = resolveCancerDir(validatedCancer).resolve(validatedCancer + "_mutations.txt");
+            if (Files.isRegularFile(mutationsFile)) {
+                long size = 0;
+                try { size = Files.size(mutationsFile); } catch (IOException ignored) {}
+                String fName = mutationsFile.getFileName().toString();
+                files.add(new CohortFileDto(validatedCancer, "Summary", "mutations", fName,
+                        humanizeFileName(fName), null, size,
+                        "/api/v1/cohort/files/download/" + validatedCancer + "/Summary/mutations/" +
+                                UriUtils.encodePathSegment(fName, StandardCharsets.UTF_8)));
+            }
+        }
+
+        return files;
+    }
+
+    public Resource loadCohortFile(String cancer, String source, String category, String fileName) {
+        String validatedCancer = validateCancer(cancer);
+        Path filePath;
+        if ("Summary".equals(source) && "mutations".equals(category)) {
+            filePath = resolveCancerDir(validatedCancer).resolve(fileName);
+        } else {
+            filePath = resolveCancerDir(validatedCancer).resolve(source).resolve(category).resolve(fileName);
+        }
+        if (!Files.isRegularFile(filePath)) {
+            throw new ResourceNotFoundException("Cohort file not found: " + fileName);
+        }
+        return new FileSystemResource(filePath);
+    }
+
+    public List<LabelCountDto> getSourceDistribution(String cancer) {
+        String validatedCancer = validateCancer(cancer);
+        List<LabelCountDto> results = new ArrayList<>();
+        for (String src : DATA_SOURCES) {
+            Path sourceDir = resolveCancerDir(validatedCancer).resolve(src);
+            if (!Files.isDirectory(sourceDir)) continue;
+            long fileCount = 0;
+            for (String cat : FILE_CATEGORIES) {
+                fileCount += countAllFiles(sourceDir.resolve(cat));
+            }
+            if (fileCount > 0) {
+                results.add(new LabelCountDto(src, fileCount));
+            }
+        }
+        return results;
+    }
+
+    private String extractSampleId(String fileName, String category) {
+        if ("multianno".equals(category)) {
+            // e.g. "BR_RTCG0P0003-1-TWN1.hg38_multianno.txt" → "BR_RTCG0P0003-1-TWN1"
+            int idx = fileName.indexOf(".hg38_multianno");
+            if (idx > 0) return fileName.substring(0, idx);
+            idx = fileName.indexOf("_multianno");
+            if (idx > 0) return fileName.substring(0, idx);
+        } else if ("filtered_vcf".equals(category)) {
+            // e.g. "BR_RTCG0P0003-1-TWN1.filtered.vcf.gz" → "BR_RTCG0P0003-1-TWN1"
+            int idx = fileName.indexOf(".filtered");
+            if (idx > 0) return fileName.substring(0, idx);
+        }
+        // fallback: strip extension
+        int dot = fileName.indexOf('.');
+        return dot > 0 ? fileName.substring(0, dot) : fileName;
+    }
+
+    // ---- Statistics page: data-source-aware plot discovery ----
 
     /**
      * Resolve the plot directory for a given cancer + source.

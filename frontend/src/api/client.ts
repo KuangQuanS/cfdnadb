@@ -1,5 +1,6 @@
 import type {
   ApiResponse,
+  CohortFile,
   DatabaseStats,
   DataFile,
   DownloadAsset,
@@ -321,4 +322,18 @@ export function getStatisticsGenes(cancer: string, source: string, query: string
 export function getStatisticsGenePlotUrl(cancer: string, source: string, gene: string) {
   const params = new URLSearchParams({ source, gene });
   return `${API_BASE}/api/v1/statistics/${encodeURIComponent(cancer)}/gene-plot?${params.toString()}`;
+}
+
+// ---- Cohort files (Browse Files tab) ----
+
+export function getCohortFiles(cancer: string, source?: string, category?: string) {
+  const params = new URLSearchParams({ cancer });
+  if (source) params.set("source", source);
+  if (category) params.set("category", category);
+  return requestLive<CohortFile[]>(`/api/v1/cohort/files?${params.toString()}`);
+}
+
+export function getSourceDistribution(cancer: string) {
+  const params = new URLSearchParams({ cancer });
+  return requestLive<LabelCount[]>(`/api/v1/cohort/source-distribution?${params.toString()}`);
 }

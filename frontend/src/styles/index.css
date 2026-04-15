@@ -3793,11 +3793,33 @@ button, input, select { font: inherit; }
   margin-right: 6px;
 }
 
+/* Single merged header card */
+.browse-header-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 !important;
+  overflow: visible;
+}
+
+.browse-header-card > .browse-dense-topbar {
+  padding: 14px 16px;
+}
+
+.browse-header-card > .browse-dense-toolbar {
+  padding: 8px 16px;
+  border-top: 1px solid #e5e9f0;
+}
+
+.browse-header-card > .browse-dense-filterbar {
+  padding: 10px 16px;
+  border-top: 1px solid #e5e9f0;
+}
+
 .browse-dense-filterbar {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  padding: 10px 12px;
 }
 
 .browse-dense-filterbar .browse-field {
@@ -3808,6 +3830,23 @@ button, input, select { font: inherit; }
 .browse-dense-page .browse-field-inline > span {
   font-size: 0.68rem;
   letter-spacing: 0.06em;
+}
+
+.browse-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.browse-range-inputs input {
+  flex: 1;
+  min-width: 0;
+}
+
+.browse-range-sep {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  flex-shrink: 0;
 }
 
 .browse-dense-filterbar .browse-field select,
@@ -3830,7 +3869,8 @@ button, input, select { font: inherit; }
   grid-template-areas:
     "cancer func profile cohort"
     "genes exonic preview samplebars"
-    "samples chrom preview hist";
+    "samples source preview hist"
+    "chrom chrom . .";
   gap: 10px;
 }
 
@@ -3845,6 +3885,7 @@ button, input, select { font: inherit; }
 .browse-area-samples { grid-area: samples; }
 .browse-area-chrom { grid-area: chrom; }
 .browse-area-hist { grid-area: hist; }
+.browse-area-source { grid-area: source; }
 
 .browse-dense-panel {
   padding: 0;
@@ -3920,10 +3961,21 @@ button, input, select { font: inherit; }
 
 .browse-facet-row-clickable {
   cursor: pointer;
+  border: none;
+  outline: none;
+  background: none;
+  width: 100%;
+  font: inherit;
+  color: inherit;
 }
 
 .browse-facet-row-clickable:hover {
   background: #f8fbff;
+}
+
+.browse-facet-row-clickable:focus-visible {
+  outline: 2px solid #44689b;
+  outline-offset: -2px;
 }
 
 .browse-facet-row-active {
@@ -3935,6 +3987,35 @@ button, input, select { font: inherit; }
   gap: 8px;
   align-items: flex-start;
   min-width: 0;
+}
+
+.browse-facet-checkbox {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #b0b8c9;
+  border-radius: 2px;
+  flex: none;
+  margin-top: 2px;
+  position: relative;
+  background: #fff;
+}
+
+.browse-facet-checkbox-checked {
+  background: #44689b;
+  border-color: #44689b;
+}
+
+.browse-facet-checkbox-checked::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0.5px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(40deg);
 }
 
 .browse-facet-swatch {
@@ -4122,11 +4203,135 @@ button, input, select { font: inherit; }
   color: #475467;
 }
 
-@media (max-width: 1400px) {
-  .browse-dense-filterbar {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+/* Files modal overlay */
+.browse-files-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
 
+.browse-files-modal {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  width: 90vw;
+  max-width: 1100px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.browse-files-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e9f0;
+  flex-shrink: 0;
+}
+
+.browse-files-modal-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1e3a5f;
+}
+
+.browse-files-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.browse-files-source-select {
+  padding: 6px 10px;
+  border: 1px solid #d1d7e0;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.browse-files-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 8px;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.browse-files-close:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.browse-files-modal-body {
+  overflow-y: auto;
+  padding: 16px 24px 24px;
+  flex: 1;
+}
+
+/* Files table */
+.browse-files-scroll {
+  overflow-x: auto;
+}
+
+.browse-files-scroll .data-table {
+  width: 100%;
+}
+
+.browse-download-btn {
+  display: inline-block;
+  padding: 4px 12px !important;
+  font-size: 0.78rem !important;
+  text-decoration: none;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Source badges */
+.browse-source-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.browse-source-private-cfdna {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.browse-source-geo {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.browse-source-tcga {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.browse-source-summary {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+@media (max-width: 1400px) {
   .browse-dense-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
@@ -4135,7 +4340,8 @@ button, input, select { font: inherit; }
       "genes exonic"
       "preview samplebars"
       "preview hist"
-      "samples chrom";
+      "samples source"
+      "chrom chrom";
   }
 }
 
@@ -4150,10 +4356,6 @@ button, input, select { font: inherit; }
     width: 100%;
   }
 
-  .browse-dense-filterbar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .browse-dense-grid {
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -4166,6 +4368,7 @@ button, input, select { font: inherit; }
       "preview"
       "samplebars"
       "samples"
+      "source"
       "chrom"
       "hist";
   }
@@ -4176,10 +4379,6 @@ button, input, select { font: inherit; }
 }
 
 @media (max-width: 640px) {
-  .browse-dense-filterbar {
-    grid-template-columns: 1fr;
-  }
-
   .browse-facet-header,
   .browse-facet-row {
     grid-template-columns: minmax(0, 1fr) 54px 54px;

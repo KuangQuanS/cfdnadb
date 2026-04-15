@@ -6,16 +6,19 @@ import {
   getAllGenes,
   getCancerSummary,
   getChromDistribution,
+  getCohortFiles,
   getExonicDistribution,
   getFuncDistribution,
   getSampleBurden,
+  getSourceDistribution,
+  toApiUrl,
   type BrowseFilters
 } from "../api/client";
 import { cancerSummaryMock } from "../api/mockData";
 import { DataTable } from "../components/DataTable";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
 import { COMMON_CANCER_GENES } from "../constants/genes";
-import type { GeneVariant, LabelCount } from "../types/api";
+import type { CohortFile, GeneVariant, LabelCount } from "../types/api";
 import { formatNumber } from "../utils/format";
 
 const FUNC_OPTIONS = [
@@ -35,6 +38,17 @@ const CHR_OPTIONS = [
 ];
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DATASET_OPTIONS = [{ value: "multianno", label: "Aggregate Multianno" }];
+const SOURCE_OPTIONS = [
+  { value: "", label: "All sources" },
+  { value: "Private_cfDNA", label: "Private cfDNA" },
+  { value: "GEO", label: "GEO" },
+  { value: "TCGA", label: "TCGA" }
+];
+const CATEGORY_LABELS: Record<string, string> = {
+  multianno: "Multianno",
+  filtered_vcf: "Filtered VCF",
+  mutations: "Mutations Summary"
+};
 const ALL_COLUMNS = [
   { key: "gene", label: "Gene" },
   { key: "chr", label: "Chr" },
@@ -88,6 +102,19 @@ function savePresets(presets: FilterPreset[]) {
 
 const columnHelper = createColumnHelper<GeneVariant>();
 
+function toggleFilter(current: string, value: string): string {
+  const items = current ? current.split(",").filter(Boolean) : [];
+  const idx = items.indexOf(value);
+  if (idx >= 0) items.splice(idx, 1);
+  else items.push(value);
+  return items.join(",");
+}
+
+function filterIncludes(current: string, value: string): boolean {
+  if (!current) return false;
+  return current.split(",").includes(value);
+}
+
 function countBy(values: string[]) {
   const counts = new Map<string, number>();
   values.filter(Boolean).forEach((value) => {
@@ -121,9 +148,12 @@ function makePlaceholderGeneItems() {
 }
 
 function normalizeCancerLabel(cancer: string) {
-  if (cancer === "Colonrector") return "Colorectal";
-  if (cancer === "Pdac") return "Pancreas";
-  return cancer;
+  return cancer.split(",").map((c) => {
+    const t = c.trim();
+    if (t === "Colonrector") return "Colorectal";
+    if (t === "Pdac") return "Pancreas";
+    return t;
+  }).join(", ");
 }
 
 function escapeCsvCell(value: string | number | undefined) {
@@ -187,6 +217,9 @@ export function BrowsePage() {
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
 
+  const [source, setSource] = useState("");
+  const [showFilesModal, setShowFilesModal] = useState(false);
+
   const [submitted, setSubmitted] = useState<BrowseFilters & { dataset: string }>({
     cancer: DEFAULT_CANCER,
     dataset: "multianno",
@@ -235,6 +268,17 @@ export function BrowsePage() {
   const sampleBurdenQuery = useQuery({
     queryKey: ["browse-sample-burden", cancer],
     queryFn: () => getSampleBurden(cancer, 8),
+    staleTime: 5 * 60 * 1000
+  });
+
+  const sourceDistQuery = useQuery({
+    queryKey: ["browse-source-dist", cancer],
+    queryFn: () => getSourceDistribution(cancer),
+    staleTime: 5 * 60 * 1000
+  });
+  const cohortFilesQuery = useQuery({
+    queryKey: ["browse-cohort-files", cancer, source],
+    queryFn: () => getCohortFiles(cancer, source || undefined),
     staleTime: 5 * 60 * 1000
   });
 
@@ -343,6 +387,7 @@ export function BrowsePage() {
   const resetFilters = () => {
     setCancer(DEFAULT_CANCER);
     setDataset("multianno");
+    setSource("");
     setGeneInput("");
     setFuncClass("");
     setExonicFunc("");
@@ -392,7 +437,10 @@ export function BrowsePage() {
   };
 
   const selectCohort = (nextCancer: string) => {
-    applyFacetSelection({ cancer: nextCancer });
+    const next = toggleFilter(cancer, nextCancer);
+    // Ensure at least one cancer is always selected
+    if (!next) return;
+    applyFacetSelection({ cancer: next });
   };
 
   const toggleCol = (key: ColKey) => {
@@ -515,7 +563,7 @@ export function BrowsePage() {
       note: item.annotatedCount > 0 ? "ready" : "pending",
       ratio: item.sampleCount / maxCount,
       percent: item.sampleCount / cohortTotal,
-      active: item.cancer === submitted.cancer,
+      active: filterIncludes(submitted.cancer, item.cancer),
       onClick: () => selectCohort(item.cancer)
     }));
   }, [cohortSummary, cohortTotal, submitted.cancer]);
@@ -525,20 +573,28 @@ export function BrowsePage() {
     const items = primary.length > 0 ? toPanelItems(primary, 8) : toPanelItems(countBy(rows.map((row) => row.func)), 8);
     return items.map((item) => ({
       ...item,
-      active: item.label === submitted.funcClass,
-      onClick: () => applyFacetSelection({ funcClass: submitted.funcClass === item.label ? "" : item.label })
+      active: filterIncludes(submitted.funcClass || "", item.label),
+      onClick: () => {
+        const next = toggleFilter(funcClass, item.label);
+        setFuncClass(next);
+        applySearch({ funcClass: next });
+      }
     }));
-  }, [funcDistQuery.data, rows, submitted.funcClass]);
+  }, [funcDistQuery.data, rows, submitted.funcClass, funcClass]);
 
   const geneItems = useMemo(() => {
     const geneCounts = countBy(rows.map((row) => row.gene));
     const items = geneCounts.length > 0 ? toPanelItems(geneCounts, 8) : makePlaceholderGeneItems();
     return items.map((item) => ({
       ...item,
-      active: item.label === submitted.gene,
-      onClick: () => applyFacetSelection({ gene: submitted.gene === item.label ? "" : item.label })
+      active: filterIncludes(geneInput || submitted.gene || "", item.label),
+      onClick: () => {
+        const next = toggleFilter(geneInput, item.label);
+        setGeneInput(next);
+        applySearch({ gene: next });
+      }
     }));
-  }, [rows, submitted.gene]);
+  }, [rows, submitted.gene, geneInput]);
 
   const exonicItems = useMemo(() => {
     const primary = exonicDistQuery.data ?? [];
@@ -546,30 +602,55 @@ export function BrowsePage() {
     const items = primary.length > 0 ? toPanelItems(primary, 8) : toPanelItems(fallback, 8);
     return items.map((item) => ({
       ...item,
-      active: item.label === submitted.exonicFunc,
-      onClick: () => applyFacetSelection({ exonicFunc: submitted.exonicFunc === item.label ? "" : item.label })
+      active: filterIncludes(submitted.exonicFunc || "", item.label),
+      onClick: () => {
+        const next = toggleFilter(exonicFunc, item.label);
+        setExonicFunc(next);
+        applySearch({ exonicFunc: next });
+      }
     }));
-  }, [exonicDistQuery.data, rows, submitted.exonicFunc]);
+  }, [exonicDistQuery.data, rows, submitted.exonicFunc, exonicFunc]);
 
   const chromosomeItems = useMemo(() => {
     const primary = chromDistQuery.data ?? [];
     const items = primary.length > 0 ? toPanelItems(primary, 8) : toPanelItems(countBy(rows.map((row) => row.chr)), 8);
     return items.map((item) => ({
       ...item,
-      active: item.label === submitted.chr,
-      onClick: () => applyFacetSelection({ chr: submitted.chr === item.label ? "" : item.label })
+      active: filterIncludes(submitted.chr || "", item.label),
+      onClick: () => {
+        const next = toggleFilter(chr, item.label);
+        setChr(next);
+        applySearch({ chr: next });
+      }
     }));
-  }, [chromDistQuery.data, rows, submitted.chr]);
+  }, [chromDistQuery.data, rows, submitted.chr, chr]);
 
   const sampleItems = useMemo(() => {
     const primary = sampleBurdenQuery.data ?? [];
     const items = primary.length > 0 ? toPanelItems(primary, 8) : toPanelItems(countBy(rows.map((row) => row.sample)), 8);
     return items.map((item) => ({
       ...item,
-      active: item.label === submitted.sample,
-      onClick: () => applyFacetSelection({ sample: submitted.sample === item.label ? "" : item.label })
+      active: filterIncludes(sampleInput || submitted.sample || "", item.label),
+      onClick: () => {
+        const next = toggleFilter(sampleInput, item.label);
+        setSampleInput(next);
+        applySearch({ sample: next });
+      }
     }));
-  }, [sampleBurdenQuery.data, rows, submitted.sample]);
+  }, [sampleBurdenQuery.data, rows, submitted.sample, sampleInput]);
+
+  const sourceItems = useMemo(() => {
+    const primary = sourceDistQuery.data ?? [];
+    const items = primary.length > 0 ? toPanelItems(primary, 8) : [];
+    return items.map((item) => ({
+      ...item,
+      active: item.label === source,
+      onClick: () => {
+        const next = source === item.label ? "" : item.label;
+        setSource(next);
+      }
+    }));
+  }, [sourceDistQuery.data, source]);
 
   const selectedSampleCount = uniqueSamplesOnPage || selectedCohortSummary?.sampleCount || 0;
   const profileBase = Math.max(selectedCohortSummary?.totalDataFiles ?? 0, 1);
@@ -609,147 +690,129 @@ export function BrowsePage() {
   return (
     <div className="page-stack browse-dense-page">
       <form className="browse-dense-top-shell" onSubmit={submitSearch}>
-        <section className="detail-card browse-dense-topbar">
-          <div className="browse-dense-title">
-            <h2>cfDNA Variant Browser</h2>
-            <p>cfDNA Atlas - cohort-level somatic mutation set accessible</p>
-          </div>
-          <div className="browse-dense-query">
-            <div className="autocomplete-wrapper">
-              <input
-                ref={inputRef}
-                value={geneInput}
-                onChange={(event) => handleGeneInput(event.target.value)}
-                onFocus={() => geneInput.trim().length >= 1 && setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder="Click gene symbols below or enter here"
-                autoComplete="off"
-              />
-              {showSuggestions && suggestions.length > 0 && (
-                <ul className="autocomplete-dropdown">
-                  {suggestions.map((gene) => (
-                    <li key={gene} className="autocomplete-item" onMouseDown={() => selectSuggestion(gene)}>{gene}</li>
-                  ))}
-                </ul>
-              )}
+        <section className="detail-card browse-header-card">
+          <div className="browse-dense-topbar">
+            <div className="browse-dense-title">
+              <h2>cfDNA Variant Browser</h2>
+              <p>cfDNA Atlas - cohort-level somatic mutation set accessible</p>
             </div>
-            <button className="button-secondary" type="submit">Query</button>
-          </div>
-        </section>
-
-        <section className="detail-card browse-dense-toolbar">
-          <div className="browse-dense-tabs">
-            <button type="button" className="browse-dense-tab browse-dense-tab-active">Summary</button>
-            <button type="button" className="browse-dense-tab">Variant Table</button>
-            <button type="button" className="browse-dense-tab browse-dense-tab-beta">Plots Beta!</button>
-          </div>
-          <div className="browse-dense-toolbar-right">
-            <span className="browse-dense-selection">
-              Selected: {formatNumber(data?.totalElements ?? 0)} variants | {formatNumber(selectedSampleCount)} samples
-            </span>
-            <div className="browse-dense-actions">
-              <label className="browse-field-inline">
-                <span>Rows</span>
-                <select value={pageSize} onChange={(event) => changePageSize(Number(event.target.value))}>
-                  {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
-                </select>
-              </label>
-              <button className="button-secondary" type="button" onClick={resetFilters}>Reset</button>
-              <button className="button-secondary" type="button" onClick={exportCsv} disabled={rows.length === 0}>Export</button>
-              <div className="browse-dropdown-wrap">
-                <button className="button-secondary" type="button" onClick={() => { setShowColMenu(!showColMenu); setShowPresetMenu(false); }}>
-                  Columns
-                </button>
-                {showColMenu && (
-                  <div className="browse-dropdown-menu">
-                    {ALL_COLUMNS.map((column) => (
-                      <label key={column.key} className="browse-dropdown-item">
-                        <input type="checkbox" checked={visibleCols.has(column.key)} onChange={() => toggleCol(column.key)} />
-                        {column.label}
-                      </label>
+            <div className="browse-dense-query">
+              <div className="autocomplete-wrapper">
+                <input
+                  ref={inputRef}
+                  value={geneInput}
+                  onChange={(event) => handleGeneInput(event.target.value)}
+                  onFocus={() => geneInput.trim().length >= 1 && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  placeholder="Click gene symbols below or enter here"
+                  autoComplete="off"
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <ul className="autocomplete-dropdown">
+                    {suggestions.map((gene) => (
+                      <li key={gene} className="autocomplete-item" onMouseDown={() => selectSuggestion(gene)}>{gene}</li>
                     ))}
-                  </div>
+                  </ul>
                 )}
               </div>
-              <div className="browse-dropdown-wrap">
-                <button className="button-secondary" type="button" onClick={() => { setShowPresetMenu(!showPresetMenu); setShowColMenu(false); }}>
-                  Presets
-                </button>
-                {showPresetMenu && (
-                  <div className="browse-dropdown-menu browse-preset-menu">
-                    <div className="browse-preset-save">
-                      <input value={presetName} onChange={(event) => setPresetName(event.target.value)} placeholder="Preset name" />
-                      <button type="button" className="button-primary browse-preset-save-btn" onClick={saveCurrentAsPreset}>
-                        Save
-                      </button>
+              <button className="button-secondary" type="submit">Query</button>
+            </div>
+          </div>
+
+          <div className="browse-dense-toolbar">
+            <div className="browse-dense-tabs">
+              <button type="button" className="browse-dense-tab browse-dense-tab-active">Summary</button>
+              <button type="button" className="browse-dense-tab">Variant Table</button>
+              <button type="button" className="browse-dense-tab browse-dense-tab-beta">Plots Beta!</button>
+            </div>
+            <div className="browse-dense-toolbar-right">
+              <span className="browse-dense-selection">
+                Selected: {formatNumber(data?.totalElements ?? 0)} variants | {formatNumber(selectedSampleCount)} samples
+              </span>
+              <div className="browse-dense-actions">
+                <label className="browse-field-inline">
+                  <span>Rows</span>
+                  <select value={pageSize} onChange={(event) => changePageSize(Number(event.target.value))}>
+                    {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
+                  </select>
+                </label>
+                <button className="button-secondary" type="button" onClick={resetFilters}>Reset</button>
+                <button className="button-secondary" type="button" onClick={exportCsv} disabled={rows.length === 0}>Export</button>
+                <div className="browse-dropdown-wrap">
+                  <button className="button-secondary" type="button" onClick={() => { setShowColMenu(!showColMenu); setShowPresetMenu(false); }}>
+                    Columns
+                  </button>
+                  {showColMenu && (
+                    <div className="browse-dropdown-menu">
+                      {ALL_COLUMNS.map((column) => (
+                        <label key={column.key} className="browse-dropdown-item">
+                          <input type="checkbox" checked={visibleCols.has(column.key)} onChange={() => toggleCol(column.key)} />
+                          {column.label}
+                        </label>
+                      ))}
                     </div>
-                    {presets.length === 0 && <p className="browse-preset-empty">No saved presets</p>}
-                    {presets.map((preset) => (
-                      <div key={preset.name} className="browse-preset-row">
-                        <button type="button" className="browse-preset-load" onClick={() => loadPreset(preset)}>
-                          <strong>{preset.name}</strong>
-                          <span>
-                            {normalizeCancerLabel(preset.cancer)}
-                            {preset.gene ? ` / ${preset.gene}` : ""}
-                            {preset.funcClass ? ` / ${preset.funcClass}` : ""}
-                          </span>
+                  )}
+                </div>
+                <div className="browse-dropdown-wrap">
+                  <button className="button-secondary" type="button" onClick={() => { setShowPresetMenu(!showPresetMenu); setShowColMenu(false); }}>
+                    Presets
+                  </button>
+                  {showPresetMenu && (
+                    <div className="browse-dropdown-menu browse-preset-menu">
+                      <div className="browse-preset-save">
+                        <input value={presetName} onChange={(event) => setPresetName(event.target.value)} placeholder="Preset name" />
+                        <button type="button" className="button-primary browse-preset-save-btn" onClick={saveCurrentAsPreset}>
+                          Save
                         </button>
-                        <button type="button" className="browse-preset-delete" onClick={() => deletePreset(preset.name)}>&times;</button>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {presets.length === 0 && <p className="browse-preset-empty">No saved presets</p>}
+                      {presets.map((preset) => (
+                        <div key={preset.name} className="browse-preset-row">
+                          <button type="button" className="browse-preset-load" onClick={() => loadPreset(preset)}>
+                            <strong>{preset.name}</strong>
+                            <span>
+                              {normalizeCancerLabel(preset.cancer)}
+                              {preset.gene ? ` / ${preset.gene}` : ""}
+                              {preset.funcClass ? ` / ${preset.funcClass}` : ""}
+                            </span>
+                          </button>
+                          <button type="button" className="browse-preset-delete" onClick={() => deletePreset(preset.name)}>&times;</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={() => setShowFilesModal(true)}
+                >
+                  Files{cohortFilesQuery.data ? ` (${cohortFilesQuery.data.length})` : ""}
+                </button>
               </div>
             </div>
           </div>
-        </section>
 
-        <section className="detail-card browse-dense-filterbar">
-          <label className="browse-field">
-            <span>Cancer Cohort</span>
-            <select value={cancer} onChange={(event) => setCancer(event.target.value)}>
-              {CANCER_OPTIONS.map((option) => <option key={option} value={option}>{normalizeCancerLabel(option)}</option>)}
-            </select>
-          </label>
-          <label className="browse-field">
-            <span>Dataset</span>
-            <select value={dataset} onChange={(event) => setDataset(event.target.value)}>
-              {DATASET_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-          </label>
-          <label className="browse-field">
-            <span>Functional Class</span>
-            <select value={funcClass} onChange={(event) => setFuncClass(event.target.value)}>
-              <option value="">All classes</option>
-              {FUNC_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
-          </label>
-          <label className="browse-field">
-            <span>Exonic Function</span>
-            <select value={exonicFunc} onChange={(event) => setExonicFunc(event.target.value)}>
-              <option value="">All exonic types</option>
-              {EXONIC_FUNC_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
-          </label>
-          <label className="browse-field">
-            <span>Chromosome</span>
-            <select value={chr} onChange={(event) => setChr(event.target.value)}>
-              <option value="">All chromosomes</option>
-              {CHR_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
-          </label>
-          <label className="browse-field">
-            <span>Sample Barcode</span>
-            <input value={sampleInput} onChange={(event) => setSampleInput(event.target.value)} placeholder="Sample ID" autoComplete="off" />
-          </label>
-          <label className="browse-field">
-            <span>Position Min</span>
-            <input type="number" value={startMin} onChange={(event) => setStartMin(event.target.value)} placeholder="Start" />
-          </label>
-          <label className="browse-field">
-            <span>Position Max</span>
-            <input type="number" value={startMax} onChange={(event) => setStartMax(event.target.value)} placeholder="End" />
-          </label>
+          <div className="browse-dense-filterbar">
+            <label className="browse-field">
+              <span>Dataset</span>
+              <select value={dataset} onChange={(event) => setDataset(event.target.value)}>
+                {DATASET_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <label className="browse-field">
+              <span>Sample Barcode</span>
+              <input value={sampleInput} onChange={(event) => setSampleInput(event.target.value)} placeholder="Sample ID" autoComplete="off" />
+            </label>
+            <div className="browse-field browse-field-range">
+              <span>Position Range</span>
+              <div className="browse-range-inputs">
+                <input type="number" value={startMin} onChange={(event) => setStartMin(event.target.value)} placeholder="Start" />
+                <span className="browse-range-sep">&ndash;</span>
+                <input type="number" value={startMax} onChange={(event) => setStartMax(event.target.value)} placeholder="End" />
+              </div>
+            </div>
+          </div>
         </section>
       </form>
 
@@ -775,17 +838,11 @@ export function BrowsePage() {
         <MiniBarPanel className="browse-area-samplebars" title="Variants Per Sample" items={sampleItems.slice(0, 8)} emptyText="No sample burden summary." />
         <FacetPanel className="browse-area-samples" title="Top Samples" headerLabel="Sample Barcode" items={sampleItems} emptyText="No sample list available." />
         <FacetPanel className="browse-area-chrom" title="Chromosome Burden" headerLabel="Chromosome" items={chromosomeItems} emptyText="No chromosome summary." />
+        <FacetPanel className="browse-area-source" title="Data Source" headerLabel="Source" items={sourceItems} emptyText="No source distribution." />
         <MiniBarPanel className="browse-area-hist" title="Mutation Count" items={chromosomeItems.slice(0, 8)} emptyText="No mutation count histogram." />
       </section>
 
       <section className="detail-card browse-dense-results">
-        <div className="browse-dense-results-header">
-          <div>
-            <strong>Variant Table</strong>
-            <p>{data ? `${formatNumber(data.totalElements)} matching variants` : "Run a query to populate the result table."}</p>
-          </div>
-        </div>
-
         {variantsQuery.isLoading && <p className="panel-note">Loading variants...</p>}
         {variantsQuery.isError && (
           <p className="panel-note">
@@ -815,6 +872,41 @@ export function BrowsePage() {
           )
         )}
       </section>
+
+      {showFilesModal && (
+        <div className="browse-files-overlay" onClick={() => setShowFilesModal(false)}>
+          <div className="browse-files-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="browse-files-modal-header">
+              <h3>
+                Cohort Files — {normalizeCancerLabel(cancer)}
+                {cohortFilesQuery.data ? ` (${cohortFilesQuery.data.length} files)` : ""}
+              </h3>
+              <div className="browse-files-modal-actions">
+                <select
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  className="browse-files-source-select"
+                >
+                  {SOURCE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <button type="button" className="browse-files-close" onClick={() => setShowFilesModal(false)}>
+                  &times;
+                </button>
+              </div>
+            </div>
+            <div className="browse-files-modal-body">
+              <CohortFilesTable
+                files={cohortFilesQuery.data ?? []}
+                isLoading={cohortFilesQuery.isLoading}
+                isError={cohortFilesQuery.isError}
+                cancer={cancer}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -872,6 +964,7 @@ function FacetPanel({
                   {...(item.onClick ? { onClick: item.onClick, type: "button" as const } : {})}
                 >
                   <div className="browse-facet-main">
+                    {item.onClick && <span className={`browse-facet-checkbox${item.active ? " browse-facet-checkbox-checked" : ""}`} />}
                     <span className="browse-facet-swatch" style={{ backgroundColor: colorForIndex(index) }} />
                     <div className="browse-facet-copy">
                       <strong>{item.label}</strong>
@@ -1033,6 +1126,86 @@ function MiniBarPanel({
         </div>
       )}
     </DensePanel>
+  );
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const size = bytes / Math.pow(1024, index);
+  return `${size.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+}
+
+function CohortFilesTable({
+  files,
+  isLoading,
+  isError,
+  cancer
+}: {
+  files: CohortFile[];
+  isLoading: boolean;
+  isError: boolean;
+  cancer: string;
+}) {
+  if (isLoading) return <p className="panel-note">Loading files...</p>;
+  if (isError) {
+    return (
+      <p className="panel-note">
+        File listing is unavailable for {normalizeCancerLabel(cancer)}.
+      </p>
+    );
+  }
+  if (files.length === 0) {
+    return (
+      <div className="browse-empty-state">
+        <h4>No files available</h4>
+        <p>Per-sample data files (multianno, filtered VCF) have not been generated for this cohort and source yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="browse-files-scroll">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>File Name</th>
+            <th>Source</th>
+            <th>Category</th>
+            <th>Sample</th>
+            <th>Size</th>
+            <th>Download</th>
+          </tr>
+        </thead>
+        <tbody>
+          {files.map((file) => (
+            <tr key={`${file.source}-${file.category}-${file.fileName}`}>
+              <td title={file.fileName}>
+                <span className="browse-mono">{file.fileName}</span>
+              </td>
+              <td>
+                <span className={`browse-source-badge browse-source-${file.source.toLowerCase().replace(/_/g, "-")}`}>
+                  {file.source === "Private_cfDNA" ? "Private" : file.source}
+                </span>
+              </td>
+              <td>{CATEGORY_LABELS[file.category] ?? file.category}</td>
+              <td>{file.sampleId ?? "-"}</td>
+              <td>{formatFileSize(file.sizeBytes)}</td>
+              <td>
+                <a
+                  href={toApiUrl(file.downloadUrl)}
+                  className="button-secondary browse-download-btn"
+                  download
+                >
+                  Download
+                </a>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

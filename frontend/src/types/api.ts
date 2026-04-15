@@ -301,3 +301,14 @@ export interface StatisticsSource {
   source: string;
   hasGenePlots: boolean;
 }
+
+export interface CohortFile {
+  cancer: string;
+  source: string;
+  category: string;
+  fileName: string;
+  displayName: string;
+  sampleId: string | null;
+  sizeBytes: number;
+  downloadUrl: string;
+}
