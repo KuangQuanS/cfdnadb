@@ -24,5 +24,6 @@ start-*.cmd
 *.pdf
 *.sh
 *.duckdb
-converted_csv
+converted_csv/*
+converted_csv/maf.duckdb
 docs

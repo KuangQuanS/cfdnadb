@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { HeroCarousel } from "../components/HeroCarousel";
-import { formatNumber } from "../utils/format";
 import "../styles/home.css";
 
 const TOOL_TILES = [
@@ -27,30 +26,6 @@ const TOOL_TILES = [
     link: "/downloads",
     badge: "Data access",
     preview: "table",
-  },
-] as const;
-
-const DATA_LAYERS = [
-  {
-    id: "01",
-    title: "Public cfDNA Studies",
-    source: "GEO / PMID-curated",
-    sampleCount: 476,
-    note: "Curated external plasma cfDNA studies.",
-  },
-  {
-    id: "02",
-    title: "In-house Cohort",
-    source: "Lee Lab",
-    sampleCount: 1425,
-    note: "Internal sequencing cohort processed with a unified pipeline.",
-  },
-  {
-    id: "03",
-    title: "TCGA Reference",
-    source: "TCGA MAF",
-    sampleCount: 6579,
-    note: "Reference solid-tumor mutation set for comparison.",
   },
 ] as const;
 
@@ -121,53 +96,6 @@ export function HomePage() {
           </div>
         </section>
 
-        <section className="portal-showcase-section portal-showcase-section--data animate-fade-up animate-fade-up-3">
-          <div className="portal-section-inner">
-            <div className="portal-showcase-hero portal-showcase-hero--reverse">
-              <div className="portal-showcase-copy">
-                <span className="portal-showcase-kicker">Data Architecture</span>
-                <h2>Three coordinated data layers support query and comparison</h2>
-                <p>
-                  cfdnadb integrates curated public cfDNA studies, internal plasma cohorts, and a TCGA solid-tumor reference so users can inspect cfDNA findings with a consistent comparison baseline.
-                </p>
-                <div className="portal-showcase-actions">
-                  <Link to="/downloads" className="portal-showcase-button portal-showcase-button--secondary">Open Downloads</Link>
-                </div>
-              </div>
-
-              <div className="portal-showcase-visual portal-showcase-visual--data" aria-hidden="true">
-                <div className="portal-architecture-card">
-                  {DATA_LAYERS.map((layer, index) => (
-                    <div key={layer.title} className="portal-architecture-step">
-                      <div className="portal-architecture-index">{layer.id}</div>
-                      <div className="portal-architecture-body">
-                        <strong>{layer.title}</strong>
-                        <span>{layer.source}</span>
-                      </div>
-                      {index < DATA_LAYERS.length - 1 ? <div className="portal-architecture-connector" /> : null}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="portal-data-band">
-              {DATA_LAYERS.map((layer) => (
-                <article key={layer.title} className="portal-data-card">
-                  <div className="portal-data-card-head">
-                    <span>{layer.id}</span>
-                    <strong>{formatNumber(layer.sampleCount)}</strong>
-                  </div>
-                  <div className="portal-data-card-body">
-                    <h3>{layer.title}</h3>
-                    <small>{layer.source}</small>
-                    <p>{layer.note}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
       </main>
     </>
   );

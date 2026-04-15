@@ -89,27 +89,13 @@ export function AppShell({ children }: PropsWithChildren) {
 
       <main className={`page-content${showLoader ? " page-content-loading" : ""}`}>{children}</main>
 
-      <footer
-        className="site-footer"
-        style={{
-          backgroundImage: `linear-gradient(90deg, rgba(75, 53, 154, 0.95), rgba(75, 53, 154, 0.92)), url(${headerBgPng})`
-        }}
-      >
+      <footer className="site-footer">
         <div className="footer-main">
           <div className="footer-brand">
             <p className="footer-logo">cfdnadb</p>
             <p>
               Plasma cfDNA somatic mutation database spanning cohort browse, gene search, and downloadable analysis outputs.
             </p>
-          </div>
-
-          <div className="footer-col">
-            <h4>Navigation</h4>
-            <ul>
-              {navItems.map((item) => (
-                <li key={item.to}><Link to={item.to}>{item.label}</Link></li>
-              ))}
-            </ul>
           </div>
 
           <div className="footer-col">

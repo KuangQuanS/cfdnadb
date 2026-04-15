@@ -145,7 +145,7 @@ button, input, select { font: inherit; }
 .header-container {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 16px 28px;
+  padding: 22px 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -3425,7 +3425,7 @@ button, input, select { font: inherit; }
   margin: 0 auto;
   padding: 34px 28px 24px;
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1.2fr;
+  grid-template-columns: 2fr 1fr;
   gap: 28px;
 }
 .footer-brand .footer-logo {
@@ -3492,12 +3492,11 @@ button, input, select { font: inherit; }
 }
 .footer-bottom-inner a:hover { color: white; text-decoration: none; }
 
-@media (max-width: 960px) {
+@media (max-width: 640px) {
   .footer-main {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 24px;
   }
-  .footer-brand { grid-column: 1 / -1; }
 }
 
 @media (max-width: 960px) {
@@ -3540,7 +3539,6 @@ button, input, select { font: inherit; }
   }
 
   .footer-main {
-    grid-template-columns: 1fr;
     padding: 28px 20px 20px;
   }
 }
