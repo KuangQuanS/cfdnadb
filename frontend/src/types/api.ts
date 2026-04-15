@@ -283,6 +283,17 @@ export interface MafSummary {
   totalGenes: number;
 }
 
+export interface StatisticsOverview {
+  source: string;
+  generatedAt: string;
+  cancerSummary: CancerSummary[];
+  mafSummary: MafSummary;
+  funcDistribution: LabelCount[];
+  exonicDistribution: LabelCount[];
+  chromDistribution: LabelCount[];
+  topGenes: TopGene[];
+}
+
 export interface MafGeneSummary {
   hugoSymbol: string;
   totalVariants: number;
@@ -297,9 +308,34 @@ export interface MafGeneSummary {
   annotationPreview: string;
 }
 
+export interface GenePlot {
+  fileName: string;
+  url: string;
+  cancer: string;
+  gene: string;
+  chromosome: string;
+  startPosition: string;
+  endPosition: string;
+  coordinateLabel: string;
+}
+
 export interface StatisticsSource {
   source: string;
   hasGenePlots: boolean;
+}
+
+export interface OncoplottCell {
+  gene: string;
+  sample: string;
+  variantClass: string;
+}
+
+export interface OncoplottData {
+  genes: string[];
+  samples: string[];
+  cells: OncoplottCell[];
+  geneCounts: Record<string, number>;
+  sampleCounts: Record<string, number>;
 }
 
 export interface CohortFile {
@@ -311,4 +347,38 @@ export interface CohortFile {
   sampleId: string | null;
   sizeBytes: number;
   downloadUrl: string;
+}
+
+export interface SampleBrowseItem {
+  sampleId: string;
+  cancer: string;
+  source: string;
+  variantCount: number;
+  topGenes: string[];
+  availableFiles: string[];
+  hasAnnotated: boolean;
+  hasSomatic: boolean;
+}
+
+export interface SampleFile {
+  type: string;
+  fileName: string;
+  sizeBytes: number;
+  lastModified: string;
+  downloadUrl: string;
+}
+
+export interface SampleDetail {
+  sampleId: string;
+  cancer: string;
+  source: string;
+  variantCount: number;
+  topGenes: LabelCount[];
+  files: SampleFile[];
+}
+
+export interface SampleSelection {
+  sampleId: string;
+  cancer: string;
+  source: string;
 }

@@ -1,168 +1,170 @@
-import { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { HeroCarousel } from "../components/HeroCarousel";
-import { CANCER_OPTIONS, DEFAULT_CANCER, DEFAULT_GENE } from "../constants/cfdna";
 import { formatNumber } from "../utils/format";
 import "../styles/home.css";
 
-const DATA_SOURCES = [
+const TOOL_TILES = [
   {
+    id: "01",
+    title: "Gene Search",
+    desc: "Query a gene and open sample-level mutation records.",
+    link: "/gene-search",
+    badge: "Gene-level query",
+    preview: "search",
+  },
+  {
+    id: "02",
+    title: "Browse",
+    desc: "Open oncoplots and cohort summary views by cancer type.",
+    link: "/browse",
+    badge: "Cohort-level view",
+    preview: "bars",
+  },
+  {
+    id: "03",
+    title: "Downloads",
+    desc: "Retrieve whole-cohort files and filtered multianno bundles.",
+    link: "/downloads",
+    badge: "Data access",
+    preview: "table",
+  },
+] as const;
+
+const DATA_LAYERS = [
+  {
+    id: "01",
     title: "Public cfDNA Studies",
     source: "GEO / PMID-curated",
     sampleCount: 476,
-    note: "Harmonized and curated external plasma cfDNA datasets."
+    note: "Curated external plasma cfDNA studies.",
   },
   {
+    id: "02",
     title: "In-house Cohort",
     source: "Lee Lab",
     sampleCount: 1425,
-    note: "Proprietary sequencing data processed via standardized pipeline."
+    note: "Internal sequencing cohort processed with a unified pipeline.",
   },
   {
+    id: "03",
     title: "TCGA Reference",
     source: "TCGA MAF",
     sampleCount: 6579,
-    note: "Baseline somatic mutation data for gene and cohort comparison."
-  }
-];
-
-const FEATURES = [
-  {
-    title: "Gene Search",
-    desc: "Targeted querying of somatic variants by gene symbol with comprehensive functional annotations.",
-    link: "/gene-search",
-    icon: "🔬",
+    note: "Reference solid-tumor mutation set for comparison.",
   },
-  {
-    title: "Statistical Analysis",
-    desc: "Interactive cohort-level mutation plots and gene-specific structural distribution visualization.",
-    link: "/statistics",
-    icon: "📊",
-  },
-  {
-    title: "Data Downloads",
-    desc: "Access annotated tables, MAF summaries, and raw standardized data for downstream research.",
-    link: "/downloads",
-    icon: "📥",
-  }
-];
+] as const;
 
 export function HomePage() {
-  const navigate = useNavigate();
-
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const cancer = formData.get("cancer")?.toString() || DEFAULT_CANCER;
-    const gene = formData.get("gene")?.toString().trim() || DEFAULT_GENE;
-    navigate(`/gene-search?cancer=${encodeURIComponent(cancer)}&gene=${encodeURIComponent(gene)}`);
-  };
-
   return (
     <>
       <HeroCarousel />
 
       <main className="portal-home">
-        {/* Unified Search Section */}
-        <section className="portal-search-section">
+        <section className="portal-showcase-section animate-fade-up animate-fade-up-2">
           <div className="portal-section-inner">
-            <div className="portal-search-container animate-fade-up">
-              <div className="portal-search-header">
-                <h2>Query Somatic Variants</h2>
-                <p>Search across multianno cohorts using standardized gene symbols</p>
+            <div className="portal-showcase-hero">
+              <div className="portal-showcase-copy">
+                <span className="portal-showcase-kicker">Tools</span>
+                <h2>Explore cfdnadb through focused analysis workflows</h2>
+                <p>
+                  Use the core interfaces to search genes, inspect cohort-level mutation patterns, and retrieve curated outputs without moving between disconnected pages.
+                </p>
+                <div className="portal-showcase-actions">
+                  <Link to="/gene-search" className="portal-showcase-button">Open Gene Search</Link>
+                </div>
               </div>
-              
-              <form className="portal-query-builder" onSubmit={handleSearch}>
-                <div className="portal-query-input-group">
-                  <div className="portal-query-field cohort-select">
-                    <span className="field-label">Cohort</span>
-                    <select name="cancer" defaultValue={DEFAULT_CANCER}>
-                      {CANCER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                    </select>
+
+              <div className="portal-showcase-visual portal-showcase-visual--tools" aria-hidden="true">
+                <div className="portal-ui-card">
+                  <div className="portal-ui-topbar">
+                    <span />
+                    <span />
+                    <span />
                   </div>
-                  <div className="portal-query-divider" />
-                  <div className="portal-query-field gene-input">
-                    <span className="field-label">Gene Symbol</span>
-                    <input name="gene" type="text" defaultValue={DEFAULT_GENE} placeholder="e.g. TP53, KRAS, EGFR" />
+                  <div className="portal-ui-grid">
+                    <div className="portal-ui-panel portal-ui-panel--wide" />
+                    <div className="portal-ui-panel" />
+                    <div className="portal-ui-panel" />
+                    <div className="portal-ui-panel portal-ui-panel--short" />
+                    <div className="portal-ui-panel portal-ui-panel--chart" />
+                    <div className="portal-ui-panel portal-ui-panel--chart" />
                   </div>
-                  <button type="submit" className="portal-query-submit">Search</button>
                 </div>
-              </form>
-              
-              <div className="portal-query-examples">
-                <span>Examples:</span>
-                <div className="example-links">
-                  <Link to="/gene-search?cancer=Breast&gene=TP53">Breast / TP53</Link>
-                  <Link to="/gene-search?cancer=Colonrector&gene=KRAS">Colorectal / KRAS</Link>
-                  <Link to="/gene-search?cancer=Lung&gene=EGFR">Lung / EGFR</Link>
-                </div>
+              </div>
+            </div>
+
+            <div className="portal-showcase-band">
+              <div className="portal-showcase-band-grid">
+                {TOOL_TILES.map((tool) => (
+                  <Link key={tool.title} to={tool.link} className="portal-tool-tile">
+                    <div className={`portal-tool-preview portal-tool-preview--${tool.preview}`} aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                    <div className="portal-tool-caption">
+                      <strong>{tool.title}</strong>
+                      <p>{tool.desc}</p>
+                      <span>{tool.badge}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="portal-showcase-sidecopy">
+                <p>
+                  The main workflows are organized around direct query, cohort browse, and export, so the homepage points to analysis tasks instead of decorative cards.
+                </p>
+                <Link to="/browse" className="portal-side-action">Open cohort browse</Link>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Feature Modules */}
-        <section className="portal-modules-section animate-fade-up animate-fade-up-2">
+        <section className="portal-showcase-section portal-showcase-section--data animate-fade-up animate-fade-up-3">
           <div className="portal-section-inner">
-            <div className="portal-section-title">
-              <h2>Analytical Modules</h2>
-              <div className="title-underline" />
+            <div className="portal-showcase-hero portal-showcase-hero--reverse">
+              <div className="portal-showcase-copy">
+                <span className="portal-showcase-kicker">Data Architecture</span>
+                <h2>Three coordinated data layers support query and comparison</h2>
+                <p>
+                  cfdnadb integrates curated public cfDNA studies, internal plasma cohorts, and a TCGA solid-tumor reference so users can inspect cfDNA findings with a consistent comparison baseline.
+                </p>
+                <div className="portal-showcase-actions">
+                  <Link to="/downloads" className="portal-showcase-button portal-showcase-button--secondary">Open Downloads</Link>
+                </div>
+              </div>
+
+              <div className="portal-showcase-visual portal-showcase-visual--data" aria-hidden="true">
+                <div className="portal-architecture-card">
+                  {DATA_LAYERS.map((layer, index) => (
+                    <div key={layer.title} className="portal-architecture-step">
+                      <div className="portal-architecture-index">{layer.id}</div>
+                      <div className="portal-architecture-body">
+                        <strong>{layer.title}</strong>
+                        <span>{layer.source}</span>
+                      </div>
+                      {index < DATA_LAYERS.length - 1 ? <div className="portal-architecture-connector" /> : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div className="portal-modules-grid">
-              {FEATURES.map((f) => (
-                <Link key={f.title} to={f.link} className="portal-module-card">
-                  <div className="module-icon-wrapper">
-                     <div className="module-icon">{f.icon}</div>
+
+            <div className="portal-data-band">
+              {DATA_LAYERS.map((layer) => (
+                <article key={layer.title} className="portal-data-card">
+                  <div className="portal-data-card-head">
+                    <span>{layer.id}</span>
+                    <strong>{formatNumber(layer.sampleCount)}</strong>
                   </div>
-                  <div className="module-content">
-                    <h3>{f.title}</h3>
-                    <p>{f.desc}</p>
+                  <div className="portal-data-card-body">
+                    <h3>{layer.title}</h3>
+                    <small>{layer.source}</small>
+                    <p>{layer.note}</p>
                   </div>
-                  <div className="module-action">Explore &rarr;</div>
-                </Link>
+                </article>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Data Architecture */}
-        <section className="portal-data-section animate-fade-up animate-fade-up-3">
-          <div className="portal-section-inner">
-            <div className="portal-section-title">
-              <h2>Data Architecture</h2>
-              <div className="title-underline" />
-              <p className="section-subtitle">Triple-layered harmonized somatic data for robust comparative analysis.</p>
-            </div>
-            <div className="portal-data-grid">
-              {DATA_SOURCES.map((d, i) => (
-                <div key={d.title} className="portal-data-item">
-                  <div className="data-item-number">0{i + 1}</div>
-                  <div className="data-item-details">
-                    <span className="data-count">{formatNumber(d.sampleCount)} Samples</span>
-                    <h4>{d.title}</h4>
-                    <p>{d.note}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Footer / About Note */}
-        <section className="portal-about-section animate-fade-up animate-fade-up-4">
-          <div className="portal-section-inner">
-            <div className="portal-about-content">
-              <h2>About cfDNA Atlas</h2>
-              <p>
-                The cfDNA Atlas is an academic somatic mutation database indexing plasma cell-free DNA 
-                across diverse cancer cohorts. Built for precision oncology, the platform supports 
-                direct variant lookups, comprehensive cohort-level statistics, and downstream 
-                comparative computational analysis.
-              </p>
-              <div className="portal-about-actions">
-                <Link to="/browse" className="btn-solid">Browse Data Matrix</Link>
-                <Link to="/downloads" className="btn-outline">Access Repositories</Link>
-              </div>
             </div>
           </div>
         </section>

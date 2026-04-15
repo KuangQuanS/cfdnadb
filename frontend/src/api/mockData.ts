@@ -4,9 +4,12 @@ import type {
   DownloadAsset,
   FilterOptions,
   LabelCount,
+  MafSummary,
   Overview,
   PagedResponse,
+  StatisticsOverview,
   StudyDetail,
+  TopGene,
   VcfDemo,
   VisualizationSummary
 } from "../types/api";
@@ -30,7 +33,7 @@ export const cancerSummaryMock: CancerSummary[] = [
     externalStatus: "Completed"
   },
   {
-    cancer: "Colonrector",
+    cancer: "Colorectal",
     sampleCount: 50,
     totalDataFiles: 200,
     avinputCount: 50,
@@ -81,7 +84,7 @@ export const cancerSummaryMock: CancerSummary[] = [
     externalStatus: "Not started"
   },
   {
-    cancer: "Pdac",
+    cancer: "Pancreatic",
     sampleCount: 0,
     totalDataFiles: 0,
     avinputCount: 0,
@@ -639,3 +642,34 @@ export const sampleBurdenMock: LabelCount[] = [
   { label: "RTCG0P0037-1-THN1", count: 1143 },
   { label: "RTCG0P0014-1-TWN1", count: 987 }
 ];
+
+const mafSummaryMock: MafSummary = {
+  source: "cfDNA",
+  totalVariants: 86197,
+  totalSamples: 1425,
+  totalGenes: 16129
+};
+
+const statisticsTopGenesMock: TopGene[] = [
+  { gene: "TTN", count: 246 },
+  { gene: "MUC12", count: 160 },
+  { gene: "MUC16", count: 101 },
+  { gene: "HRNR", count: 88 },
+  { gene: "OBSCN", count: 88 },
+  { gene: "HMCN2", count: 83 },
+  { gene: "PLEC", count: 78 },
+  { gene: "FLG", count: 77 },
+  { gene: "TNRC6A", count: 68 },
+  { gene: "TNXB", count: 66 }
+];
+
+export const statisticsOverviewMock: StatisticsOverview = {
+  source: "cfDNA",
+  generatedAt: "2026-04-14T00:00:00Z",
+  cancerSummary: cancerSummaryMock,
+  mafSummary: mafSummaryMock,
+  funcDistribution: funcDistributionMock,
+  exonicDistribution: exonicDistributionMock,
+  chromDistribution: chromDistributionMock,
+  topGenes: statisticsTopGenesMock
+};

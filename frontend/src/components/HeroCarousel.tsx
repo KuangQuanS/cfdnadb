@@ -1,6 +1,8 @@
+import { type FormEvent, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getCancerSummary, getDatabaseStats } from "../api/client";
+import { CANCER_OPTIONS, DEFAULT_CANCER, DEFAULT_GENE } from "../constants/cfdna";
 import type { CancerSummary, DatabaseStats } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/human_body.png";
@@ -10,7 +12,7 @@ const MOCK_STATS: DatabaseStats = {
   totalVariants: 3_324_495,
   totalSamples: 1_527,
   totalGenes: 22_638,
-  cohortCount: 5
+  cohortCount: 12
 };
 
 const MOCK_COHORTS: CancerSummary[] = [
@@ -22,142 +24,168 @@ const MOCK_COHORTS: CancerSummary[] = [
 ];
 
 const COHORT_LABELS: Record<string, string> = {
-  Breast: "Breast", Colonrector: "Colorectal", Liver: "Liver", Lung: "Lung", Pdac: "Pancreas"
+  Breast: "Breast",
+  Colonrector: "Colorectal",
+  Liver: "Liver",
+  Lung: "Lung",
+  Pdac: "Pancreas",
+};
+
+const BAR_COLORS = ["#4b359a", "#5b43ad", "#6b53bc", "#7b64cb", "#917dd8"];
+const BROWSE_CANCER_MAP: Record<string, string> = {
+  Breast: "Breast",
+  Colonrector: "Colorectal",
+  Liver: "Liver",
+  Lung: "Lung",
+  Pdac: "Pancreatic",
 };
 
 export function HeroCarousel() {
+  const navigate = useNavigate();
   const statsQuery = useQuery({ queryKey: ["db-stats"], queryFn: getDatabaseStats, staleTime: 5 * 60_000 });
   const cancerQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary, staleTime: 5 * 60_000 });
 
   const stats = statsQuery.data ?? MOCK_STATS;
   const cohorts = cancerQuery.data && cancerQuery.data.length > 0 ? cancerQuery.data : MOCK_COHORTS;
-  const maxSamples = Math.max(...cohorts.map((c) => c.sampleCount), 1);
+
+  const topCohorts = useMemo(
+    () => [...cohorts].sort((left, right) => right.sampleCount - left.sampleCount).slice(0, 5),
+    [cohorts]
+  );
+  const maxSamples = Math.max(...topCohorts.map((item) => item.sampleCount), 1);
+  const totalSamples = stats.totalSamples || topCohorts.reduce((sum, item) => sum + item.sampleCount, 0);
+  const axisTicks = buildAxisTicks(maxSamples);
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const cancer = formData.get("cancer")?.toString() || DEFAULT_CANCER;
+    const gene = formData.get("gene")?.toString().trim() || DEFAULT_GENE;
+    navigate(`/gene-search?source=cfDNA&cancer=${encodeURIComponent(cancer)}&gene=${encodeURIComponent(gene)}`);
+  };
+
+  const goToBrowse = (cancer: string) => {
+    const targetCancer = BROWSE_CANCER_MAP[cancer] ?? cancer;
+    navigate(`/browse?cancer=${encodeURIComponent(targetCancer)}`);
+  };
 
   return (
     <section className="gdc-hero">
-      <div className="gdc-hero-background"></div>
       <div className="gdc-hero-inner">
-        
-        {/* Left Column */}
         <div className="gdc-col-left">
-          <h1 className="gdc-title">cfDNA Somatic Variant<br/><span>Data Portal</span></h1>
-          <div className="gdc-subtitle-section">
-            <h3>Harmonized Cancer Datasets</h3>
-            <p>
-              A repository and computational platform for cancer researchers who need to 
-              understand cancer, its clinical progression, and response to therapy through plasma cell-free DNA.
-            </p>
-            <Link to="/gene-search" className="gdc-btn-primary">Explore Our Cancer Datasets</Link>
-          </div>
-          
-          <div className="gdc-summary-section">
-            <div className="gdc-summary-header">
-              <h3>Data Portal Summary</h3>
-              <span className="gdc-release-link">Data Release 1.0 - Dec 2025</span>
+          <h1 className="gdc-title">
+            cfDNA cancer database
+          </h1>
+          <p className="gdc-subtitle">
+            Curated plasma cfDNA somatic mutation records with cohort browse, gene-level query, and downloadable data outputs.
+          </p>
+
+          <form className="gdc-hero-search" onSubmit={handleSearch}>
+            <div className="gdc-search-fields">
+              <label className="gdc-search-field gdc-search-field--cohort">
+                <span>Cohort</span>
+                <select name="cancer" defaultValue={DEFAULT_CANCER}>
+                  {CANCER_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="gdc-search-field gdc-search-field--gene">
+                <span>Gene Symbol</span>
+                <input name="gene" type="text" defaultValue={DEFAULT_GENE} placeholder="TP53, KRAS, EGFR" />
+              </label>
             </div>
-            <div className="gdc-metrics-pill">
-              <div className="gdc-metric">
-                 <div className="gdc-metric-icon cohort-icon">📁</div>
-                 <span className="gdc-num">{stats.cohortCount}</span>
-                 <span className="gdc-label">Cohorts</span>
-              </div>
-              <div className="gdc-metric">
-                 <div className="gdc-metric-icon site-icon">🧪</div>
-                 <span className="gdc-num">{formatNumber(stats.totalSamples)}</span>
-                 <span className="gdc-label">Samples</span>
-              </div>
-              <div className="gdc-metric">
-                 <div className="gdc-metric-icon gene-icon">🧬</div>
-                 <span className="gdc-num">{formatNumber(stats.totalGenes)}</span>
-                 <span className="gdc-label">Genes</span>
-              </div>
-              <div className="gdc-metric">
-                 <div className="gdc-metric-icon variant-icon">🔬</div>
-                 <span className="gdc-num">{formatNumber(stats.totalVariants)}</span>
-                 <span className="gdc-label">Mutations</span>
-              </div>
+            <div className="gdc-search-actions">
+              <button type="submit" className="gdc-search-submit">Search</button>
+              <Link to="/gene-search" className="gdc-search-link">Advanced search</Link>
             </div>
+          </form>
+        </div>
+
+        <div className="gdc-col-middle" aria-hidden="true">
+          <div className="gdc-body-card">
+            <img src={humanBodyImg} alt="" className="gdc-body-img" />
           </div>
         </div>
 
-        {/* Middle Column */}
-        <div className="gdc-col-middle">
-          <BodySilhouette cohorts={cohorts} />
-        </div>
-
-        {/* Right Column */}
         <div className="gdc-col-right">
-          <div className="gdc-chart-container">
-            <h4 className="gdc-chart-title">Cases by Major Primary Site</h4>
+          <section className="gdc-chart-card">
+            <div className="gdc-chart-header">
+              <h3>Cases by Primary Site</h3>
+              <span>n = {formatNumber(totalSamples)}</span>
+            </div>
+
             <div className="gdc-bar-chart">
-              {cohorts.map((c) => {
-                const pct = (c.sampleCount / maxSamples) * 100;
+              {topCohorts.map((cohort, index) => {
+                const width = (cohort.sampleCount / maxSamples) * 100;
                 return (
-                  <div key={c.cancer} className="gdc-bar-row">
-                    <span className="gdc-bar-label">{COHORT_LABELS[c.cancer] ?? c.cancer}</span>
-                    <div className="gdc-bar-track">
-                      <div 
-                        className={`gdc-bar-fill color-${c.cancer.toLowerCase()}`}
-                        style={{ width: `${Math.max(pct, 2)}%` }}
-                      ></div>
+                  <button
+                    key={cohort.cancer}
+                    type="button"
+                    className="gdc-bar-row"
+                    onClick={() => goToBrowse(cohort.cancer)}
+                    aria-label={`Open browse view for ${COHORT_LABELS[cohort.cancer] ?? cohort.cancer}`}
+                  >
+                    <div className="gdc-bar-meta">
+                      <span className="gdc-bar-label">{COHORT_LABELS[cohort.cancer] ?? cohort.cancer}</span>
+                      <span className="gdc-bar-value">{formatNumber(cohort.sampleCount)}</span>
                     </div>
-                  </div>
+                    <div className="gdc-bar-track">
+                      <div
+                        className="gdc-bar-fill"
+                        style={{
+                          width: `${Math.max(width, 2)}%`,
+                          backgroundColor: BAR_COLORS[index % BAR_COLORS.length],
+                        }}
+                      />
+                    </div>
+                  </button>
                 );
               })}
             </div>
-            <div className="gdc-chart-axis">
-              <span>0</span>
-              <span>1</span>
-              <span>2</span>
-              <span>3</span>
-              <span>4</span>
-              <span>100s of Cases</span>
-            </div>
-          </div>
-        </div>
 
+            <div className="gdc-chart-axis">
+              {axisTicks.map((tick) => (
+                <span key={tick}>{formatAxisTick(tick, axisTicks[axisTicks.length - 1] ?? tick)}</span>
+              ))}
+            </div>
+
+            <div className="gdc-summary-section">
+              <div className="gdc-summary-header">
+                <h4>Database Summary</h4>
+              </div>
+              <div className="gdc-summary-grid">
+                <SummaryMetric label="Cohorts" value={formatNumber(stats.cohortCount)} />
+                <SummaryMetric label="Samples" value={formatNumber(stats.totalSamples)} />
+                <SummaryMetric label="Genes" value={formatNumber(stats.totalGenes)} />
+                <SummaryMetric label="Mutations" value={stats.totalVariants >= 1_000_000 ? `${(stats.totalVariants / 1_000_000).toFixed(1)}M+` : formatNumber(stats.totalVariants)} />
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </section>
   );
 }
 
-function BodySilhouette({ cohorts }: { cohorts: CancerSummary[] }) {
-  const cohortSet = new Set(cohorts.map((c) => c.cancer));
-
-  const labels = [
-    { cancer: "Lung", label: "Lung", labelTop: "27%", labelLeft: "90%", pointTop: "28%", pointLeft: "55%" },
-    { cancer: "Breast", label: "Breast", labelTop: "33%", labelLeft: "10%", pointTop: "33%", pointLeft: "42%" },
-    { cancer: "Liver", label: "Liver", labelTop: "44%", labelLeft: "90%", pointTop: "42%", pointLeft: "48%" },
-    { cancer: "Pdac", label: "Pancreas", labelTop: "50%", labelLeft: "10%", pointTop: "50%", pointLeft: "52%" },
-    { cancer: "Colonrector", label: "Colorectal", labelTop: "58%", labelLeft: "90%", pointTop: "56%", pointLeft: "48%" },
-  ];
-
+function SummaryMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="gdc-body-wrapper">
-      <img src={humanBodyImg} alt="Human body" className="gdc-body-img" />
-      <svg className="gdc-body-svg" xmlns="http://www.w3.org/2000/svg">
-        {labels.map((l) => {
-          const active = cohortSet.has(l.cancer);
-          if (!active) return null;
-          return (
-            <line 
-              key={`line-${l.cancer}`}
-              x1={l.labelLeft} y1={l.labelTop} 
-              x2={l.pointLeft} y2={l.pointTop} 
-            />
-          );
-        })}
-      </svg>
-      {labels.map((l) => {
-        const active = cohortSet.has(l.cancer);
-        if (!active) return null;
-        return (
-          <div key={l.cancer}>
-             <div className="gdc-body-label" style={{ top: l.labelTop, left: l.labelLeft }}>{l.label}</div>
-             <div className="gdc-body-point" style={{ top: l.pointTop, left: l.pointLeft }}></div>
-          </div>
-        );
-      })}
+    <div className="gdc-metric">
+      <span className="gdc-label">{label}</span>
+      <strong className="gdc-num">{value}</strong>
     </div>
   );
+}
+
+function buildAxisTicks(maxValue: number) {
+  const roundedMax = Math.max(100, Math.ceil(maxValue / 100) * 100);
+  const step = roundedMax / 4;
+  return [0, step, step * 2, step * 3, roundedMax].map((value) => Math.round(value));
+}
+
+function formatAxisTick(value: number, roundedMax: number) {
+  if (value === roundedMax) return `${roundedMax}+`;
+  return String(value);
 }

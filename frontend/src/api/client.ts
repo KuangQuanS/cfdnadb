@@ -10,10 +10,15 @@ import type {
   MafGeneSummary,
   MafSummary,
   MafMutation,
+  OncoplottData,
   Overview,
   PagedResponse,
   BiomarkerRecord,
+  SampleBrowseItem,
+  SampleDetail,
+  SampleSelection,
   StudyDetail,
+  StatisticsOverview,
   VisualizationSummary,
   VcfDemo,
   CancerAsset,
@@ -21,7 +26,8 @@ import type {
   GeneVariant,
   GeneSummary,
   TopGene,
-  StatisticsSource
+  StatisticsSource,
+  GenePlot
 } from "../types/api";
 import {
   downloadsMock,
@@ -35,6 +41,7 @@ import {
   funcDistributionMock,
   exonicDistributionMock,
   chromDistributionMock,
+  statisticsOverviewMock,
   sampleBurdenMock
 } from "./mockData";
 
@@ -49,6 +56,7 @@ function resolveMock(path: string): unknown {
   if (path.startsWith("/api/v1/vcf-demo")) return vcfDemoMock;
   if (path.startsWith("/api/v1/downloads")) return downloadsMock;
   if (path.startsWith("/api/v1/summary/cancers")) return cancerSummaryMock;
+  if (path.startsWith("/api/v1/statistics/overview")) return statisticsOverviewMock;
   if (path.startsWith("/api/v1/variants/func-distribution")) return funcDistributionMock;
   if (path.startsWith("/api/v1/variants/exonic-distribution")) return exonicDistributionMock;
   if (path.startsWith("/api/v1/variants/chrom-distribution")) return chromDistributionMock;
@@ -120,6 +128,10 @@ export function getStudy(id: string) {
 
 export function getCancerSummary() {
   return requestLive<CancerSummary[]>("/api/v1/summary/cancers");
+}
+
+export function getStatisticsOverview() {
+  return request<StatisticsOverview>("/api/v1/statistics/overview");
 }
 
 export function getTopGenes(cancer: string, limit = 20) {
@@ -324,6 +336,24 @@ export function getStatisticsGenePlotUrl(cancer: string, source: string, gene: s
   return `${API_BASE}/api/v1/statistics/${encodeURIComponent(cancer)}/gene-plot?${params.toString()}`;
 }
 
+// ---- Gene lollipop plots ----
+
+export function getGenePlots(gene: string, cancers?: string[]) {
+  const params = new URLSearchParams({ gene });
+  for (const c of cancers ?? []) params.append("cancer", c);
+  return requestLive<GenePlot[]>(`/api/v1/gene-plots?${params.toString()}`);
+}
+
+export function toGenePlotUrl(url: string) {
+  return `${API_BASE}${url}`;
+}
+
+export function getOncoplottData(source: string, cancerTypes: string[], limit = 20) {
+  const params = new URLSearchParams({ source, limit: String(limit) });
+  for (const c of cancerTypes) params.append("cancerType", c);
+  return requestLive<OncoplottData>(`/api/v1/maf-mutations/oncoplot?${params.toString()}`);
+}
+
 // ---- Cohort files (Browse Files tab) ----
 
 export function getCohortFiles(cancer: string, source?: string, category?: string) {
@@ -336,4 +366,58 @@ export function getCohortFiles(cancer: string, source?: string, category?: strin
 export function getSourceDistribution(cancer: string) {
   const params = new URLSearchParams({ cancer });
   return requestLive<LabelCount[]>(`/api/v1/cohort/source-distribution?${params.toString()}`);
+}
+
+export interface SampleBrowseFilters {
+  cancers?: string[];
+  sources?: string[];
+  gene?: string;
+  sample?: string;
+  minVariants?: number;
+  hasAnnotated?: boolean;
+  hasSomatic?: boolean;
+  includeTopGenes?: boolean;
+  page?: number;
+  size?: number;
+}
+
+export function getSampleBrowse(filters: SampleBrowseFilters) {
+  const params = new URLSearchParams();
+  for (const cancer of filters.cancers ?? []) params.append("cancer", cancer);
+  for (const source of filters.sources ?? []) params.append("source", source);
+  if (filters.gene) params.set("gene", filters.gene);
+  if (filters.sample) params.set("sample", filters.sample);
+  if (filters.minVariants != null) params.set("minVariants", String(filters.minVariants));
+  if (filters.hasAnnotated) params.set("hasAnnotated", "true");
+  if (filters.hasSomatic) params.set("hasSomatic", "true");
+  if (filters.includeTopGenes === false) params.set("includeTopGenes", "false");
+  params.set("page", String(filters.page ?? 1));
+  params.set("size", String(filters.size ?? 25));
+  return requestLive<PagedResponse<SampleBrowseItem>>(`/api/v1/samples?${params.toString()}`);
+}
+
+export function getSampleDetail(cancer: string, source: string, sampleId: string) {
+  const params = new URLSearchParams({ cancer, source, sampleId });
+  return requestLive<SampleDetail>(`/api/v1/samples/detail?${params.toString()}`);
+}
+
+export async function downloadSampleFiles(fileType: string, samples: SampleSelection[]) {
+  const response = await fetch(`${API_BASE}/api/v1/samples/download`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ fileType, samples })
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed with ${response.status}`);
+  }
+
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const fileNameMatch = disposition.match(/filename=\"([^\"]+)\"/i);
+  const fileName = fileNameMatch?.[1] ?? `cfdnadb_${fileType}_samples.zip`;
+  return {
+    blob: await response.blob(),
+    fileName
+  };
 }

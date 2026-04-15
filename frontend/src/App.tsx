@@ -11,6 +11,7 @@ const StudyDetailPage = lazy(() => import("./pages/StudyDetailPage").then((modul
 const DownloadsPage = lazy(() => import("./pages/DownloadsPage").then((module) => ({ default: module.DownloadsPage })));
 const AboutPage = lazy(() => import("./pages/AboutPage").then((module) => ({ default: module.AboutPage })));
 const StatisticsPage = lazy(() => import("./pages/StatisticsPage").then((module) => ({ default: module.StatisticsPage })));
+const HelpPage = lazy(() => import("./pages/HelpPage").then((module) => ({ default: module.HelpPage })));
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="/studies/:id" element={<StudyDetailPage />} />
           <Route path="/downloads" element={<DownloadsPage />} />
+          <Route path="/help" element={<HelpPage />} />
           <Route path="/about" element={<AboutPage />} />
         </Routes>
       </Suspense>

@@ -1,409 +1,643 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
-import { Document, Page, pdfjs } from "react-pdf";
-import {
-  getStatisticsGenes,
-  getStatisticsGenePlotUrl,
-  getStatisticsPlots,
-  getStatisticsSources,
-  toApiUrl,
-} from "../api/client";
+import ReactECharts from "echarts-for-react";
+import type { EChartsOption } from "echarts";
+import { useNavigate } from "react-router-dom";
 import { SectionHeader } from "../components/SectionHeader";
-import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
-import type { CancerAsset, StatisticsSource } from "../types/api";
+import { getStatisticsOverview } from "../api/client";
+import type { CancerSummary, LabelCount } from "../types/api";
+import { formatNumber } from "../utils/format";
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+const PURPLE_SCALE = [
+  "#4b359a",
+  "#5d45b4",
+  "#7258c6",
+  "#8a70d2",
+  "#a288dd",
+  "#b7a0e5",
+  "#c9b7ec",
+  "#dbcdf2",
+];
 
-const DEFAULT_STAT_GENE = "TP53";
+const DONUT_SCALE = [
+  "#4b359a",
+  "#6548b8",
+  "#7e63cb",
+  "#9a83dd",
+  "#b8aae9",
+  "#d7d0f6",
+  "#ece4ff",
+];
 
-const SOURCE_LABELS: Record<string, string> = {
-  Private_cfDNA: "Private cfDNA",
-  GEO: "GEO",
-  TCGA: "TCGA",
-  Overview: "Overview",
+const CHART_LOADING_OPTION = {
+  text: "Loading chart...",
+  color: "#7258c6",
+  textColor: "#5c6b86",
+  maskColor: "rgba(255, 255, 255, 0.72)",
+  zlevel: 0,
+  fontSize: 13,
+  spinnerRadius: 12,
+  lineWidth: 3,
 };
 
-function normalizeCancerLabel(value: string) {
-  if (value === "Colonrector") return "Colorectal";
-  if (value === "Pdac") return "Pancreas";
-  return value;
+function cleanLabels(items: LabelCount[]): LabelCount[] {
+  return items.filter(
+    (item) =>
+      item.count > 0 &&
+      item.label.trim() !== "" &&
+      item.label.trim() !== "."
+  );
 }
 
-function getPlotDescription(asset: CancerAsset) {
-  const key = `${asset.title} ${asset.fileName}`.toLowerCase();
-  if (key.includes("oncoplot")) {
-    return "Oncoplot summarizes recurrent mutated genes and their alteration patterns across samples in the selected cohort.";
-  }
-  if (key.includes("titv")) {
-    return "Ti/Tv plot shows base-substitution composition and transition/transversion balance, helping assess mutation spectrum differences.";
-  }
-  if (key.includes("spectrum")) {
-    return "Spectrum plot breaks mutations into trinucleotide contexts so you can inspect substitution signatures within the cohort.";
-  }
-  if (key.includes("summary")) {
-    return "Summary plot combines mutation-class burden, variant-type composition, and top altered genes into one cohort-level overview.";
-  }
-  return "Summary PDF generated from maftools for the selected cohort and source.";
+function withOtherGroup(items: LabelCount[], limit = 6): LabelCount[] {
+  const sorted = [...cleanLabels(items)].sort((a, b) => b.count - a.count);
+  if (sorted.length <= limit) return sorted;
+  const head = sorted.slice(0, limit);
+  const tailCount = sorted
+    .slice(limit)
+    .reduce((sum, item) => sum + item.count, 0);
+  return [...head, { label: "Other", count: tailCount }];
 }
 
-function rankPlot(asset: CancerAsset) {
-  const key = `${asset.title} ${asset.fileName}`.toLowerCase();
-  if (key.includes("spectrum")) return 0;
-  if (key.includes("titv")) return 1;
-  if (key.includes("oncoplot")) return 2;
-  if (key.includes("summary")) return 3;
-  return 10;
-}
+function buildCohortDonutOption(
+  cancers: CancerSummary[],
+  total: number
+): EChartsOption {
+  const normalized = withOtherGroup(
+    cancers
+      .filter((item) => item.sampleCount > 0)
+      .map((item) => ({ label: item.cancer, count: item.sampleCount })),
+    8
+  );
 
-export function StatisticsPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const cancer = searchParams.get("cancer") ?? DEFAULT_CANCER;
-  const source = searchParams.get("source") ?? "";
-
-  const [geneQuery, setGeneQuery] = useState("");
-  const [selectedGene, setSelectedGene] = useState<string | null>(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [highlightIdx, setHighlightIdx] = useState(-1);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const suggestionsRef = useRef<HTMLUListElement>(null);
-
-  const sourcesQ = useQuery({
-    queryKey: ["stat-sources", cancer],
-    queryFn: () => getStatisticsSources(cancer),
-  });
-
-  const sources: StatisticsSource[] = sourcesQ.data ?? [];
-  const activeSource = source && sources.some((item) => item.source === source) ? source : sources[0]?.source ?? "";
-  const currentSourceMeta = sources.find((item) => item.source === activeSource);
-  const hasGenePlots = currentSourceMeta?.hasGenePlots ?? false;
-  const selectedLabel = SOURCE_LABELS[activeSource] ?? activeSource;
-
-  const setParam = useCallback(
-    (key: string, value: string) => {
-      const params = new URLSearchParams(searchParams);
-      params.set(key, value);
-      if (key === "cancer") {
-        params.delete("source");
-      }
-      setSearchParams(params);
+  return {
+    tooltip: {
+      trigger: "item",
+      formatter: (params: { name?: string; value?: number; percent?: number }) => {
+        const value = params.value ?? 0;
+        const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0.0";
+        return `${params.name}<br/>${formatNumber(value)} samples (${pct}%)`;
+      },
     },
-    [searchParams, setSearchParams]
-  );
-
-  const plotsQ = useQuery({
-    queryKey: ["stat-plots", cancer, activeSource],
-    queryFn: () => getStatisticsPlots(cancer, activeSource),
-    enabled: !!activeSource,
-  });
-
-  const genesQ = useQuery({
-    queryKey: ["stat-genes", cancer, activeSource, geneQuery],
-    queryFn: () => getStatisticsGenes(cancer, activeSource, geneQuery),
-    enabled: hasGenePlots && geneQuery.length >= 1,
-  });
-
-  const suggestions = genesQ.data ?? [];
-
-  useEffect(() => {
-    setGeneQuery("");
-    setSelectedGene(null);
-    setShowSuggestions(false);
-    setHighlightIdx(-1);
-  }, [cancer, activeSource]);
-
-  useEffect(() => {
-    if (hasGenePlots && !selectedGene) {
-      setGeneQuery(DEFAULT_STAT_GENE);
-      setSelectedGene(DEFAULT_STAT_GENE);
-    }
-  }, [hasGenePlots, selectedGene]);
-
-  useEffect(() => {
-    const handler = (event: MouseEvent) => {
-      if (
-        inputRef.current &&
-        !inputRef.current.contains(event.target as Node) &&
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(event.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const selectGene = (gene: string) => {
-    const normalized = gene.trim().toUpperCase();
-    if (!normalized) return;
-    setSelectedGene(normalized);
-    setGeneQuery(normalized);
-    setShowSuggestions(false);
-    setHighlightIdx(-1);
+    title: {
+      text: formatNumber(total),
+      subtext: "samples",
+      left: "33%",
+      top: "39%",
+      textAlign: "center",
+      textStyle: {
+        color: "#1d2742",
+        fontSize: 24,
+        fontWeight: 800,
+      },
+      subtextStyle: {
+        color: "#6b7893",
+        fontSize: 11,
+        fontWeight: 700,
+      },
+      itemGap: 2,
+    },
+    legend: {
+      orient: "vertical",
+      right: 10,
+      top: "middle",
+      icon: "circle",
+      itemWidth: 8,
+      itemHeight: 8,
+      itemGap: 10,
+      type: "scroll",
+      pageIconColor: "#4b359a",
+      pageTextStyle: { color: "#53627d", fontSize: 11 },
+      textStyle: { color: "#53627d", fontSize: 11, fontWeight: 600 },
+    },
+    series: [
+      {
+        type: "pie",
+        radius: ["52%", "72%"],
+        center: ["33%", "50%"],
+        avoidLabelOverlap: true,
+        label: { show: false },
+        labelLine: { show: false },
+        itemStyle: {
+          borderColor: "#ffffff",
+          borderWidth: 3,
+        },
+        data: normalized.map((item, index) => ({
+          name: item.label,
+          value: item.count,
+          itemStyle: { color: PURPLE_SCALE[index % PURPLE_SCALE.length] },
+        })),
+      },
+    ],
   };
+}
 
-  const submitGene = () => {
-    if (!geneQuery.trim()) return;
-    selectGene(geneQuery);
+function buildDonutOption(
+  data: LabelCount[],
+  centerLabel: string
+): EChartsOption {
+  const normalized = withOtherGroup(data, 5);
+  const total = normalized.reduce((sum, item) => sum + item.count, 0);
+  return {
+    tooltip: {
+      trigger: "item",
+      formatter: (params: { name?: string; value?: number; percent?: number }) => {
+        return `${params.name}<br/>${formatNumber(params.value ?? 0)} (${(
+          params.percent ?? 0
+        ).toFixed(1)}%)`;
+      },
+    },
+    title: {
+      text: formatNumber(total),
+      subtext: centerLabel,
+      left: "33%",
+      top: "39%",
+      textAlign: "center",
+      textStyle: {
+        color: "#1d2742",
+        fontSize: 22,
+        fontWeight: 800,
+      },
+      subtextStyle: {
+        color: "#6b7893",
+        fontSize: 11,
+        fontWeight: 700,
+      },
+      itemGap: 2,
+    },
+    legend: {
+      orient: "vertical",
+      right: 10,
+      top: "middle",
+      icon: "circle",
+      itemHeight: 8,
+      itemWidth: 8,
+      itemGap: 10,
+      textStyle: { color: "#53627d", fontSize: 11, fontWeight: 600 },
+      type: "scroll",
+      pageIconColor: "#4b359a",
+      pageTextStyle: { color: "#53627d", fontSize: 11 },
+    },
+    series: [
+      {
+        type: "pie",
+        radius: ["50%", "72%"],
+        center: ["33%", "50%"],
+        avoidLabelOverlap: true,
+        label: { show: false },
+        labelLine: { show: false },
+        itemStyle: { borderColor: "#ffffff", borderWidth: 3 },
+        data: normalized.map((item, index) => ({
+          name: item.label,
+          value: item.count,
+          itemStyle: { color: DONUT_SCALE[index % DONUT_SCALE.length] },
+        })),
+      },
+    ],
   };
+}
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (showSuggestions && suggestions.length > 0) {
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        setHighlightIdx((idx) => Math.min(idx + 1, suggestions.length - 1));
-        return;
-      }
+const CHROM_ORDER = [
+  "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+  "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
+  "21", "22", "X", "Y", "M", "MT",
+];
 
-      if (event.key === "ArrowUp") {
-        event.preventDefault();
-        setHighlightIdx((idx) => Math.max(idx - 1, 0));
-        return;
-      }
-
-      if (event.key === "Enter" && highlightIdx >= 0) {
-        event.preventDefault();
-        selectGene(suggestions[highlightIdx]);
-        return;
-      }
-    }
-
-    if (event.key === "Enter") {
-      event.preventDefault();
-      submitGene();
-      return;
-    }
-
-    if (event.key === "Escape") {
-      setShowSuggestions(false);
-    }
+function buildChromOption(data: LabelCount[]): EChartsOption {
+  const normalized = cleanLabels(data).map((item) => ({
+    label: item.label.replace(/^chr/i, "").toUpperCase(),
+    count: item.count,
+  }));
+  const ordered = normalized
+    .filter((item) => CHROM_ORDER.includes(item.label))
+    .sort(
+      (a, b) => CHROM_ORDER.indexOf(a.label) - CHROM_ORDER.indexOf(b.label)
+    );
+  const categories = ordered.map((item) => item.label);
+  const total = ordered.reduce((sum, item) => sum + item.count, 0);
+  return {
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      formatter: (params: Array<{ name: string; value: number }>) => {
+        const p = params[0];
+        const pct = total > 0 ? ((p.value / total) * 100).toFixed(1) : "0.0";
+        return `chr${p.name}<br/>${formatNumber(p.value)} variants (${pct}%)`;
+      },
+    },
+    grid: { left: 56, right: 20, top: 24, bottom: 46, containLabel: true },
+    xAxis: {
+      type: "category",
+      data: categories,
+      axisLabel: {
+        color: "#5c6b86",
+        fontSize: 9,
+        interval: (index: number, value: string) => {
+          if (["X", "Y", "M", "MT"].includes(value)) return false;
+          const numeric = Number(value);
+          return Number.isNaN(numeric) ? false : numeric % 2 === 1;
+        },
+        margin: 10,
+      },
+      axisTick: { alignWithLabel: true, lineStyle: { color: "#c6cfde" } },
+      axisLine: { lineStyle: { color: "#c6cfde" } },
+    },
+    yAxis: {
+      type: "value",
+      splitLine: { lineStyle: { color: "rgba(80, 95, 128, 0.12)" } },
+      axisLabel: {
+        color: "#5c6b86",
+        fontSize: 11,
+        formatter: (value: number) => {
+          if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+          if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
+          return String(value);
+        },
+      },
+    },
+    series: [
+      {
+        type: "bar",
+        data: ordered.map((item) => item.count),
+        barMaxWidth: 18,
+        itemStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: "#8a70d2" },
+              { offset: 1, color: "#4b359a" },
+            ],
+          },
+          borderRadius: [5, 5, 0, 0],
+        },
+      },
+    ],
   };
+}
 
-  const plotAssets = useMemo(
-    () => [...(plotsQ.data ?? [])].sort((left, right) => rankPlot(left) - rankPlot(right) || left.title.localeCompare(right.title)),
-    [plotsQ.data]
-  );
+function buildCompositionBarOption(
+  data: LabelCount[],
+  unitLabel: string
+): EChartsOption {
+  const normalized = withOtherGroup(data, 6)
+    .sort((a, b) => b.count - a.count)
+    .reverse();
+  const total = normalized.reduce((sum, item) => sum + item.count, 0);
+  return {
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      formatter: (params: Array<{ name: string; value: number }>) => {
+        const p = params[0];
+        const pct = total > 0 ? ((p.value / total) * 100).toFixed(1) : "0.0";
+        return `${p.name}<br/>${formatNumber(p.value)} ${unitLabel} (${pct}%)`;
+      },
+    },
+    grid: { left: 170, right: 80, top: 20, bottom: 24, containLabel: true },
+    xAxis: {
+      type: "value",
+      splitLine: { lineStyle: { color: "rgba(80, 95, 128, 0.12)" } },
+      axisLabel: {
+        color: "#5c6b86",
+        fontSize: 11,
+        formatter: (value: number) => {
+          if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+          if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
+          return String(value);
+        },
+      },
+    },
+    yAxis: {
+      type: "category",
+      data: normalized.map((item) => item.label),
+      axisLabel: {
+        color: "#33415c",
+        fontSize: 11,
+        fontWeight: 700,
+      },
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: "#c6cfde" } },
+    },
+    series: [
+      {
+        type: "bar",
+        data: normalized.map((item) => item.count),
+        barMaxWidth: 18,
+        itemStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 1,
+            y2: 0,
+            colorStops: [
+              { offset: 0, color: "#b7a0e5" },
+              { offset: 1, color: "#6548b8" },
+            ],
+          },
+          borderRadius: [0, 10, 10, 0],
+        },
+        label: {
+          show: true,
+          position: "right",
+          color: "#4b359a",
+          fontWeight: 700,
+          fontSize: 11,
+          formatter: (p: { value: number }) => formatNumber(p.value),
+        },
+      },
+    ],
+  };
+}
 
-  const sourceSummary = useMemo(() => {
-    if (!activeSource) return "Choose a cohort and source to inspect summary PDFs and per-gene mutation plots.";
-    if (hasGenePlots) return "This source includes both cohort-level summary PDFs and gene-level lollipop plots.";
-    return "This source currently provides cohort-level summary PDFs only.";
-  }, [activeSource, hasGenePlots]);
+function buildTopGenesOption(
+  items: Array<{ gene: string; count: number }>
+): EChartsOption {
+  const reversed = [...items]
+    .sort((a, b) => b.count - a.count)
+    .reverse();
+  return {
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      formatter: (params: Array<{ name: string; value: number }>) => {
+        const p = params[0];
+        return `${p.name}<br/>${formatNumber(p.value)} mutations`;
+      },
+    },
+    grid: { left: 100, right: 88, top: 16, bottom: 32, containLabel: true },
+    xAxis: {
+      type: "value",
+      splitLine: { lineStyle: { color: "rgba(80, 95, 128, 0.12)" } },
+      axisLabel: {
+        color: "#5c6b86",
+        formatter: (value: number) => {
+          if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+          if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
+          return String(value);
+        },
+      },
+    },
+    yAxis: {
+      type: "category",
+      data: reversed.map((item) => item.gene),
+      axisLabel: {
+        color: "#33415c",
+        fontWeight: 700,
+        fontSize: 12,
+      },
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: "#c6cfde" } },
+    },
+    series: [
+      {
+        type: "bar",
+        data: reversed.map((item) => item.count),
+        barMaxWidth: 18,
+        itemStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 1,
+            y2: 0,
+            colorStops: [
+              { offset: 0, color: "#9a83dd" },
+              { offset: 1, color: "#4b359a" },
+            ],
+          },
+          borderRadius: [0, 10, 10, 0],
+        },
+        label: {
+          show: true,
+          position: "right",
+          color: "#4b359a",
+          fontWeight: 700,
+          fontSize: 11,
+          formatter: (p: { value: number }) => formatNumber(p.value),
+        },
+      },
+    ],
+  };
+}
 
-  const genePlotUrl = selectedGene ? getStatisticsGenePlotUrl(cancer, activeSource, selectedGene) : null;
+function StatScope({
+  children,
+}: {
+  children: string;
+}) {
+  return <span className="statistics-private-card-scope">{children}</span>;
+}
 
+function KpiTile({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: number;
+  hint?: string;
+}) {
   return (
-    <div className="page-stack statistics-page">
-      <SectionHeader
-        eyebrow="Statistics"
-        title="Cohort statistical plots and gene analysis"
-        description="Explore cohort-level maftools summaries first, then move into a selected gene to inspect its protein-domain mutation pattern."
-      />
-
-      <section className="detail-card statistics-toolbar-card">
-        <div className="statistics-toolbar-top">
-          <label className="statistics-toolbar-field">
-            <span>Cohort</span>
-            <select value={cancer} onChange={(event) => setParam("cancer", event.target.value)}>
-              {CANCER_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {normalizeCancerLabel(option)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="statistics-toolbar-group">
-            <span className="statistics-toolbar-label">Data Source</span>
-            <div className="statistics-source-tabs">
-              {sources.map((item) => (
-                <button
-                  key={item.source}
-                  className={`statistics-source-tab${activeSource === item.source ? " active" : ""}`}
-                  onClick={() => setParam("source", item.source)}
-                  type="button"
-                >
-                  {SOURCE_LABELS[item.source] ?? item.source}
-                  {item.hasGenePlots ? <small>gene plots</small> : null}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="statistics-toolbar-meta">
-          <strong>
-            {normalizeCancerLabel(cancer)} {activeSource ? `· ${selectedLabel}` : ""}
-          </strong>
-          <p>{sourceSummary}</p>
-        </div>
-      </section>
-
-      {sourcesQ.isLoading ? <p className="panel-note">Discovering data sources...</p> : null}
-      {sources.length === 0 && !sourcesQ.isLoading ? (
-        <section className="detail-card empty-card">
-          <h3>No data sources found</h3>
-          <p>{normalizeCancerLabel(cancer)} does not have any discoverable plot directories.</p>
-        </section>
-      ) : null}
-
-      {activeSource ? (
-        <section className="statistics-section-block">
-          <div className="statistics-section-heading">
-            <p className="section-eyebrow">
-              {normalizeCancerLabel(cancer)} · {selectedLabel}
-            </p>
-            <h2>Summary Plots</h2>
-            <p className="statistics-section-copy">
-              These four maftools summary views describe mutation spectrum, substitution bias, recurrently altered genes, and overall cohort composition.
-            </p>
-          </div>
-
-          {plotsQ.isLoading ? <p className="panel-note">Loading plots...</p> : null}
-          {plotAssets.length > 0 ? (
-            <div className="statistics-pdf-grid">
-              {plotAssets.map((asset) => (
-                <article key={asset.fileName} className="stat-pdf-card">
-                  <div className="statistics-panel-header">
-                    <h3 className="stat-pdf-title">{asset.title}</h3>
-                    <p className="statistics-panel-note">{getPlotDescription(asset)}</p>
-                  </div>
-                  <div className="statistics-pdf-shell">
-                    <embed
-                      className="stat-pdf-frame"
-                      src={toApiUrl(asset.assetUrl)}
-                      type="application/pdf"
-                      title={asset.title}
-                    />
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : plotsQ.data ? (
-            <section className="detail-card empty-card">
-              <h3>No plots available</h3>
-              <p>
-                No PDF files found for {normalizeCancerLabel(cancer)} / {selectedLabel}.
-              </p>
-            </section>
-          ) : null}
-        </section>
-      ) : null}
-
-      {hasGenePlots ? (
-        <section className="detail-card statistics-gene-panel">
-          <div className="statistics-panel-header">
-            <div>
-              <p className="section-eyebrow">
-                {normalizeCancerLabel(cancer)} · {selectedLabel}
-              </p>
-              <h2>Gene Lollipop Plot</h2>
-              <p className="statistics-panel-copy">
-                Lollipop plots place observed coding mutations onto the protein model so you can quickly inspect hotspot clustering and affected domains.
-              </p>
-            </div>
-          </div>
-
-          <div className="statistics-gene-toolbar">
-            <div className="gene-search-box statistics-gene-search-box">
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="Type a gene name (e.g. TP53, BRCA1)..."
-                value={geneQuery}
-                onChange={(event) => {
-                  setGeneQuery(event.target.value.toUpperCase());
-                  setSelectedGene(null);
-                  setShowSuggestions(true);
-                  setHighlightIdx(-1);
-                }}
-                onFocus={() => {
-                  if (geneQuery.length >= 1) setShowSuggestions(true);
-                }}
-                onKeyDown={handleKeyDown}
-              />
-              {showSuggestions && suggestions.length > 0 ? (
-                <ul className="gene-suggestions" ref={suggestionsRef}>
-                  {suggestions.map((gene, idx) => (
-                    <li
-                      key={gene}
-                      className={idx === highlightIdx ? "highlighted" : ""}
-                      onMouseDown={() => selectGene(gene)}
-                    >
-                      {gene}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-
-            <div className="statistics-gene-actions">
-              <button className="button-primary statistics-gene-submit" type="button" onClick={submitGene}>
-                Load Plot
-              </button>
-              {selectedGene ? <span className="statistics-selected-gene">Selected gene: {selectedGene}</span> : null}
-            </div>
-          </div>
-
-          <div className="statistics-gene-explainer">
-            <p>
-              Default gene is <strong>{DEFAULT_STAT_GENE}</strong> so the lollipop module is immediately populated on first entry. Replace it with another symbol and click
-              <strong> Load Plot</strong> to refresh the figure.
-            </p>
-          </div>
-
-          {selectedGene && genePlotUrl ? (
-            <div className="gene-plot-viewer statistics-gene-viewer">
-              <div className="statistics-panel-header statistics-panel-header-soft">
-                <h3>{selectedGene} mutation map</h3>
-                <p className="statistics-panel-note">
-                  Colored lollipops mark distinct mutation classes along the transcript-coded protein structure for the selected cohort.
-                </p>
-              </div>
-              <InlinePdfPage url={genePlotUrl} title={`${selectedGene} lollipop plot`} />
-            </div>
-          ) : (
-            <div className="statistics-gene-empty">
-              <strong>No gene selected</strong>
-              <p>Use the search box above to load a lollipop plot for the current cohort and source.</p>
-            </div>
-          )}
-        </section>
-      ) : activeSource ? (
-        <section className="detail-card empty-card">
-          <h3>Gene plots unavailable</h3>
-          <p>{selectedLabel} currently exposes summary PDFs only.</p>
-        </section>
-      ) : null}
+    <div className="statistics-private-kpi-tile">
+      <span className="statistics-private-kpi-label">{label}</span>
+      <strong className="statistics-private-kpi-value">
+        {formatNumber(value)}
+      </strong>
+      {hint ? <span className="statistics-private-kpi-hint">{hint}</span> : null}
     </div>
   );
 }
 
-function InlinePdfPage({ url, title }: { url: string; title: string }) {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(960);
+export function StatisticsPage() {
+  const navigate = useNavigate();
+  const overviewQ = useQuery({
+    queryKey: ["statistics-overview-cfdna"],
+    queryFn: getStatisticsOverview,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
 
-  useLayoutEffect(() => {
-    const element = wrapperRef.current;
-    if (!element) return;
+  const overview = overviewQ.data;
+  const cancerSummary = overview?.cancerSummary ?? [];
+  const activeCohorts = useMemo(
+    () => cancerSummary.filter((item) => item.sampleCount > 0),
+    [cancerSummary]
+  );
+  const sampleSum = activeCohorts.reduce(
+    (sum, item) => sum + item.sampleCount,
+    0
+  );
+  const mafSummary = overview?.mafSummary;
+  const totalSamples = mafSummary?.totalSamples ?? sampleSum;
+  const totalVariants = mafSummary?.totalVariants ?? 0;
+  const totalGenes = mafSummary?.totalGenes ?? 0;
 
-    const updateWidth = () => {
-      setWidth(Math.max(320, Math.floor(element.clientWidth - 32)));
-    };
+  const topGeneItems = useMemo(
+    () => overview?.topGenes ?? [],
+    [overview]
+  );
 
-    updateWidth();
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+  const loading = overviewQ.isLoading;
+  const cohortChartLoading = overviewQ.isLoading;
+  const funcChartLoading = overviewQ.isLoading;
+  const exonicChartLoading = overviewQ.isLoading;
+  const chromChartLoading = overviewQ.isLoading;
+  const topGenesChartLoading = overviewQ.isLoading;
+
+  const topGeneChartEvents = useMemo(
+    () => ({
+      click: (params: { name?: string; componentType?: string }) => {
+        if (params.componentType !== "series" || !params.name) return;
+        navigate(`/gene-search/${encodeURIComponent(params.name)}`);
+      },
+    }),
+    [navigate]
+  );
 
   return (
-    <div className="statistics-inline-pdf" ref={wrapperRef}>
-      <Document file={url} loading={<p className="panel-note">Loading gene plot...</p>} error={<p className="panel-note">Unable to load this PDF preview.</p>}>
-        <Page pageNumber={1} width={width} renderTextLayer={false} renderAnnotationLayer={false} className="statistics-inline-pdf-page" />
-      </Document>
-      <p className="statistics-inline-pdf-caption">{title}</p>
+    <div className="page-stack statistics-private-page">
+      <SectionHeader
+        eyebrow="Database Statistics"
+        title="Mutational Landscape of the cfDNA Liquid-Biopsy Database"
+        description="A database-wide visual summary of somatic mutations curated from the full cfDNA liquid-biopsy sample collection across all indexed cancer cohorts."
+      />
+
+      <section className="detail-card statistics-private-toolbar-card">
+        <div className="statistics-private-toolbar-row">
+          <div className="statistics-private-toolbar-meta">
+            <p className="section-eyebrow">Data Source</p>
+            <strong>cfDNA Liquid Biopsy Collection</strong>
+          </div>
+          <div className="statistics-private-toolbar-badge">
+            <span>Cohorts</span>
+            <strong>{formatNumber(activeCohorts.length)}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="statistics-private-kpis">
+        <KpiTile label="Samples" value={totalSamples} hint="Unique barcodes" />
+        <KpiTile
+          label="Variants"
+          value={totalVariants}
+          hint="Annotated mutation calls"
+        />
+        <KpiTile
+          label="Mutated Genes"
+          value={totalGenes}
+          hint="Distinct Hugo symbols"
+        />
+        <KpiTile
+          label="Cancer Cohorts"
+          value={activeCohorts.length}
+          hint="With somatic data"
+        />
+      </section>
+
+      {loading ? (
+        <p className="panel-note">Loading database statistics...</p>
+      ) : null}
+
+      <section className="statistics-private-grid">
+        <article className="detail-card statistics-private-card">
+          <header className="statistics-private-card-header">
+            <div className="statistics-private-card-header-row">
+              <p className="section-eyebrow">Cohort Composition</p>
+              <StatScope>sample-level</StatScope>
+            </div>
+            <h3>Sample Distribution Across Cancer Cohorts</h3>
+          </header>
+          <div className="statistics-private-card-body">
+            <ReactECharts
+              option={buildCohortDonutOption(activeCohorts, totalSamples)}
+              showLoading={cohortChartLoading}
+              loadingOption={CHART_LOADING_OPTION}
+              style={{ height: 380 }}
+            />
+          </div>
+        </article>
+
+        <article className="detail-card statistics-private-card">
+          <header className="statistics-private-card-header">
+            <div className="statistics-private-card-header-row">
+              <p className="section-eyebrow">Functional Region</p>
+              <StatScope>variant-level</StatScope>
+            </div>
+            <h3>Variant Distribution by Genomic Region</h3>
+          </header>
+          <div className="statistics-private-card-body">
+            <ReactECharts
+              option={buildDonutOption(overview?.funcDistribution ?? [], "variants")}
+              showLoading={funcChartLoading}
+              loadingOption={CHART_LOADING_OPTION}
+              style={{ height: 380 }}
+            />
+          </div>
+        </article>
+
+        <article className="detail-card statistics-private-card">
+          <header className="statistics-private-card-header">
+            <div className="statistics-private-card-header-row">
+              <p className="section-eyebrow">Exonic Consequence</p>
+              <StatScope>variant-level</StatScope>
+            </div>
+            <h3>Coding Consequence Composition</h3>
+          </header>
+          <div className="statistics-private-card-body">
+            <ReactECharts
+              option={buildCompositionBarOption(overview?.exonicDistribution ?? [], "variants")}
+              showLoading={exonicChartLoading}
+              loadingOption={CHART_LOADING_OPTION}
+              style={{ height: 380 }}
+            />
+          </div>
+        </article>
+
+        <article className="detail-card statistics-private-card">
+          <header className="statistics-private-card-header">
+            <div className="statistics-private-card-header-row">
+              <p className="section-eyebrow">Chromosomal Distribution</p>
+              <StatScope>variant-level</StatScope>
+            </div>
+            <h3>Variant Counts per Chromosome</h3>
+          </header>
+          <div className="statistics-private-card-body">
+            <ReactECharts
+              option={buildChromOption(overview?.chromDistribution ?? [])}
+              showLoading={chromChartLoading}
+              loadingOption={CHART_LOADING_OPTION}
+              style={{ height: 380 }}
+            />
+          </div>
+        </article>
+
+        <article className="detail-card statistics-private-card statistics-private-card--full">
+          <header className="statistics-private-card-header">
+            <div className="statistics-private-card-header-row">
+              <p className="section-eyebrow">Top Mutated Genes</p>
+              <StatScope>gene-level</StatScope>
+            </div>
+            <h3>Most Frequently Mutated Genes in the cfDNA Database</h3>
+          </header>
+          <div className="statistics-private-card-body">
+            <ReactECharts
+              option={buildTopGenesOption(topGeneItems)}
+              onEvents={topGeneChartEvents}
+              showLoading={topGenesChartLoading}
+              loadingOption={CHART_LOADING_OPTION}
+              style={{ height: 460 }}
+            />
+            <p className="statistics-private-chart-hint">
+              Click a gene bar to open its gene detail page.
+            </p>
+          </div>
+        </article>
+      </section>
     </div>
   );
 }

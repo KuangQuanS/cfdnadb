@@ -30,8 +30,9 @@ server:
   port: ${SERVER_PORT:8080}
 
 app:
-  data-dir: ${APP_DATA_DIR:/400T/cfdnadb}
+  data-dir: ${APP_DATA_DIR:/400T/cfdnaweb}
   maf-db-file: ${APP_MAF_DB_FILE:maf.duckdb}
+  pan-cancer-dir: ${APP_PAN_CANCER_DIR:/400T/cfdnaweb/statistics/oncoplot/pan_cancer}
   maf-import:
     enabled: ${APP_MAF_IMPORT_ENABLED:false}
     exit-after-run: ${APP_MAF_IMPORT_EXIT_AFTER_RUN:true}

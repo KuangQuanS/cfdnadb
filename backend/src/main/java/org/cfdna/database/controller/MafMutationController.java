@@ -5,6 +5,7 @@ import org.cfdna.database.dto.MafFilterOptionsDto;
 import org.cfdna.database.dto.MafGeneSummaryDto;
 import org.cfdna.database.dto.MafMutationDto;
 import org.cfdna.database.dto.MafSummaryDto;
+import org.cfdna.database.dto.OncoplottDto;
 import org.cfdna.database.dto.PagedResponse;
 import org.cfdna.database.service.DuckDbService;
 
@@ -116,5 +117,13 @@ public class MafMutationController {
             @RequestParam String q,
             @RequestParam(defaultValue = "10") int limit) {
         return ApiResponse.success(duckDbService.getMafSuggestions(source, "Tumor_Sample_Barcode", q, limit));
+    }
+
+    @GetMapping("/oncoplot")
+    public ApiResponse<OncoplottDto> getOncoplot(
+            @RequestParam(defaultValue = "cfDNA") String source,
+            @RequestParam(required = false) List<String> cancerType,
+            @RequestParam(defaultValue = "20") int limit) {
+        return ApiResponse.success(duckDbService.getOncoplottData(source, cancerType, limit));
     }
 }

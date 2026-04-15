@@ -11,6 +11,7 @@ public class SpaForwardController {
             "/browse",
             "/statistics",
             "/downloads",
+            "/help",
             "/visualizations",
             "/about",
             "/vcf-demo",

@@ -41,7 +41,7 @@ class CfDnaEndpointsIntegrationTest {
     void cancerSummaryReflectsFilesystemProgress() throws Exception {
         mockMvc.perform(get("/api/v1/summary/cancers"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(5)))
+                .andExpect(jsonPath("$.data", hasSize(15)))
                 .andExpect(jsonPath("$.data[0].cancer").value("Breast"))
                 .andExpect(jsonPath("$.data[0].sampleCount").value(2))
                 .andExpect(jsonPath("$.data[0].rawImportStatus").value("Completed"))
@@ -52,7 +52,7 @@ class CfDnaEndpointsIntegrationTest {
                 .andExpect(jsonPath("$.data[3].cancer").value("Lung"))
                 .andExpect(jsonPath("$.data[3].rawImportStatus").value("Completed"))
                 .andExpect(jsonPath("$.data[3].annotatedStatus").value("Not started"))
-                .andExpect(jsonPath("$.data[4].cancer").value("Pdac"))
+                .andExpect(jsonPath("$.data[4].cancer").value("Pancreatic"))
                 .andExpect(jsonPath("$.data[4].rawImportStatus").value("Not started"));
     }
 
@@ -141,9 +141,13 @@ class CfDnaEndpointsIntegrationTest {
             Path root = Files.createTempDirectory("cfdna-test-data");
             createBreastData(root.resolve("Breast"));
             createLungData(root.resolve("Lung"));
-            createEmptyCancer(root.resolve("Colonrector"));
-            createEmptyCancer(root.resolve("Liver"));
-            createEmptyCancer(root.resolve("Pdac"));
+            // create empty dirs for all remaining cancers
+            for (String cancer : new String[]{
+                    "Colorectal", "Liver", "Pancreatic", "Bladder", "Cervical",
+                    "Endometrial", "Esophageal", "Gastric", "HeadAndNeck",
+                    "Kidney", "Ovarian", "Thyroid", "NGY"}) {
+                createEmptyCancer(root.resolve(cancer));
+            }
             return root;
         } catch (IOException exception) {
             throw new RuntimeException("Failed to create test data", exception);
@@ -151,49 +155,54 @@ class CfDnaEndpointsIntegrationTest {
     }
 
     private static void createBreastData(Path cancerDir) throws IOException {
-        Files.createDirectories(cancerDir.resolve("avinput"));
-        Files.createDirectories(cancerDir.resolve("filtered_vcf"));
-        Files.createDirectories(cancerDir.resolve("multianno"));
-        Files.createDirectories(cancerDir.resolve("somatic_vcf"));
-        Files.createDirectories(cancerDir.resolve("Plot"));
-        Files.createDirectories(cancerDir.resolve("TCGA"));
-        Files.createDirectories(cancerDir.resolve("GEO"));
+        Files.createDirectories(cancerDir.resolve("private/avinput"));
+        Files.createDirectories(cancerDir.resolve("private/vcf"));
+        Files.createDirectories(cancerDir.resolve("private/multianno"));
+        Files.createDirectories(cancerDir.resolve("private/stats/lollipop"));
+        Files.createDirectories(cancerDir.resolve("public/vcf"));
+        Files.createDirectories(cancerDir.resolve("public/multianno"));
+        Files.createDirectories(cancerDir.resolve("public/stats"));
+        Files.createDirectories(cancerDir.resolve("tcga/stats"));
+        Files.createDirectories(cancerDir.resolve("stats"));
 
-        Files.writeString(cancerDir.resolve("avinput/BR-001.avinput"), "sample");
-        Files.writeString(cancerDir.resolve("avinput/BR-002.avinput"), "sample");
-        Files.writeString(cancerDir.resolve("filtered_vcf/BR-001.filtered.vcf.gz"), "vcf");
-        Files.writeString(cancerDir.resolve("filtered_vcf/BR-002.filtered.vcf.gz"), "vcf");
-        Files.writeString(cancerDir.resolve("multianno/BR-001.hg38_multianno.txt"), "anno");
-        Files.writeString(cancerDir.resolve("multianno/BR-002.hg38_multianno.txt"), "anno");
-        Files.writeString(cancerDir.resolve("somatic_vcf/BR-001_somatic.vcf.gz"), "vcf");
-        Files.writeString(cancerDir.resolve("Plot/Breast_oncplot.pdf"), "%PDF-test");
-        Files.writeString(cancerDir.resolve("TCGA/TCGA-BRCA-summary.pdf"), "%PDF-test");
-        Files.writeString(cancerDir.resolve("GEO/GSE-demo.txt"), "geo");
-        Files.writeString(cancerDir.resolve("Breast_merged.avinput"), "merged");
-        Files.writeString(cancerDir.resolve("Breast_merged_filtered.vcf.gz"), "merged");
+        Files.writeString(cancerDir.resolve("private/avinput/BR-001.avinput"), "sample");
+        Files.writeString(cancerDir.resolve("private/avinput/BR-002.avinput"), "sample");
+        Files.writeString(cancerDir.resolve("private/vcf/BR-001.filtered.vcf.gz"), "vcf");
+        Files.writeString(cancerDir.resolve("private/vcf/BR-002.filtered.vcf.gz"), "vcf");
+        Files.writeString(cancerDir.resolve("private/multianno/BR-001.hg38_multianno.txt"), "anno");
+        Files.writeString(cancerDir.resolve("private/multianno/BR-002.hg38_multianno.txt"), "anno");
+        Files.writeString(cancerDir.resolve("private/stats/Breast_oncplot.pdf"), "%PDF-test");
+        Files.writeString(cancerDir.resolve("tcga/stats/TCGA-BRCA-summary.pdf"), "%PDF-test");
         Files.writeString(cancerDir.resolve("Breast_all_sample_multianno.txt"),
-                "Chr\tStart\tEnd\tRef\tAlt\tFunc.refGene\tGene.refGene\tTumor_Sample_Barcode\n" +
-                        "chr17\t7579472\t7579472\tC\tT\texonic\tTP53\tBR-001\n" +
-                        "chr12\t25245350\t25245350\tG\tA\texonic\tKRAS\tBR-002\n" +
-                        "chr17\t7578406\t7578406\tC\tT\texonic\tTP53;MDM2\tBR-003\n");
+                "Chr\tStart\tEnd\tRef\tAlt\tFunc.refGene\tGene.refGene\tExonicFunc.refGene\tAAChange.refGene\tTumor_Sample_Barcode\n" +
+                        "chr17\t7579472\t7579472\tC\tT\texonic\tTP53\tnonsynonymous SNV\tTP53:p.R175H\tBR-001\n" +
+                        "chr12\t25245350\t25245350\tG\tA\texonic\tKRAS\tnonsynonymous SNV\tKRAS:p.G12D\tBR-002\n" +
+                        "chr17\t7578406\t7578406\tC\tT\texonic\tTP53;MDM2\tnonsynonymous SNV\tTP53:p.R248W\tBR-003\n");
     }
 
     private static void createLungData(Path cancerDir) throws IOException {
-        Files.createDirectories(cancerDir.resolve("avinput"));
-        Files.createDirectories(cancerDir.resolve("filtered_vcf"));
-        Files.createDirectories(cancerDir.resolve("multianno"));
-        Files.createDirectories(cancerDir.resolve("somatic_vcf"));
-        Files.createDirectories(cancerDir.resolve("Plot"));
+        Files.createDirectories(cancerDir.resolve("private/avinput"));
+        Files.createDirectories(cancerDir.resolve("private/vcf"));
+        Files.createDirectories(cancerDir.resolve("private/multianno"));
+        Files.createDirectories(cancerDir.resolve("private/stats"));
+        Files.createDirectories(cancerDir.resolve("public/vcf"));
+        Files.createDirectories(cancerDir.resolve("public/stats"));
+        Files.createDirectories(cancerDir.resolve("tcga/stats"));
+        Files.createDirectories(cancerDir.resolve("stats"));
 
-        Files.writeString(cancerDir.resolve("avinput/LU-001.avinput"), "sample");
-        Files.writeString(cancerDir.resolve("filtered_vcf/LU-001.filtered.vcf.gz"), "vcf");
+        Files.writeString(cancerDir.resolve("private/avinput/LU-001.avinput"), "sample");
+        Files.writeString(cancerDir.resolve("private/vcf/LU-001.filtered.vcf.gz"), "vcf");
     }
 
     private static void createEmptyCancer(Path cancerDir) throws IOException {
-        Files.createDirectories(cancerDir.resolve("avinput"));
-        Files.createDirectories(cancerDir.resolve("filtered_vcf"));
-        Files.createDirectories(cancerDir.resolve("multianno"));
-        Files.createDirectories(cancerDir.resolve("somatic_vcf"));
-        Files.createDirectories(cancerDir.resolve("Plot"));
+        Files.createDirectories(cancerDir.resolve("private/avinput"));
+        Files.createDirectories(cancerDir.resolve("private/vcf"));
+        Files.createDirectories(cancerDir.resolve("private/multianno"));
+        Files.createDirectories(cancerDir.resolve("private/stats/lollipop"));
+        Files.createDirectories(cancerDir.resolve("public/vcf"));
+        Files.createDirectories(cancerDir.resolve("public/multianno"));
+        Files.createDirectories(cancerDir.resolve("public/stats/lollipop"));
+        Files.createDirectories(cancerDir.resolve("tcga/stats"));
+        Files.createDirectories(cancerDir.resolve("stats"));
     }
 }

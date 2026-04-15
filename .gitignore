@@ -16,3 +16,13 @@ frontend/tsconfig.node.tsbuildinfo
 frontend/tsconfig.tsbuildinfo
 start-*.cmd
 .DS_Store
+*.md
+*.cmd
+*.xlsx
+*.txt
+*.csv
+*.pdf
+*.sh
+*.duckdb
+converted_csv
+docs

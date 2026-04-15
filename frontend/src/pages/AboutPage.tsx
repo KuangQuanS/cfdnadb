@@ -2,20 +2,24 @@ import { Link } from "react-router-dom";
 
 export function AboutPage() {
   return (
-    <div className="page-stack">
+    <div className="page-stack about-page">
 
-      <section>
+      <section className="stat-pdf-card about-hero-card">
+        <div className="statistics-panel-header">
+          <h3 className="stat-pdf-title">cfdnadb</h3>
+          <p className="statistics-panel-note">
+            A curated academic database of somatic mutations identified from circulating cell-free DNA (cfDNA) in plasma across multiple cancer cohorts. Built to support liquid biopsy research, biomarker discovery, and cross-cohort comparative genomics.
+          </p>
+        </div>
+        <div className="statistics-pdf-shell about-hero-shell">
         <p className="section-eyebrow">About</p>
-        <h2 style={{ fontSize: "2.2rem", color: "var(--accent)", margin: "8px 0 16px" }}>cfDNA Atlas</h2>
-        <p style={{ fontSize: "1.15rem", color: "var(--muted)", maxWidth: 760, lineHeight: 1.8 }}>
-          A curated academic database of somatic mutations identified from circulating cell-free DNA (cfDNA) in plasma across multiple cancer cohorts. Built to accelerate liquid biopsy research, biomarker discovery, and cross-cohort comparative genomics.
-        </p>
         <div className="badge-row" style={{ marginTop: 20 }}>
           <span className="badge">hg38</span>
           <span className="badge">ANNOVAR</span>
           <span className="badge">MuTect2</span>
           <span className="badge warm">Liquid biopsy</span>
           <span className="badge green">Open access</span>
+        </div>
         </div>
       </section>
 
@@ -25,10 +29,10 @@ export function AboutPage() {
           <p className="section-eyebrow">Citation</p>
           <h3>How to cite</h3>
           <p>
-            If you use cfDNA Atlas in published research, please cite the following:
+            If you use cfdnadb in published research, please cite the following:
           </p>
           <div className="citation-block">
-            Lee Lab. cfDNA Atlas: a multi-cohort somatic variant database for circulating cell-free DNA research.
+            Lee Lab. cfdnadb: a multi-cohort somatic variant database for circulating cell-free DNA research.
             Kunming Medical University. 2025. https://leelab.kmmu.edu.cn/cfdnadb/
           </div>
           <p>
@@ -41,7 +45,7 @@ export function AboutPage() {
           <p className="section-eyebrow">Data</p>
           <h3>Database content</h3>
           <p>
-            cfDNA Atlas currently contains somatic variant calls from five cancer cohorts: breast carcinoma, colorectal adenocarcinoma, hepatocellular carcinoma, non-small cell lung cancer, and pancreatic ductal adenocarcinoma (PDAC). Variants are derived from targeted panel or whole-exome sequencing of plasma-isolated cfDNA.
+            cfdnadb currently contains somatic variant calls from five cancer cohorts: breast carcinoma, colorectal adenocarcinoma, hepatocellular carcinoma, non-small cell lung cancer, and pancreatic ductal adenocarcinoma (PDAC). Variants are derived from targeted panel or whole-exome sequencing of plasma-isolated cfDNA.
           </p>
           <p>
             All variant records include chromosomal coordinates (hg38), reference and alternate alleles, functional region annotation (Func.refGene), exonic consequence (ExonicFunc.refGene), amino acid change (AAChange.refGene), and tumor sample barcode. Per-cohort aggregate files are available for download.
@@ -80,14 +84,14 @@ export function AboutPage() {
         <p className="section-eyebrow">Terms of use</p>
         <h3>Data access and usage policy</h3>
         <p>
-          All data in cfDNA Atlas is made available for academic and non-commercial research use. Redistribution or commercial use of the raw data requires prior written permission from the Lee Laboratory. Users are responsible for compliance with applicable data protection regulations and institutional review board requirements for their jurisdiction.
+          All data in cfdnadb is made available for academic and non-commercial research use. Redistribution or commercial use of the raw data requires prior written permission from the Lee Laboratory. Users are responsible for compliance with applicable data protection regulations and institutional review board requirements for their jurisdiction.
         </p>
         <p>
           The variant calls provided represent computational predictions derived from a standardized bioinformatics pipeline. They have not been individually validated by orthogonal methods. Users should perform appropriate validation before reporting findings in a clinical context.
         </p>
         <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
           <Link to="/downloads" className="button-secondary inline-button">Access data files</Link>
-          <Link to="/browse" className="button-secondary inline-button">Browse variants</Link>
+          <Link to="/browse" className="button-secondary inline-button">Browse cohorts</Link>
         </div>
       </section>
 

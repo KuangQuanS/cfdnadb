@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { PageLoader } from "./PageLoader";
+import headerBgPng from "../assets/background.png";
 
 const navItems = [
   { to: "/", label: "Home" },
@@ -8,6 +9,7 @@ const navItems = [
   { to: "/gene-search", label: "Gene Search" },
   { to: "/statistics", label: "Statistics" },
   { to: "/downloads", label: "Downloads" },
+  { to: "/help", label: "Help" },
   { to: "/about", label: "About" }
 ];
 
@@ -57,11 +59,18 @@ export function AppShell({ children }: PropsWithChildren) {
     <div className="app-shell">
       {showLoader ? <PageLoader overlay message="Loading page..." /> : null}
 
-      <header className="site-header">
+      <header
+        className="site-header"
+        style={{
+          backgroundImage: `linear-gradient(90deg, rgba(75, 53, 154, 0.94), rgba(75, 53, 154, 0.9)), url(${headerBgPng})`
+        }}
+      >
         <div className="header-container">
           <div className="title-area">
-            <p className="site-kicker">Academic Resource Portal</p>
-            <Link to="/" className="site-title">cfDNA Atlas</Link>
+            <div className="title-stack">
+              <p className="site-kicker">Plasma somatic mutation database</p>
+              <Link to="/" className="site-title">cfDNAdb</Link>
+            </div>
           </div>
           <nav className="site-nav">
             {navItems.map((item) => (
@@ -80,12 +89,17 @@ export function AppShell({ children }: PropsWithChildren) {
 
       <main className={`page-content${showLoader ? " page-content-loading" : ""}`}>{children}</main>
 
-      <footer className="site-footer">
+      <footer
+        className="site-footer"
+        style={{
+          backgroundImage: `linear-gradient(90deg, rgba(75, 53, 154, 0.95), rgba(75, 53, 154, 0.92)), url(${headerBgPng})`
+        }}
+      >
         <div className="footer-main">
           <div className="footer-brand">
-            <p className="footer-logo">cfDNA Atlas</p>
+            <p className="footer-logo">cfdnadb</p>
             <p>
-              Somatic mutation atlas for plasma cell-free DNA across multiple cancer cohorts.
+              Plasma cfDNA somatic mutation database spanning cohort browse, gene search, and downloadable analysis outputs.
             </p>
           </div>
 
@@ -115,13 +129,15 @@ export function AppShell({ children }: PropsWithChildren) {
         <div className="footer-bottom">
           <div className="footer-bottom-inner">
             <span>
-              &copy; {new Date().getFullYear()} cfDNA Atlas &mdash; Lee Laboratory, Kunming Medical University.
+              &copy; {new Date().getFullYear()} cfdnadb &mdash; Lee Laboratory, Kunming Medical University.
               Data is provided for academic research use only.
             </span>
             <span>
               <Link to="/about">Citation</Link>
               &nbsp;&middot;&nbsp;
               <Link to="/downloads">Data access</Link>
+              &nbsp;&middot;&nbsp;
+              <Link to="/help">Help</Link>
             </span>
           </div>
         </div>

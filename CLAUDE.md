@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+# 请使用中文回答所有问题和交流
+
+与用户的所有互动都应使用中文
+
 ## Project Overview
 
 cfDNA Database — a full-stack academic portal for cancer cell-free DNA research data. Spring Boot 2.7 backend (Java 11) + React 18 frontend (TypeScript, Vite), packaged as a single WAR (`cfdnadb.war`) for Tomcat deployment at `/cfdnadb/`.
