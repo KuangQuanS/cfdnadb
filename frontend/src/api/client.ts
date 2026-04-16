@@ -19,6 +19,7 @@ import type {
   SampleSelection,
   StudyDetail,
   StatisticsOverview,
+  VafDistribution,
   VisualizationSummary,
   VcfDemo,
   CancerAsset,
@@ -42,7 +43,8 @@ import {
   exonicDistributionMock,
   chromDistributionMock,
   statisticsOverviewMock,
-  sampleBurdenMock
+  sampleBurdenMock,
+  vafDistributionMock
 } from "./mockData";
 
 const derivedBase = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
@@ -61,6 +63,7 @@ function resolveMock(path: string): unknown {
   if (path.startsWith("/api/v1/variants/exonic-distribution")) return exonicDistributionMock;
   if (path.startsWith("/api/v1/variants/chrom-distribution")) return chromDistributionMock;
   if (path.startsWith("/api/v1/variants/sample-burden")) return sampleBurdenMock;
+  if (path.startsWith("/api/v1/statistics/vaf-distribution")) return vafDistributionMock;
   if (path.startsWith("/api/v1/studies/")) {
     const id = Number(path.split("/").pop());
     return studyDetailsMock[id] ?? studyDetailsMock[1];
@@ -132,6 +135,10 @@ export function getCancerSummary() {
 
 export function getStatisticsOverview() {
   return request<StatisticsOverview>("/api/v1/statistics/overview");
+}
+
+export function getVafDistribution() {
+  return request<VafDistribution[]>("/api/v1/statistics/vaf-distribution");
 }
 
 export function getTopGenes(cancer: string, limit = 20) {

@@ -21,6 +21,7 @@ import org.cfdna.database.dto.SampleDownloadRequestDto;
 import org.cfdna.database.dto.SampleFileDto;
 import org.cfdna.database.dto.SampleSelectionDto;
 import org.cfdna.database.dto.TopGeneDto;
+import org.cfdna.database.dto.VafDistributionDto;
 import org.cfdna.database.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,28 +84,38 @@ public class DuckDbService {
     );
 
     private final Path dataDir;
-    private final String mafDbFileName;
+    private final String queryDbFileName;
+    private final Path tcgaIgvFile;
     private final Path panCancerDir;
+    private final Path vafDataDir;
 
     @Autowired
     public DuckDbService(@Value("${app.data-dir:/400T/cfdnaweb}") String dataDir,
-                         @Value("${app.maf-db-file:maf.duckdb}") String mafDbFileName,
-                         @Value("${app.pan-cancer-dir:/400T/cfdnaweb/statistics/oncoplot/pan_cancer}") String panCancerDir) {
-        this(Path.of(dataDir), mafDbFileName, Path.of(panCancerDir));
+                         @Value("${app.query-db-file:${app.maf-db-file:cfdnadb.duckdb}}") String queryDbFileName,
+                         @Value("${app.tcga-igv-file:/400T/cfdnaweb/tcga_maf.txt}") String tcgaIgvFile,
+                         @Value("${app.pan-cancer-dir:/400T/cfdnaweb/statistics/oncoplot/pan_cancer}") String panCancerDir,
+                         @Value("${app.vaf-data-dir:/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF}") String vafDataDir) {
+        this(Path.of(dataDir), queryDbFileName, Path.of(tcgaIgvFile), Path.of(panCancerDir), Path.of(vafDataDir));
     }
 
     public DuckDbService(Path dataDir) {
-        this(dataDir, "maf.duckdb", Path.of("/400T/cfdnaweb/statistics/oncoplot/pan_cancer"));
+        this(dataDir, "cfdnadb.duckdb", dataDir.resolve("tcga_maf.txt"), Path.of("/400T/cfdnaweb/statistics/oncoplot/pan_cancer"), Path.of("/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF"));
     }
 
-    public DuckDbService(Path dataDir, String mafDbFileName) {
-        this(dataDir, mafDbFileName, Path.of("/400T/cfdnaweb/statistics/oncoplot/pan_cancer"));
+    public DuckDbService(Path dataDir, String queryDbFileName) {
+        this(dataDir, queryDbFileName, dataDir.resolve("tcga_maf.txt"), Path.of("/400T/cfdnaweb/statistics/oncoplot/pan_cancer"), Path.of("/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF"));
     }
 
-    public DuckDbService(Path dataDir, String mafDbFileName, Path panCancerDir) {
+    public DuckDbService(Path dataDir, String queryDbFileName, Path tcgaIgvFile, Path panCancerDir) {
+        this(dataDir, queryDbFileName, tcgaIgvFile, panCancerDir, Path.of("/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF"));
+    }
+
+    public DuckDbService(Path dataDir, String queryDbFileName, Path tcgaIgvFile, Path panCancerDir, Path vafDataDir) {
         this.dataDir = dataDir;
-        this.mafDbFileName = mafDbFileName;
+        this.queryDbFileName = queryDbFileName;
+        this.tcgaIgvFile = tcgaIgvFile;
         this.panCancerDir = panCancerDir;
+        this.vafDataDir = vafDataDir;
         ensureDuckDbDriverLoaded();
     }
 
@@ -123,15 +134,15 @@ public class DuckDbService {
     }
 
     public List<TopGeneDto> getTopGenes(String cancer, int limit) {
-        Path aggregateMultianno = resolveAggregateMultianno(validateCancer(cancer));
-        if (!Files.isRegularFile(aggregateMultianno) || !hasRequiredColumns(aggregateMultianno, List.of("Gene.refGene"))) {
+        String readExpr = resolveMultiCancerReadExpr(validateCancer(cancer));
+        if (readExpr == null) {
             return List.of();
         }
 
         String sql = "SELECT TRIM(gene_name) AS gene, COUNT(*) AS occurrence_count " +
                 "FROM (" +
                 "  SELECT UNNEST(STRING_SPLIT(COALESCE(\"Gene.refGene\", ''), ';')) AS gene_name " +
-                "  FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true)" +
+                "  FROM %s" +
                 ") split_genes " +
                 "WHERE TRIM(gene_name) <> '' AND TRIM(gene_name) <> '.' " +
                 "GROUP BY gene " +
@@ -139,28 +150,28 @@ public class DuckDbService {
                 "LIMIT %d";
 
         List<TopGeneDto> results = new ArrayList<>();
-        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
+        try (Connection connection = openMafConnection();
              Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql.formatted(toDuckDbPath(aggregateMultianno), limit))) {
+             ResultSet resultSet = statement.executeQuery(sql.formatted(readExpr, limit))) {
             while (resultSet.next()) {
                 results.add(new TopGeneDto(resultSet.getString("gene"), resultSet.getLong("occurrence_count")));
             }
             return results;
         } catch (SQLException exception) {
-            log.warn("Failed to query top genes for {} from {}", cancer, aggregateMultianno, exception);
+            log.warn("Failed to query top genes for {}", cancer, exception);
             return List.of();
         }
     }
 
     public PagedResponse<GeneVariantDto> getVariantsByGene(String cancer, String gene, int page, int pageSize) {
-        Path aggregateMultianno = resolveAggregateMultianno(validateCancer(cancer));
-        if (!Files.isRegularFile(aggregateMultianno) || !hasRequiredColumns(aggregateMultianno, REQUIRED_MULTIANNO_COLUMNS)) {
+        String readExpr = resolveMultiCancerReadExpr(validateCancer(cancer));
+        if (readExpr == null) {
             return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
         }
 
         String normalizedGene = gene.trim().toLowerCase(Locale.ROOT);
         String countSql = "SELECT COUNT(*) AS total_rows " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) " +
+                "FROM %s " +
                 "WHERE POSITION(? IN LOWER(COALESCE(\"Gene.refGene\", ''))) > 0";
 
         String dataSql = "SELECT " +
@@ -174,14 +185,14 @@ public class DuckDbService {
                 "  COALESCE(CAST(\"Gene.refGene\" AS VARCHAR), '') AS gene_symbol, " +
                 "  COALESCE(CAST(\"AAChange.refGene\" AS VARCHAR), '') AS aa_change, " +
                 "  COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '') AS sample_barcode " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) " +
+                "FROM %s " +
                 "WHERE POSITION(? IN LOWER(COALESCE(\"Gene.refGene\", ''))) > 0 " +
                 "ORDER BY start_pos ASC, sample_barcode ASC " +
                 "LIMIT ? OFFSET ?";
 
         long totalRows;
-        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
-             PreparedStatement countStatement = connection.prepareStatement(countSql.formatted(toDuckDbPath(aggregateMultianno)))) {
+        try (Connection connection = openMafConnection();
+             PreparedStatement countStatement = connection.prepareStatement(countSql.formatted(readExpr))) {
             countStatement.setString(1, normalizedGene);
             try (ResultSet resultSet = countStatement.executeQuery()) {
                 resultSet.next();
@@ -193,7 +204,7 @@ public class DuckDbService {
             }
 
             List<GeneVariantDto> content = new ArrayList<>();
-            try (PreparedStatement dataStatement = connection.prepareStatement(dataSql.formatted(toDuckDbPath(aggregateMultianno)))) {
+            try (PreparedStatement dataStatement = connection.prepareStatement(dataSql.formatted(readExpr))) {
                 dataStatement.setString(1, normalizedGene);
                 dataStatement.setInt(2, pageSize);
                 dataStatement.setInt(3, Math.max(page - 1, 0) * pageSize);
@@ -221,7 +232,7 @@ public class DuckDbService {
             boolean last = totalPages == 0 || page >= totalPages;
             return new PagedResponse<>(content, page, pageSize, totalRows, totalPages, first, last);
         } catch (SQLException exception) {
-            log.warn("Failed to query variants for {} / {} from {}", cancer, gene, aggregateMultianno, exception);
+            log.warn("Failed to query variants for {} / {}", cancer, gene, exception);
             return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
         }
     }
@@ -263,7 +274,7 @@ public class DuckDbService {
                 "ORDER BY chr ASC, start_pos ASC LIMIT ? OFFSET ?";
 
         long totalRows;
-        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
+        try (Connection connection = openMafConnection();
              PreparedStatement countStmt = connection.prepareStatement(countSql)) {
             int idx = 1;
             idx = bindBrowseParams(countStmt, idx, hasGene, normalizedGene, hasFunc, funcClass,
@@ -303,34 +314,33 @@ public class DuckDbService {
     }
 
     public GeneSummaryDto getGeneSummary(String cancer, String gene) {
-        Path aggregateMultianno = resolveAggregateMultianno(validateCancer(cancer));
-        if (!Files.isRegularFile(aggregateMultianno) || !hasRequiredColumns(aggregateMultianno, REQUIRED_MULTIANNO_COLUMNS)) {
+        String readExpr = resolveMultiCancerReadExpr(validateCancer(cancer));
+        if (readExpr == null) {
             return new GeneSummaryDto(gene, cancer, 0, 0, List.of(), List.of(), List.of());
         }
 
         String normalizedGene = gene.trim().toLowerCase(Locale.ROOT);
         String geneFilter = "POSITION('%s' IN LOWER(COALESCE(\"Gene.refGene\", ''))) > 0".formatted(normalizedGene.replace("'", "''"));
-        String filePath = toDuckDbPath(aggregateMultianno);
 
         String statsSql = "SELECT COUNT(*) AS total_vars, COUNT(DISTINCT Tumor_Sample_Barcode) AS unique_samples " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) WHERE %s";
+                "FROM %s WHERE %s";
         String funcSql = "SELECT COALESCE(\"Func.refGene\", '') AS label, COUNT(*) AS cnt " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) WHERE %s " +
+                "FROM %s WHERE %s " +
                 "GROUP BY label ORDER BY cnt DESC";
         String exonicSql = "SELECT COALESCE(\"ExonicFunc.refGene\", '') AS label, COUNT(*) AS cnt " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) WHERE %s " +
+                "FROM %s WHERE %s " +
                 "AND COALESCE(\"ExonicFunc.refGene\", '') <> '' AND COALESCE(\"ExonicFunc.refGene\", '') <> '.' " +
                 "GROUP BY label ORDER BY cnt DESC";
         String chromSql = "SELECT COALESCE(CAST(Chr AS VARCHAR), '') AS label, COUNT(*) AS cnt " +
-                "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true) WHERE %s " +
+                "FROM %s WHERE %s " +
                 "GROUP BY label ORDER BY cnt DESC";
 
-        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
+        try (Connection connection = openMafConnection();
              Statement stmt = connection.createStatement()) {
 
             long totalVars = 0;
             long uniqueSamples = 0;
-            try (ResultSet rs = stmt.executeQuery(statsSql.formatted(filePath, geneFilter))) {
+            try (ResultSet rs = stmt.executeQuery(statsSql.formatted(readExpr, geneFilter))) {
                 if (rs.next()) {
                     totalVars = rs.getLong("total_vars");
                     uniqueSamples = rs.getLong("unique_samples");
@@ -338,17 +348,17 @@ public class DuckDbService {
             }
 
             List<LabelCountDto> funcBreakdown = new ArrayList<>();
-            try (ResultSet rs = stmt.executeQuery(funcSql.formatted(filePath, geneFilter))) {
+            try (ResultSet rs = stmt.executeQuery(funcSql.formatted(readExpr, geneFilter))) {
                 while (rs.next()) funcBreakdown.add(new LabelCountDto(rs.getString("label"), rs.getLong("cnt")));
             }
 
             List<LabelCountDto> exonicBreakdown = new ArrayList<>();
-            try (ResultSet rs = stmt.executeQuery(exonicSql.formatted(filePath, geneFilter))) {
+            try (ResultSet rs = stmt.executeQuery(exonicSql.formatted(readExpr, geneFilter))) {
                 while (rs.next()) exonicBreakdown.add(new LabelCountDto(rs.getString("label"), rs.getLong("cnt")));
             }
 
             List<LabelCountDto> chromBreakdown = new ArrayList<>();
-            try (ResultSet rs = stmt.executeQuery(chromSql.formatted(filePath, geneFilter))) {
+            try (ResultSet rs = stmt.executeQuery(chromSql.formatted(readExpr, geneFilter))) {
                 while (rs.next()) chromBreakdown.add(new LabelCountDto(rs.getString("label"), rs.getLong("cnt")));
             }
 
@@ -445,33 +455,33 @@ public class DuckDbService {
     }
 
     public DatabaseStatsDto getDatabaseStats() {
-        long totalVariants = 0;
-        long totalSamples = 0;
-        long totalGenes = 0;
-        int cohortCount = 0;
-        for (String cancer : CANCERS) {
-            Path multianno = resolveAggregateMultianno(cancer);
-            if (!Files.isRegularFile(multianno)) continue;
-            cohortCount++;
-            String sql = "SELECT COUNT(*) AS total_vars, " +
-                    "COUNT(DISTINCT Tumor_Sample_Barcode) AS total_samples, " +
-                    "COUNT(DISTINCT TRIM(gene_name)) AS total_genes " +
-                    "FROM (SELECT Tumor_Sample_Barcode, UNNEST(STRING_SPLIT(COALESCE(\"Gene.refGene\",''),';')) AS gene_name " +
-                    "FROM read_csv_auto('%s', delim='\\t', header=true, ignore_errors=true)) t " +
-                    "WHERE TRIM(gene_name) <> '' AND TRIM(gene_name) <> '.'";
-            try (Connection conn = DriverManager.getConnection("jdbc:duckdb:");
-                 Statement stmt = conn.createStatement();
-                 ResultSet rs = stmt.executeQuery(sql.formatted(toDuckDbPath(multianno)))) {
-                if (rs.next()) {
-                    totalVariants += rs.getLong("total_vars");
-                    totalSamples += rs.getLong("total_samples");
-                    totalGenes = Math.max(totalGenes, rs.getLong("total_genes"));
-                }
-            } catch (SQLException e) {
-                log.warn("Stats query failed for {}: {}", cancer, e.getMessage());
+        String sql =
+                "WITH gene_counts AS (" +
+                        "  SELECT DISTINCT TRIM(gene_name) AS gene_name " +
+                        "  FROM (" +
+                        "    SELECT UNNEST(STRING_SPLIT(COALESCE(\"Gene.refGene\", ''), ';')) AS gene_name FROM aggregate_multianno" +
+                        "  ) split_genes " +
+                        "  WHERE TRIM(gene_name) <> '' AND TRIM(gene_name) <> '.'" +
+                        ") " +
+                        "SELECT " +
+                        "  (SELECT COUNT(*) FROM aggregate_multianno) AS total_variants, " +
+                        "  (SELECT COUNT(*) FROM sample_inventory) AS total_samples, " +
+                        "  (SELECT COUNT(*) FROM gene_counts) AS total_genes, " +
+                        "  (SELECT COUNT(DISTINCT cancer_type) FROM aggregate_multianno) AS cohort_count";
+        try (Connection conn = openMafConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return new DatabaseStatsDto(
+                        rs.getLong("total_variants"),
+                        rs.getLong("total_samples"),
+                        rs.getLong("total_genes"),
+                        rs.getInt("cohort_count"));
             }
+        } catch (SQLException e) {
+            log.warn("Stats query failed: {}", e.getMessage());
         }
-        return new DatabaseStatsDto(totalVariants, totalSamples, totalGenes, cohortCount);
+        return new DatabaseStatsDto(0, 0, 0, 0);
     }
 
     public List<String> getAllGenes(String cancer) {
@@ -485,7 +495,7 @@ public class DuckDbService {
                 "WHERE TRIM(gene_name) <> '' AND TRIM(gene_name) <> '.' " +
                 "ORDER BY gene ASC";
         List<String> results = new ArrayList<>();
-        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
+        try (Connection connection = openMafConnection();
              Statement statement = connection.createStatement();
              ResultSet rs = statement.executeQuery(sql)) {
             while (rs.next()) results.add(rs.getString("gene"));
@@ -510,7 +520,7 @@ public class DuckDbService {
                 "ORDER BY gene ASC " +
                 "LIMIT " + limit;
         List<String> results = new ArrayList<>();
-        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
+        try (Connection connection = openMafConnection();
              Statement statement = connection.createStatement();
              ResultSet rs = statement.executeQuery(sql)) {
             while (rs.next()) {
@@ -562,7 +572,7 @@ public class DuckDbService {
         if (readExpr == null) return List.of();
         String sql = sqlTemplate.formatted(readExpr);
         List<LabelCountDto> results = new ArrayList<>();
-        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
+        try (Connection connection = openMafConnection();
              Statement statement = connection.createStatement();
              ResultSet rs = statement.executeQuery(sql)) {
             while (rs.next()) {
@@ -577,26 +587,50 @@ public class DuckDbService {
 
     public List<CancerAssetDto> getCancerAssets(String cancer) {
         String validatedCancer = validateCancer(cancer);
+        String sql = "SELECT category, title, file_name, size_bytes FROM statistics_asset_index " +
+                "WHERE cancer_type = ? AND asset_type = 'cancer_asset' " +
+                "ORDER BY category ASC, file_name ASC";
         List<CancerAssetDto> assets = new ArrayList<>();
-        assets.addAll(discoverAssets(validatedCancer, "private/stats"));
-        assets.addAll(discoverAssets(validatedCancer, "public/stats"));
-        assets.addAll(discoverAssets(validatedCancer, "tcga/stats"));
-        assets.addAll(discoverAssets(validatedCancer, "stats"));
-        assets.sort(Comparator.comparing(CancerAssetDto::getCategory).thenComparing(CancerAssetDto::getFileName));
-        return assets;
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validatedCancer);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    String fileName = rs.getString("file_name");
+                    assets.add(new CancerAssetDto(
+                            rs.getString("category"),
+                            rs.getString("title"),
+                            fileName,
+                            rs.getLong("size_bytes"),
+                            "/api/v1/cancers/assets/" + validatedCancer + "/file/" +
+                                    UriUtils.encodePathSegment(fileName, StandardCharsets.UTF_8)));
+                }
+            }
+            return assets;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to list cancer assets for " + validatedCancer, exception);
+        }
     }
 
     public CancerAssetResource loadCancerAsset(String cancer, String fileName) {
         String validatedCancer = validateCancer(cancer);
-        return getCancerAssets(validatedCancer).stream()
-                .filter(asset -> asset.getFileName().equals(fileName))
-                .findFirst()
-                .map(asset -> {
-                    Path filePath = resolveCancerDir(validatedCancer).resolve(asset.getCategory()).resolve(asset.getFileName());
-                    Resource resource = new FileSystemResource(filePath);
-                    return new CancerAssetResource(resource, asset.getFileName(), "application/pdf", asset.getSizeBytes());
-                })
-                .orElseThrow(() -> new ResourceNotFoundException("Cancer asset not found: " + fileName));
+        String sql = "SELECT file_path, size_bytes FROM statistics_asset_index " +
+                "WHERE cancer_type = ? AND asset_type = 'cancer_asset' AND file_name = ? " +
+                "ORDER BY category ASC LIMIT 1";
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validatedCancer);
+            statement.setString(2, fileName);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    throw new ResourceNotFoundException("Cancer asset not found: " + fileName);
+                }
+                Path filePath = Path.of(rs.getString("file_path"));
+                return new CancerAssetResource(new FileSystemResource(filePath), fileName, "application/pdf", rs.getLong("size_bytes"));
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to load cancer asset " + fileName, exception);
+        }
     }
 
     // ---- Gene lollipop plots ----
@@ -606,44 +640,73 @@ public class DuckDbService {
      * If cancers is null or empty, scans all 15 supported cohorts.
      */
     public List<GenePlotDto> getGeneLollipopPlots(String gene, List<String> cancers) {
-        List<String> targets = (cancers == null || cancers.isEmpty()) ? CANCERS : cancers;
         String geneUpper = gene.toUpperCase(Locale.ROOT);
-        List<GenePlotDto> results = new ArrayList<>();
-        for (String cancer : targets) {
-            String validatedCancer;
-            try {
-                validatedCancer = validateCancer(cancer);
-            } catch (Exception e) {
-                log.warn("Invalid cancer in gene plot request: {}", cancer);
-                continue;
-            }
-            Path lollipopDir = resolveCancerDir(validatedCancer).resolve("stats").resolve("lollipop");
-            if (!Files.isDirectory(lollipopDir)) continue;
-            try (Stream<Path> stream = Files.list(lollipopDir)) {
-                stream.filter(Files::isRegularFile)
-                        .filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".pdf"))
-                        .filter(p -> matchesGenePlot(p.getFileName().toString(), validatedCancer, geneUpper))
-                        .sorted()
-                        .map(p -> parseGenePlot(p, validatedCancer))
-                        .filter(Objects::nonNull)
-                        .forEach(results::add);
-            } catch (IOException e) {
-                log.warn("Failed to list gene plots for {}/{}", cancer, gene, e);
-            }
+        List<String> targets = (cancers == null || cancers.isEmpty()) ? CANCERS : cancers.stream()
+                .map(value -> {
+                    try {
+                        return validateCancer(value);
+                    } catch (IllegalArgumentException exception) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        String inClause = targets.stream().map(value -> "?").collect(Collectors.joining(","));
+        String sql = "SELECT cancer_type, file_name, gene_name, chromosome, start_position, end_position " +
+                "FROM statistics_asset_index WHERE asset_type = 'gene_plot' AND source = 'Overview' " +
+                "AND UPPER(COALESCE(gene_name, '')) = ?";
+        if (!targets.isEmpty()) {
+            sql += " AND cancer_type IN (" + inClause + ")";
         }
-        return results;
+        sql += " ORDER BY cancer_type ASC, file_name ASC";
+
+        List<GenePlotDto> results = new ArrayList<>();
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            int idx = 1;
+            statement.setString(idx++, geneUpper);
+            for (String cancer : targets) {
+                statement.setString(idx++, cancer);
+            }
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    String cancerType = rs.getString("cancer_type");
+                    String fileName = rs.getString("file_name");
+                    results.add(new GenePlotDto(
+                            fileName,
+                            "/api/v1/gene-plots/" + UriUtils.encodePathSegment(cancerType, StandardCharsets.UTF_8)
+                                    + "/file/" + UriUtils.encodePathSegment(fileName, StandardCharsets.UTF_8),
+                            cancerType,
+                            rs.getString("gene_name"),
+                            rs.getString("chromosome"),
+                            rs.getString("start_position"),
+                            rs.getString("end_position")));
+                }
+            }
+            return results;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to list gene lollipop plots for " + gene, exception);
+        }
     }
 
     public CancerAssetResource loadGenePlot(String cancer, String fileName) {
         String validatedCancer = validateCancer(cancer);
-        Path file = resolveCancerDir(validatedCancer).resolve("stats").resolve("lollipop").resolve(fileName);
-        if (!Files.isRegularFile(file)) {
-            throw new ResourceNotFoundException("Gene plot not found: " + fileName);
-        }
-        try {
-            return new CancerAssetResource(new FileSystemResource(file), fileName, "application/pdf", Files.size(file));
-        } catch (IOException e) {
-            throw new IllegalStateException("Cannot read gene plot: " + fileName, e);
+        String sql = "SELECT file_path, size_bytes FROM statistics_asset_index " +
+                "WHERE cancer_type = ? AND asset_type = 'gene_plot' AND source = 'Overview' AND file_name = ? LIMIT 1";
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validatedCancer);
+            statement.setString(2, fileName);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    throw new ResourceNotFoundException("Gene plot not found: " + fileName);
+                }
+                return new CancerAssetResource(new FileSystemResource(Path.of(rs.getString("file_path"))),
+                        fileName, "application/pdf", rs.getLong("size_bytes"));
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Cannot read gene plot: " + fileName, exception);
         }
     }
 
@@ -675,7 +738,7 @@ public class DuckDbService {
 
     // ---- MAF Mutation queries (.duckdb database) ----
 
-    private static final String MAF_DB_DEFAULT_FILE = "maf.duckdb";
+    private static final String MAF_DB_DEFAULT_FILE = "cfdnadb.duckdb";
     private static final String CFDNA_MAF_TABLE = "cfdna_maf";
     private static final String TCGA_MAF_TABLE = "tcga_maf";
 
@@ -724,6 +787,24 @@ public class DuckDbService {
             Map.entry("Brain",       "GBM")
     );
 
+    private static final Map<String, String> TCGA_TYPE_TO_CANCER = Map.ofEntries(
+            Map.entry("BLCA", "Bladder"),
+            Map.entry("BRCA", "Breast"),
+            Map.entry("CESC", "Cervical"),
+            Map.entry("COAD", "Colorectal"),
+            Map.entry("ESCA", "Esophageal"),
+            Map.entry("GBM", "Brain"),
+            Map.entry("HNSC", "HeadAndNeck"),
+            Map.entry("KIRC", "Kidney"),
+            Map.entry("LIHC", "Liver"),
+            Map.entry("LUAD", "Lung"),
+            Map.entry("OV", "Ovarian"),
+            Map.entry("PAAD", "Pancreatic"),
+            Map.entry("STAD", "Gastric"),
+            Map.entry("THCA", "Thyroid"),
+            Map.entry("UCEC", "Endometrial")
+    );
+
     /**
      * Maps frontend cancer names to CancerType values in clinical_data.txt.
      * Each cancer can map to multiple CancerType values (e.g. Lung has CFDNA_Lung + EGA_Lung).
@@ -750,25 +831,76 @@ public class DuckDbService {
     private static final String PAN_CANCER_CLINICAL_FILE = "clinical_data.txt";
     private static final String PAN_CANCER_MUTATIONS_FILE = "mutations_data.txt";
 
-    private boolean panCancerFilesAvailable() {
-        return Files.isRegularFile(panCancerDir.resolve(PAN_CANCER_CLINICAL_FILE))
-                && Files.isRegularFile(panCancerDir.resolve(PAN_CANCER_MUTATIONS_FILE));
-    }
-
-    private String panCancerClinicalPath() {
-        return toDuckDbPath(panCancerDir.resolve(PAN_CANCER_CLINICAL_FILE).toAbsolutePath());
-    }
-
-    private String panCancerMutationsPath() {
-        return toDuckDbPath(panCancerDir.resolve(PAN_CANCER_MUTATIONS_FILE).toAbsolutePath());
-    }
-
     private Path resolveMafDatabaseFile() {
-        return dataDir.resolve(mafDbFileName == null || mafDbFileName.isBlank() ? MAF_DB_DEFAULT_FILE : mafDbFileName);
+        return dataDir.resolve(queryDbFileName == null || queryDbFileName.isBlank() ? MAF_DB_DEFAULT_FILE : queryDbFileName);
     }
 
     private boolean isTcga(String source) {
         return "TCGA".equalsIgnoreCase(source);
+    }
+
+    private boolean tcgaIgvFileAvailable() {
+        return Files.isRegularFile(tcgaIgvFile);
+    }
+
+    private String resolveTcgaIgvReadExpr() {
+        String normalizedPath = tcgaIgvFile.toAbsolutePath().toString().replace("\\", "/").replace("'", "''");
+        return "(SELECT " +
+                "COALESCE(CAST(Hugo_Symbol AS VARCHAR), '') AS hugo_symbol, " +
+                "COALESCE(CAST(cancer_type AS VARCHAR), '') AS cancer_type, " +
+                "COALESCE(CAST(Chromosome AS VARCHAR), '') AS chromosome, " +
+                "COALESCE(CAST(Start_Position AS VARCHAR), '') AS start_position, " +
+                "COALESCE(CAST(End_Position AS VARCHAR), '') AS end_position, " +
+                "COALESCE(CAST(Reference_Allele AS VARCHAR), '') AS reference_allele, " +
+                "COALESCE(CAST(Tumor_Seq_Allele2 AS VARCHAR), '') AS tumor_seq_allele2, " +
+                "COALESCE(CAST(Variant_Classification AS VARCHAR), '') AS variant_classification, " +
+                "COALESCE(CAST(Variant_Type AS VARCHAR), '') AS variant_type, " +
+                "COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '') AS tumor_sample_barcode, " +
+                "'' AS transcript, '' AS exon, '' AS aa_change, '' AS functional_region, '' AS exonic_function " +
+                "FROM read_csv_auto('" + normalizedPath + "', delim='\\t', header=true, all_varchar=true, ignore_errors=true))";
+    }
+
+    private List<String> normalizeTcgaIgvCancerTypes(List<String> cancerTypes) {
+        return normalizeFilterValues(cancerTypes).stream()
+                .map(value -> {
+                    String tcgaCode = CANCER_TO_TCGA_MATRIX.get(value);
+                    if (tcgaCode != null) {
+                        return "TCGA_" + tcgaCode;
+                    }
+                    String normalized = value.toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+                    if (normalized.startsWith("TCGA_")) {
+                        return normalized;
+                    }
+                    if (TCGA_TYPE_TO_CANCER.containsKey(normalized)) {
+                        return "TCGA_" + normalized;
+                    }
+                    return normalized;
+                })
+                .distinct()
+                .toList();
+    }
+
+    private String normalizeTcgaCancerDisplay(String cancerType) {
+        if (cancerType == null || cancerType.isBlank()) {
+            return "";
+        }
+        String normalized = cancerType.trim().toUpperCase(Locale.ROOT).replace('-', '_');
+        if (normalized.startsWith("TCGA_")) {
+            normalized = normalized.substring("TCGA_".length());
+        }
+        return TCGA_TYPE_TO_CANCER.getOrDefault(normalized, cancerType);
+    }
+
+    private String normalizeTcgaCancerPreview(String preview) {
+        if (preview == null || preview.isBlank() || "-".equals(preview)) {
+            return preview;
+        }
+        return Arrays.stream(preview.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .map(this::normalizeTcgaCancerDisplay)
+                .distinct()
+                .collect(Collectors.joining(", "));
     }
 
     private String resolveMafTable(String source) {
@@ -777,6 +909,9 @@ public class DuckDbService {
 
     private Connection openMafConnection() throws SQLException {
         Path mafDb = resolveMafDatabaseFile().toAbsolutePath();
+        if (!Files.isRegularFile(mafDb)) {
+            throw new IllegalStateException("Query database file not found: " + mafDb);
+        }
         return DriverManager.getConnection("jdbc:duckdb:" + mafDb.toString());
     }
 
@@ -956,6 +1091,10 @@ public class DuckDbService {
 
     public MafGeneSummaryDto getMafGeneDetail(String source, String gene, String sample, List<String> cancerTypes,
                                               List<String> chromosomes, List<String> variantClasses, List<String> variantTypes) {
+        if (isTcga(source) && tcgaIgvFileAvailable()) {
+            return getTcgaIgvGeneDetail(gene, sample, cancerTypes, chromosomes, variantClasses, variantTypes);
+        }
+
         Path mafDb = resolveMafDatabaseFile();
         String table = resolveMafTable(source);
         if (!mafDatabaseAvailable()) {
@@ -1022,6 +1161,10 @@ public class DuckDbService {
     public PagedResponse<MafMutationDto> queryMafMutationsByGene(String source, String gene, String sample, List<String> cancerTypes,
                                                                  List<String> chromosomes, List<String> variantClasses, List<String> variantTypes,
                                                                  int page, int pageSize) {
+        if (isTcga(source) && tcgaIgvFileAvailable()) {
+            return queryTcgaIgvMutationsByGene(gene, sample, cancerTypes, chromosomes, variantClasses, variantTypes, page, pageSize);
+        }
+
         Path mafDb = resolveMafDatabaseFile();
         String table = resolveMafTable(source);
         log.info("[MAF] queryMafMutationsByGene source={}, gene={}, db={}, exists={}, table={}",
@@ -1221,6 +1364,159 @@ public class DuckDbService {
         }
     }
 
+    private MafGeneSummaryDto getTcgaIgvGeneDetail(String gene, String sample, List<String> cancerTypes,
+                                                   List<String> chromosomes, List<String> variantClasses, List<String> variantTypes) {
+        String table = resolveTcgaIgvReadExpr();
+        boolean hasSample = sample != null && !sample.isBlank();
+        List<String> normalizedCancerTypes = normalizeTcgaIgvCancerTypes(cancerTypes);
+        List<String> normalizedChromosomes = normalizeChromosomeFilterValues(chromosomes);
+        List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
+        List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
+
+        String coordinateExpr =
+                "CASE " +
+                        "WHEN NULLIF(TRIM(COALESCE(chromosome, '')), '') IS NOT NULL AND NULLIF(TRIM(COALESCE(start_position, '')), '') IS NOT NULL " +
+                        "THEN COALESCE(chromosome, '') || ':' || COALESCE(start_position, '') || " +
+                        "CASE " +
+                        "WHEN NULLIF(TRIM(COALESCE(end_position, '')), '') IS NOT NULL AND COALESCE(end_position, '') <> COALESCE(start_position, '') " +
+                        "THEN '-' || COALESCE(end_position, '') " +
+                        "ELSE '' END " +
+                        "ELSE NULL END";
+
+        String where = buildMafExactGeneWhereClause(hasSample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, false);
+        String sql =
+                "SELECT " +
+                        "COUNT(*) AS total_variants, " +
+                        "COUNT(DISTINCT NULLIF(tumor_sample_barcode, '')) AS total_samples, " +
+                        "COUNT(DISTINCT " + coordinateExpr + ") AS total_coordinates " +
+                        "FROM " + table + " " + where;
+
+        try (Connection conn = openMafConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            bindMafExactGeneParams(stmt, 1, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, false);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next() && rs.getLong("total_variants") > 0) {
+                    MafGeneSummaryDto summary = buildMafGeneSummaryDto(
+                            conn,
+                            table,
+                            gene,
+                            rs.getLong("total_variants"),
+                            rs.getLong("total_samples"),
+                            rs.getLong("total_coordinates"),
+                            hasSample,
+                            sample,
+                            normalizedCancerTypes,
+                            normalizedChromosomes,
+                            normalizedVariantClasses,
+                            normalizedVariantTypes,
+                            false);
+                    return new MafGeneSummaryDto(
+                            summary.getHugoSymbol(),
+                            summary.getTotalVariants(),
+                            summary.getTotalSamples(),
+                            summary.getTotalCoordinates(),
+                            normalizeTcgaCancerPreview(summary.getCancerTypesPreview()),
+                            summary.getSampleBarcodesPreview(),
+                            summary.getCoordinatePreview(),
+                            summary.getAllelesPreview(),
+                            summary.getVariantClassesPreview(),
+                            summary.getVariantTypesPreview(),
+                            summary.getAnnotationPreview());
+                }
+            }
+        } catch (SQLException e) {
+            log.error("[MAF] TCGA IGV gene detail query failed for gene={}: {}", gene, e.getMessage(), e);
+        }
+
+        throw new ResourceNotFoundException("Gene " + gene + " was not found in the current TCGA IGV view.");
+    }
+
+    private PagedResponse<MafMutationDto> queryTcgaIgvMutationsByGene(String gene, String sample, List<String> cancerTypes,
+                                                                      List<String> chromosomes, List<String> variantClasses, List<String> variantTypes,
+                                                                      int page, int pageSize) {
+        String table = resolveTcgaIgvReadExpr();
+        boolean hasSample = sample != null && !sample.isBlank();
+        List<String> normalizedCancerTypes = normalizeTcgaIgvCancerTypes(cancerTypes);
+        List<String> normalizedChromosomes = normalizeChromosomeFilterValues(chromosomes);
+        List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
+        List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
+
+        String where = buildMafExactGeneWhereClause(hasSample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, false);
+        String countSql = "SELECT COUNT(*) AS total FROM " + table + " " + where;
+        String dataSql = "SELECT " +
+                "  COALESCE(hugo_symbol, '') AS hugo_symbol, " +
+                "  COALESCE(cancer_type, '') AS cancer_type, " +
+                "  COALESCE(chromosome, '') AS chromosome, " +
+                "  COALESCE(start_position, '') AS start_position, " +
+                "  COALESCE(end_position, '') AS end_position, " +
+                "  COALESCE(reference_allele, '') AS reference_allele, " +
+                "  COALESCE(tumor_seq_allele2, '') AS tumor_seq_allele2, " +
+                "  COALESCE(variant_classification, '') AS variant_classification, " +
+                "  COALESCE(variant_type, '') AS variant_type, " +
+                "  COALESCE(tumor_sample_barcode, '') AS tumor_sample_barcode, " +
+                "  COALESCE(transcript, '') AS transcript, " +
+                "  COALESCE(exon, '') AS exon, " +
+                "  COALESCE(aa_change, '') AS aa_change, " +
+                "  COALESCE(functional_region, '') AS functional_region, " +
+                "  COALESCE(exonic_function, '') AS exonic_function " +
+                "FROM " + table + " " +
+                where +
+                "ORDER BY cancer_type ASC, chromosome ASC, TRY_CAST(start_position AS BIGINT) ASC NULLS LAST, tumor_sample_barcode ASC " +
+                "LIMIT ? OFFSET ?";
+
+        try (Connection conn = openMafConnection()) {
+            long totalRows;
+            try (PreparedStatement countStmt = conn.prepareStatement(countSql)) {
+                bindMafExactGeneParams(countStmt, 1, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, false);
+                try (ResultSet rs = countStmt.executeQuery()) {
+                    rs.next();
+                    totalRows = rs.getLong("total");
+                }
+            }
+            if (totalRows == 0) {
+                return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+            }
+
+            int offset = Math.max(page - 1, 0) * pageSize;
+            List<MafMutationDto> content = new ArrayList<>();
+            try (PreparedStatement dataStmt = conn.prepareStatement(dataSql)) {
+                int idx = bindMafExactGeneParams(dataStmt, 1, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, false);
+                dataStmt.setInt(idx++, pageSize);
+                dataStmt.setInt(idx, offset);
+                try (ResultSet rs = dataStmt.executeQuery()) {
+                    long rowId = offset;
+                    while (rs.next()) {
+                        content.add(new MafMutationDto(
+                                ++rowId,
+                                rs.getString("hugo_symbol"),
+                                normalizeTcgaCancerDisplay(rs.getString("cancer_type")),
+                                rs.getString("chromosome"),
+                                rs.getString("start_position"),
+                                rs.getString("end_position"),
+                                rs.getString("reference_allele"),
+                                rs.getString("tumor_seq_allele2"),
+                                rs.getString("variant_classification"),
+                                rs.getString("variant_type"),
+                                rs.getString("tumor_sample_barcode"),
+                                rs.getString("transcript"),
+                                rs.getString("exon"),
+                                rs.getString("aa_change"),
+                                rs.getString("functional_region"),
+                                rs.getString("exonic_function")));
+                    }
+                }
+            }
+
+            int totalPages = (int) Math.ceil(totalRows / (double) pageSize);
+            boolean first = page <= 1;
+            boolean last = totalPages == 0 || page >= totalPages;
+            return new PagedResponse<>(content, page, pageSize, totalRows, totalPages, first, last);
+        } catch (SQLException e) {
+            log.error("[MAF] TCGA IGV gene mutation query failed for gene={}: {}", gene, e.getMessage(), e);
+            return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+        }
+    }
+
     public MafSummaryDto getMafSummary(String source, String gene, String sample, List<String> cancerTypes,
                                        List<String> chromosomes, List<String> variantClasses, List<String> variantTypes) {
         Path mafDb = resolveMafDatabaseFile();
@@ -1331,11 +1627,6 @@ public class DuckDbService {
      * JOINs on Tumor_Sample_Barcode to filter mutations by cancer cohort.
      */
     private OncoplottDto getOncoplottDataFromPanFiles(List<String> cancerTypes, int geneLimit) {
-        if (!panCancerFilesAvailable()) {
-            log.warn("[MAF] Pan-cancer files not found at {}", panCancerDir);
-            return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
-        }
-
         List<String> requested = normalizeFilterValues(cancerTypes);
         int limit = Math.max(5, Math.min(geneLimit, 50));
 
@@ -1344,9 +1635,6 @@ public class DuckDbService {
                 .flatMap(c -> CANCER_TO_PAN_CANCER_TYPES.getOrDefault(c, List.of(c)).stream())
                 .distinct()
                 .toList();
-
-        String clinPath = panCancerClinicalPath();
-        String mutPath  = panCancerMutationsPath();
 
         String cancerFilter = panTypes.isEmpty() ? "" :
                 "WHERE c.CancerType IN (" +
@@ -1358,7 +1646,7 @@ public class DuckDbService {
         String sql =
                 "WITH clinical AS (\n" +
                 "    SELECT Tumor_Sample_Barcode, CancerType\n" +
-                "    FROM read_csv_auto('" + clinPath + "', delim='\\t', header=true, ignore_errors=true) c\n" +
+                "    FROM pan_cancer_clinical c\n" +
                 cancerFilter +
                 "),\n" +
                 "raw AS (\n" +
@@ -1376,7 +1664,7 @@ public class DuckDbService {
                 "        WHEN 'Silent'                  THEN 8\n" +
                 "        ELSE 9\n" +
                 "    END AS sev\n" +
-                "    FROM read_csv_auto('" + mutPath + "', delim='\\t', header=true, ignore_errors=true) m\n" +
+                "    FROM pan_cancer_mutations m\n" +
                 "    JOIN clinical c ON m.Tumor_Sample_Barcode = c.Tumor_Sample_Barcode\n" +
                 "),\n" +
                 "top_genes AS (\n" +
@@ -1402,7 +1690,7 @@ public class DuckDbService {
 
         String sampleSql =
                 "SELECT DISTINCT TRIM(Tumor_Sample_Barcode) AS tumor_sample_barcode\n" +
-                "FROM read_csv_auto('" + clinPath + "', delim='\\t', header=true, ignore_errors=true) c\n" +
+                "FROM pan_cancer_clinical c\n" +
                 sampleFilter +
                 "ORDER BY tumor_sample_barcode";
 
@@ -1410,7 +1698,7 @@ public class DuckDbService {
         Map<String, Long> sampleCounts = new LinkedHashMap<>();
         List<OncoplottDto.CellDto> cells = new ArrayList<>();
 
-        try (Connection conn = DriverManager.getConnection("jdbc:duckdb:");
+        try (Connection conn = openMafConnection();
              PreparedStatement sampleStmt = conn.prepareStatement(sampleSql);
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             int idx = 1;
@@ -1469,24 +1757,18 @@ public class DuckDbService {
         List<String> requested = normalizeFilterValues(cancerTypes);
         int limit = Math.max(5, Math.min(geneLimit, 50));
 
-        List<String> sampleBarcodes = requested.stream()
-                .flatMap(c -> readTcgaSampleBarcodes(c).stream())
-                .distinct()
-                .toList();
-
         String whereFragment;
         List<String> bindValues;
-        if (sampleBarcodes.isEmpty() && !requested.isEmpty()) {
-            log.warn("[MAF] TCGA oncoplot: no barcodes found for cancers={}", requested);
-            return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
-        }
-        if (sampleBarcodes.isEmpty()) {
+        if (requested.isEmpty()) {
             whereFragment = "";
             bindValues = List.of();
         } else {
-            String inClause = "IN (" + String.join(",", Collections.nCopies(sampleBarcodes.size(), "?")) + ")";
-            whereFragment = "    WHERE tumor_sample_barcode " + inClause + "\n";
-            bindValues = sampleBarcodes;
+            String inClause = "IN (" + String.join(",", Collections.nCopies(requested.size(), "?")) + ")";
+            whereFragment =
+                    "    WHERE tumor_sample_barcode IN (\n" +
+                            "        SELECT sample_id FROM sample_inventory WHERE source = 'tcga' AND cancer_type " + inClause + "\n" +
+                            "    )\n";
+            bindValues = requested;
         }
 
         String sql =
@@ -1530,15 +1812,28 @@ public class DuckDbService {
         Map<String, Long> sampleCounts = new LinkedHashMap<>();
         List<OncoplottDto.CellDto> cells = new ArrayList<>();
 
-        for (String sampleBarcode : sampleBarcodes) {
-            if (sampleBarcode != null && !sampleBarcode.isBlank()) {
-                sampleCounts.put(sampleBarcode, 0L);
-            }
-        }
-
         try (Connection conn = openMafConnection()) {
             if (!mafTableExists(conn, table)) {
                 return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
+            }
+            if (!requested.isEmpty()) {
+                try (PreparedStatement sampleStmt = conn.prepareStatement(
+                        "SELECT sample_id FROM sample_inventory WHERE source = 'tcga' AND cancer_type IN (" +
+                                String.join(",", Collections.nCopies(requested.size(), "?")) +
+                                ") ORDER BY sample_id")) {
+                    int sampleIdx = 1;
+                    for (String value : requested) {
+                        sampleStmt.setString(sampleIdx++, value);
+                    }
+                    try (ResultSet sampleRs = sampleStmt.executeQuery()) {
+                        while (sampleRs.next()) {
+                            String sampleBarcode = sampleRs.getString("sample_id");
+                            if (sampleBarcode != null && !sampleBarcode.isBlank()) {
+                                sampleCounts.put(sampleBarcode, 0L);
+                            }
+                        }
+                    }
+                }
             }
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 int idx = 1;
@@ -1871,42 +2166,63 @@ public class DuckDbService {
     }
 
     private CancerSummaryDto buildCancerSummary(String cancer) {
-        Path cancerDir = resolveCancerDir(cancer);
+        String sql =
+                "WITH cohort AS (" +
+                        "  SELECT " +
+                        "    SUM(CASE WHEN category = 'avinput' THEN 1 ELSE 0 END) AS avinput_count, " +
+                        "    SUM(CASE WHEN category = 'vcf' THEN 1 ELSE 0 END) AS vcf_count, " +
+                        "    SUM(CASE WHEN category = 'multianno' THEN 1 ELSE 0 END) AS multianno_count " +
+                        "  FROM cohort_file_index WHERE cancer_type = ? AND source IN ('private', 'public')" +
+                        "), sample_stats AS (" +
+                        "  SELECT COUNT(*) AS sample_count FROM sample_inventory " +
+                        "  WHERE cancer_type = ? AND source IN ('private', 'public') " +
+                        "    AND avinput_file_path IS NOT NULL AND avinput_file_path <> ''" +
+                        "), assets AS (" +
+                        "  SELECT " +
+                        "    SUM(CASE WHEN asset_type = 'cancer_asset' THEN 1 ELSE 0 END) AS plot_asset_count, " +
+                        "    SUM(CASE WHEN source IN ('public', 'tcga') THEN 1 ELSE 0 END) AS external_asset_count " +
+                        "  FROM statistics_asset_index WHERE cancer_type = ?" +
+                        ") " +
+                        "SELECT sample_count, avinput_count, vcf_count, multianno_count, plot_asset_count, external_asset_count " +
+                        "FROM sample_stats, cohort, assets";
 
-        long avinputCount = countFiles(cancerDir.resolve("private").resolve("avinput"), ".avinput")
-                          + countFiles(cancerDir.resolve("public").resolve("avinput"), ".avinput");
-        long filteredVcfCount = countFiles(cancerDir.resolve("private").resolve("vcf"), ".vcf.gz")
-                              + countFiles(cancerDir.resolve("public").resolve("vcf"), ".vcf.gz");
-        long multiannoCount = countFiles(cancerDir.resolve("private").resolve("multianno"), ".hg38_multianno.txt")
-                            + countFiles(cancerDir.resolve("public").resolve("multianno"), ".hg38_multianno.txt");
-        long somaticCount = 0;
-
-        long plotAssetCount = countFiles(cancerDir.resolve("private").resolve("stats"), ".pdf")
-                            + countFiles(cancerDir.resolve("public").resolve("stats"), ".pdf")
-                            + countFiles(cancerDir.resolve("tcga").resolve("stats"), ".pdf")
-                            + countFiles(cancerDir.resolve("stats"), ".pdf");
-        long externalAssetCount = countAllFiles(cancerDir.resolve("public")) + countAllFiles(cancerDir.resolve("tcga"));
-        long sampleCount = Math.max(avinputCount, Math.max(filteredVcfCount, multiannoCount));
-
-        boolean hasAggregateMultianno = Files.isRegularFile(resolveAggregateMultianno(cancer));
-
-        return new CancerSummaryDto(
-                cancer,
-                sampleCount,
-                avinputCount + filteredVcfCount + multiannoCount,
-                avinputCount,
-                filteredVcfCount,
-                multiannoCount,
-                somaticCount,
-                plotAssetCount,
-                externalAssetCount,
-                statusLabel(avinputCount > 0),
-                statusLabel(filteredVcfCount > 0),
-                statusLabel(multiannoCount > 0 || hasAggregateMultianno),
-                statusLabel(false),
-                statusLabel(plotAssetCount > 0),
-                statusLabel(externalAssetCount > 0)
-        );
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, cancer);
+            statement.setString(2, cancer);
+            statement.setString(3, cancer);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    return new CancerSummaryDto(cancer, 0, 0, 0, 0, 0, 0, 0, 0,
+                            statusLabel(false), statusLabel(false), statusLabel(false),
+                            statusLabel(false), statusLabel(false), statusLabel(false));
+                }
+                long sampleCount = rs.getLong("sample_count");
+                long avinputCount = rs.getLong("avinput_count");
+                long filteredVcfCount = rs.getLong("vcf_count");
+                long multiannoCount = rs.getLong("multianno_count");
+                long plotAssetCount = rs.getLong("plot_asset_count");
+                long externalAssetCount = rs.getLong("external_asset_count");
+                return new CancerSummaryDto(
+                        cancer,
+                        sampleCount,
+                        avinputCount + filteredVcfCount + multiannoCount,
+                        avinputCount,
+                        filteredVcfCount,
+                        multiannoCount,
+                        0,
+                        plotAssetCount,
+                        externalAssetCount,
+                        statusLabel(avinputCount > 0),
+                        statusLabel(filteredVcfCount > 0),
+                        statusLabel(multiannoCount > 0),
+                        statusLabel(false),
+                        statusLabel(plotAssetCount > 0),
+                        statusLabel(externalAssetCount > 0));
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to build cancer summary for " + cancer, exception);
+        }
     }
 
     private List<CancerAssetDto> discoverAssets(String cancer, String category) {
@@ -1960,22 +2276,23 @@ public class DuckDbService {
      * Returns null if no valid files exist.
      */
     private String resolveMultiCancerReadExpr(String cancerParam) {
-        String[] parts = cancerParam.split(",");
-        List<String> paths = new ArrayList<>();
-        for (String part : parts) {
-            String c = part.trim();
-            if (c.isEmpty() || !CANCERS.contains(c)) continue;
-            Path p = resolveAggregateMultianno(c);
-            if (Files.isRegularFile(p)) {
-                paths.add(toDuckDbPath(p));
+        LinkedHashSet<String> cancers = new LinkedHashSet<>();
+        for (String part : cancerParam.split(",")) {
+            String value = part == null ? "" : part.trim();
+            if (!value.isBlank()) {
+                cancers.add(validateCancer(value));
             }
         }
-        if (paths.isEmpty()) return null;
-        if (paths.size() == 1) {
-            return "read_csv_auto('" + paths.get(0) + "', delim='\\t', header=true, ignore_errors=true)";
+        if (cancers.isEmpty()) {
+            return null;
         }
-        String fileList = paths.stream().map(p -> "'" + p + "'").collect(Collectors.joining(", "));
-        return "read_csv_auto([" + fileList + "], delim='\\t', header=true, ignore_errors=true, union_by_name=true)";
+        if (cancers.size() == 1) {
+            return "(SELECT * FROM aggregate_multianno WHERE cancer_type = '" + cancers.iterator().next().replace("'", "''") + "')";
+        }
+        String inClause = cancers.stream()
+                .map(value -> "'" + value.replace("'", "''") + "'")
+                .collect(Collectors.joining(", "));
+        return "(SELECT * FROM aggregate_multianno WHERE cancer_type IN (" + inClause + "))";
     }
 
     private long countFiles(Path directory, String suffix) {
@@ -2050,80 +2367,71 @@ public class DuckDbService {
 
     public List<CohortFileDto> listCohortFiles(String cancer, String source, String category) {
         String validatedCancer = validateCancer(cancer);
+        StringBuilder sql = new StringBuilder(
+                "SELECT source, category, file_name, display_name, sample_id, size_bytes " +
+                        "FROM cohort_file_index WHERE cancer_type = ?");
+        List<String> params = new ArrayList<>();
+        params.add(validatedCancer);
+        if (source != null && !source.isBlank()) {
+            sql.append(" AND source = ?");
+            params.add(source);
+        }
+        if (category != null && !category.isBlank()) {
+            sql.append(" AND category = ?");
+            params.add(category);
+        } else {
+            sql.append(" AND category IN ('multianno', 'vcf', 'mutations')");
+        }
+        sql.append(" ORDER BY source ASC, category ASC, file_name ASC");
+
         List<CohortFileDto> files = new ArrayList<>();
-
-        List<String> sources = (source != null && !source.isBlank())
-                ? List.of(source)
-                : DATA_SOURCES;
-        List<String> categories = (category != null && !category.isBlank())
-                ? List.of(category)
-                : FILE_CATEGORIES;
-
-        for (String src : sources) {
-            if (!DATA_SOURCES.contains(src)) continue;
-            Path sourceDir = resolveCancerDir(validatedCancer).resolve(src);
-            if (!Files.isDirectory(sourceDir)) continue;
-
-            for (String cat : categories) {
-                for (Path catDir : resolveSourceCategoryDirs(sourceDir, cat)) {
-                    if (!Files.isDirectory(catDir)) continue;
-
-                    try (Stream<Path> stream = Files.walk(catDir)) {
-                        stream.filter(Files::isRegularFile)
-                                .sorted()
-                                .forEach(p -> {
-                                    String fName = p.getFileName().toString();
-                                    String sampleId = extractSampleId(fName, cat);
-                                    long size = 0;
-                                    try { size = Files.size(p); } catch (IOException ignored) {}
-                                    String downloadUrl = "/api/v1/cohort/files/download/" +
-                                            validatedCancer + "/" + src + "/" + cat + "/" +
-                                            UriUtils.encodePathSegment(fName, StandardCharsets.UTF_8);
-                                    files.add(new CohortFileDto(
-                                            validatedCancer, src, cat, fName,
-                                            humanizeFileName(fName), sampleId, size, downloadUrl));
-                                });
-                    } catch (IOException e) {
-                        log.warn("Failed to scan {}/{}/{}", validatedCancer, src, catDir.getFileName(), e);
-                    }
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                statement.setString(i + 1, params.get(i));
+            }
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    String fileName = rs.getString("file_name");
+                    String fileSource = rs.getString("source");
+                    String fileCategory = rs.getString("category");
+                    files.add(new CohortFileDto(
+                            validatedCancer,
+                            fileSource,
+                            fileCategory,
+                            fileName,
+                            rs.getString("display_name"),
+                            rs.getString("sample_id"),
+                            rs.getLong("size_bytes"),
+                            "/api/v1/cohort/files/download/" + validatedCancer + "/" + fileSource + "/" + fileCategory + "/" +
+                                    UriUtils.encodePathSegment(fileName, StandardCharsets.UTF_8)));
                 }
             }
+            return files;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to list cohort files for " + validatedCancer, exception);
         }
-
-        // Also include cancer-level mutation summary if it exists
-        if (category == null || category.isBlank() || "mutations".equals(category)) {
-            Path mutationsFile = resolveCancerDir(validatedCancer).resolve(validatedCancer + "_mutations.txt");
-            if (Files.isRegularFile(mutationsFile)) {
-                long size = 0;
-                try { size = Files.size(mutationsFile); } catch (IOException ignored) {}
-                String fName = mutationsFile.getFileName().toString();
-                files.add(new CohortFileDto(validatedCancer, "Summary", "mutations", fName,
-                        humanizeFileName(fName), null, size,
-                        "/api/v1/cohort/files/download/" + validatedCancer + "/Summary/mutations/" +
-                                UriUtils.encodePathSegment(fName, StandardCharsets.UTF_8)));
-            }
-        }
-
-        return files;
     }
 
     public Resource loadCohortFile(String cancer, String source, String category, String fileName) {
         String validatedCancer = validateCancer(cancer);
-        Path filePath;
-        if ("Summary".equals(source) && "mutations".equals(category)) {
-            filePath = resolveCancerDir(validatedCancer).resolve(fileName);
-        } else {
-            Path sourceDir = resolveCancerDir(validatedCancer).resolve(source);
-            filePath = resolveSourceCategoryDirs(sourceDir, category).stream()
-                    .map(dir -> dir.resolve(fileName))
-                    .filter(Files::isRegularFile)
-                    .findFirst()
-                    .orElse(sourceDir.resolve(category).resolve(fileName));
+        String sql = "SELECT file_path FROM cohort_file_index " +
+                "WHERE cancer_type = ? AND source = ? AND category = ? AND file_name = ? LIMIT 1";
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validatedCancer);
+            statement.setString(2, source);
+            statement.setString(3, category);
+            statement.setString(4, fileName);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    throw new ResourceNotFoundException("Cohort file not found: " + fileName);
+                }
+                return new FileSystemResource(Path.of(rs.getString("file_path")));
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to load cohort file " + fileName, exception);
         }
-        if (!Files.isRegularFile(filePath)) {
-            throw new ResourceNotFoundException("Cohort file not found: " + fileName);
-        }
-        return new FileSystemResource(filePath);
     }
 
     public PagedResponse<SampleBrowseItemDto> listSamples(List<String> cancerFilters,
@@ -2138,38 +2446,82 @@ public class DuckDbService {
                                                           int pageSize) {
         List<String> cancers = normalizeCancerFilters(cancerFilters);
         List<String> sources = normalizeSampleSources(sourceFilters);
-        LinkedHashMap<SampleKey, SampleInventory> inventory = buildSampleInventory(cancers, sources);
-        enrichPrivatePublicSamples(inventory, includeTopGenes);
-        enrichTcgaSamples(inventory, includeTopGenes);
-
-        String normalizedGene = gene == null ? "" : gene.trim();
+        String normalizedGene = gene == null ? "" : gene.trim().toLowerCase(Locale.ROOT);
         String normalizedSample = sample == null ? "" : sample.trim().toLowerCase(Locale.ROOT);
         long minVariantCount = minVariants == null ? 0 : Math.max(minVariants, 0);
-
-        List<SampleInventory> filtered = inventory.values().stream()
-                .filter(item -> !hasAnnotated || item.annoPath != null)
-                .filter(item -> !hasSomatic || item.vcfPath != null)
-                .filter(item -> normalizedSample.isBlank()
-                        || item.key.sampleId.toLowerCase(Locale.ROOT).contains(normalizedSample))
-                .filter(item -> normalizedGene.isBlank() || item.hasGene(normalizedGene))
-                .filter(item -> item.variantCount >= minVariantCount)
-                .sorted(Comparator.comparingLong((SampleInventory item) -> item.variantCount).reversed()
-                        .thenComparing(item -> item.key.cancer)
-                        .thenComparing(item -> item.key.source)
-                        .thenComparing(item -> item.key.sampleId))
-                .toList();
-
-        long total = filtered.size();
-        int totalPages = total == 0 ? 0 : (int) Math.ceil(total / (double) pageSize);
         int safePage = Math.max(page, 1);
-        int from = Math.min((safePage - 1) * pageSize, filtered.size());
-        int to = Math.min(from + pageSize, filtered.size());
-        List<SampleBrowseItemDto> content = filtered.subList(from, to).stream()
-                .map(this::toSampleBrowseItem)
-                .toList();
-        boolean first = safePage <= 1;
-        boolean last = totalPages == 0 || safePage >= totalPages;
-        return new PagedResponse<>(content, safePage, pageSize, total, totalPages, first, last);
+
+        StringBuilder where = new StringBuilder(" WHERE cancer_type IN (" + String.join(",", Collections.nCopies(cancers.size(), "?")) + ")" +
+                " AND source IN (" + String.join(",", Collections.nCopies(sources.size(), "?")) + ")");
+        List<Object> params = new ArrayList<>(cancers);
+        params.addAll(sources);
+        if (!normalizedSample.isBlank()) {
+            where.append(" AND LOWER(sample_id) LIKE ?");
+            params.add("%" + normalizedSample + "%");
+        }
+        if (hasAnnotated) {
+            where.append(" AND has_annotated = TRUE");
+        }
+        if (hasSomatic) {
+            where.append(" AND has_somatic = TRUE");
+        }
+        if (minVariantCount > 0) {
+            where.append(" AND variant_count >= ?");
+            params.add(minVariantCount);
+        }
+        if (!normalizedGene.isBlank()) {
+            where.append(" AND EXISTS (SELECT 1 FROM sample_top_genes stg WHERE stg.cancer_type = sample_inventory.cancer_type " +
+                    "AND stg.source = sample_inventory.source AND stg.sample_id = sample_inventory.sample_id AND LOWER(stg.gene_name) = ?)");
+            params.add(normalizedGene);
+        }
+
+        String countSql = "SELECT COUNT(*) AS total_rows FROM sample_inventory" + where;
+        String dataSql = "SELECT cancer_type, source, sample_id, variant_count, has_annotated, has_somatic " +
+                "FROM sample_inventory" + where +
+                " ORDER BY variant_count DESC, cancer_type ASC, source ASC, sample_id ASC LIMIT ? OFFSET ?";
+
+        try (Connection connection = openMafConnection();
+             PreparedStatement countStatement = connection.prepareStatement(countSql);
+             PreparedStatement dataStatement = connection.prepareStatement(dataSql)) {
+            bindDynamicParams(countStatement, params);
+            long total;
+            try (ResultSet rs = countStatement.executeQuery()) {
+                rs.next();
+                total = rs.getLong("total_rows");
+            }
+            if (total == 0) {
+                return new PagedResponse<>(List.of(), safePage, pageSize, 0, 0, true, true);
+            }
+
+            bindDynamicParams(dataStatement, params);
+            dataStatement.setInt(params.size() + 1, pageSize);
+            dataStatement.setInt(params.size() + 2, (safePage - 1) * pageSize);
+            List<SampleBrowseItemDto> content = new ArrayList<>();
+            try (ResultSet rs = dataStatement.executeQuery()) {
+                while (rs.next()) {
+                    List<String> topGenes = includeTopGenes
+                            ? loadSampleTopGeneNames(connection, rs.getString("cancer_type"), rs.getString("source"), rs.getString("sample_id"), 3)
+                            : List.of();
+                    List<String> availableFiles = rs.getBoolean("has_annotated") ? List.of("anno") : List.of();
+                    content.add(new SampleBrowseItemDto(
+                            rs.getString("sample_id"),
+                            rs.getString("cancer_type"),
+                            rs.getString("source"),
+                            rs.getLong("variant_count"),
+                            topGenes,
+                            availableFiles,
+                            rs.getBoolean("has_annotated"),
+                            rs.getBoolean("has_somatic")));
+                }
+            }
+
+            int totalPages = (int) Math.ceil(total / (double) pageSize);
+            boolean first = safePage <= 1;
+            boolean last = totalPages == 0 || safePage >= totalPages;
+            return new PagedResponse<>(content, safePage, pageSize, total, totalPages, first, last);
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to list samples", exception);
+        }
     }
 
     public SampleDetailDto getSampleDetail(String cancer, String source, String sampleId) {
@@ -2180,28 +2532,35 @@ public class DuckDbService {
             throw new IllegalArgumentException("Sample ID is required.");
         }
 
-        LinkedHashMap<SampleKey, SampleInventory> inventory = buildSampleInventory(List.of(validatedCancer), List.of(validatedSource));
-        SampleInventory target = inventory.get(new SampleKey(validatedCancer, validatedSource, normalizedSampleId));
-        if (target == null) {
-            throw new ResourceNotFoundException("Sample not found: " + normalizedSampleId);
+        String sql = "SELECT variant_count, anno_file_name, anno_file_path FROM sample_inventory " +
+                "WHERE cancer_type = ? AND source = ? AND sample_id = ? LIMIT 1";
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validatedCancer);
+            statement.setString(2, validatedSource);
+            statement.setString(3, normalizedSampleId);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    throw new ResourceNotFoundException("Sample not found: " + normalizedSampleId);
+                }
+                List<LabelCountDto> topGenes = loadSampleTopGenes(connection, validatedCancer, validatedSource, normalizedSampleId, 10);
+                List<SampleFileDto> files = new ArrayList<>();
+                String annoPath = rs.getString("anno_file_path");
+                String annoName = rs.getString("anno_file_name");
+                if (annoPath != null && !annoPath.isBlank()) {
+                    files.add(buildSampleFileDto(
+                            new SampleKey(validatedCancer, validatedSource, normalizedSampleId),
+                            "anno",
+                            "multianno",
+                            Path.of(annoPath)));
+                } else if ("tcga".equals(validatedSource)) {
+                    files.add(new SampleFileDto("maf", "tcga_maf (database view)", 0, "", ""));
+                }
+                return new SampleDetailDto(normalizedSampleId, validatedCancer, validatedSource, rs.getLong("variant_count"), topGenes, files);
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to load sample detail for " + normalizedSampleId, exception);
         }
-
-        if ("tcga".equals(validatedSource)) {
-            enrichTcgaSamples(inventory, true);
-        } else {
-            enrichPrivatePublicSamples(inventory, true);
-        }
-
-        List<SampleFileDto> files = buildSampleDetailFiles(target);
-        if (files.isEmpty() && "tcga".equals(validatedSource)) {
-            files = List.of(new SampleFileDto("maf", "tcga_maf (database view)", 0, "", ""));
-        }
-
-        List<LabelCountDto> topGenes = target.geneCounts.entrySet().stream()
-                .limit(10)
-                .map(entry -> new LabelCountDto(entry.getKey(), entry.getValue()))
-                .toList();
-        return new SampleDetailDto(target.key.sampleId, target.key.cancer, target.key.source, target.variantCount, topGenes, files);
     }
 
     public void writeSampleDownloadZip(SampleDownloadRequestDto request, OutputStream outputStream) throws IOException {
@@ -2218,30 +2577,31 @@ public class DuckDbService {
             throw new IllegalArgumentException("Selected samples are invalid.");
         }
 
-        List<String> cancers = selections.stream().map(SampleSelectionDto::getCancer).distinct().toList();
-        List<String> sources = selections.stream().map(SampleSelectionDto::getSource).distinct().toList();
-        LinkedHashMap<SampleKey, SampleInventory> inventory = buildSampleInventory(
-                normalizeCancerFilters(cancers),
-                normalizeSampleSources(sources));
-        enrichPrivatePublicSamples(inventory, true);
-        enrichTcgaSamples(inventory, true);
-
         List<SampleDownloadItem> downloadItems = new ArrayList<>();
-        for (SampleSelectionDto selection : selections) {
-            String validatedCancer = validateCancer(selection.getCancer());
-            String validatedSource = normalizeSingleSampleSource(selection.getSource());
-            String normalizedSampleId = selection.getSampleId().trim();
-            SampleInventory sampleInventory = inventory.get(new SampleKey(validatedCancer, validatedSource, normalizedSampleId));
-            if (sampleInventory == null) {
-                continue;
+        String sql = "SELECT anno_file_path FROM sample_inventory WHERE cancer_type = ? AND source = ? AND sample_id = ? LIMIT 1";
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            for (SampleSelectionDto selection : selections) {
+                String validatedCancer = validateCancer(selection.getCancer());
+                String validatedSource = normalizeSingleSampleSource(selection.getSource());
+                String normalizedSampleId = selection.getSampleId().trim();
+                statement.setString(1, validatedCancer);
+                statement.setString(2, validatedSource);
+                statement.setString(3, normalizedSampleId);
+                try (ResultSet rs = statement.executeQuery()) {
+                    if (rs.next()) {
+                        String annoPath = rs.getString("anno_file_path");
+                        if (annoPath != null && !annoPath.isBlank()) {
+                            downloadItems.add(new SampleDownloadItem(
+                                    new SampleKey(validatedCancer, validatedSource, normalizedSampleId),
+                                    fileType,
+                                    Path.of(annoPath)));
+                        }
+                    }
+                }
             }
-            if ("anno".equals(fileType) && sampleInventory.annoPath != null) {
-                downloadItems.add(new SampleDownloadItem(sampleInventory.key, fileType, sampleInventory.annoPath));
-            } else if ("vcf".equals(fileType) && sampleInventory.vcfPath != null) {
-                downloadItems.add(new SampleDownloadItem(sampleInventory.key, fileType, sampleInventory.vcfPath));
-            } else if ("maf".equals(fileType) && "tcga".equals(sampleInventory.key.source)) {
-                downloadItems.add(new SampleDownloadItem(sampleInventory.key, fileType, null));
-            }
+        } catch (SQLException exception) {
+            throw new IOException("Failed to resolve sample download paths", exception);
         }
 
         if (downloadItems.isEmpty()) {
@@ -2274,21 +2634,22 @@ public class DuckDbService {
 
     public List<LabelCountDto> getSourceDistribution(String cancer) {
         String validatedCancer = validateCancer(cancer);
+        String sql = "SELECT source, COUNT(*) AS cnt FROM cohort_file_index " +
+                "WHERE cancer_type = ? AND source IN ('private', 'public', 'tcga') AND category IN ('multianno', 'vcf') " +
+                "GROUP BY source ORDER BY source ASC";
         List<LabelCountDto> results = new ArrayList<>();
-        for (String src : DATA_SOURCES) {
-            Path sourceDir = resolveCancerDir(validatedCancer).resolve(src);
-            if (!Files.isDirectory(sourceDir)) continue;
-            long fileCount = 0;
-            for (String cat : FILE_CATEGORIES) {
-                for (Path categoryDir : resolveSourceCategoryDirs(sourceDir, cat)) {
-                    fileCount += countAllFiles(categoryDir);
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validatedCancer);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    results.add(new LabelCountDto(rs.getString("source"), rs.getLong("cnt")));
                 }
             }
-            if (fileCount > 0) {
-                results.add(new LabelCountDto(src, fileCount));
-            }
+            return results;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to load source distribution for " + validatedCancer, exception);
         }
-        return results;
     }
 
     private SampleBrowseItemDto toSampleBrowseItem(SampleInventory item) {
@@ -2508,6 +2869,48 @@ public class DuckDbService {
         for (int index = 0; index < values.size(); index++) {
             statement.setString(startIndex + index, values.get(index));
         }
+    }
+
+    private void bindDynamicParams(PreparedStatement statement, List<Object> values) throws SQLException {
+        for (int index = 0; index < values.size(); index++) {
+            statement.setObject(index + 1, values.get(index));
+        }
+    }
+
+    private List<String> loadSampleTopGeneNames(Connection connection, String cancer, String source, String sampleId, int limit) throws SQLException {
+        String sql = "SELECT gene_name FROM sample_top_genes " +
+                "WHERE cancer_type = ? AND source = ? AND sample_id = ? ORDER BY rank_no ASC LIMIT ?";
+        List<String> genes = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, cancer);
+            statement.setString(2, source);
+            statement.setString(3, sampleId);
+            statement.setInt(4, limit);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    genes.add(rs.getString("gene_name"));
+                }
+            }
+        }
+        return genes;
+    }
+
+    private List<LabelCountDto> loadSampleTopGenes(Connection connection, String cancer, String source, String sampleId, int limit) throws SQLException {
+        String sql = "SELECT gene_name, gene_count FROM sample_top_genes " +
+                "WHERE cancer_type = ? AND source = ? AND sample_id = ? ORDER BY rank_no ASC LIMIT ?";
+        List<LabelCountDto> genes = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, cancer);
+            statement.setString(2, source);
+            statement.setString(3, sampleId);
+            statement.setInt(4, limit);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    genes.add(new LabelCountDto(rs.getString("gene_name"), rs.getLong("gene_count")));
+                }
+            }
+        }
+        return genes;
     }
 
     private String buildReadCsvExpr(List<Path> paths, boolean includeFileName) {
@@ -2756,19 +3159,21 @@ public class DuckDbService {
     /** List data sources that have at least one PDF plot for a cancer. */
     public List<String> getStatisticsSources(String cancer) {
         String validated = validateCancer(cancer);
+        String sql = "SELECT DISTINCT source FROM statistics_asset_index " +
+                "WHERE cancer_type = ? AND asset_type = 'statistics_plot' ORDER BY source ASC";
         List<String> sources = new ArrayList<>();
-        for (String src : DATA_SOURCES) {
-            Path plotDir = resolveStatisticsPlotDir(validated, src);
-            if (Files.isDirectory(plotDir) && hasDirectPdfFiles(plotDir)) {
-                sources.add(src);
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validated);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    sources.add(rs.getString("source"));
+                }
             }
+            return sources;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to list statistics sources for " + validated, exception);
         }
-        // Also check top-level Plot/ (for cancers without sub-source dirs)
-        Path overviewDir = resolveStatisticsPlotDir(validated, "Overview");
-        if (Files.isDirectory(overviewDir) && hasDirectPdfFiles(overviewDir)) {
-            sources.add("Overview");
-        }
-        return sources;
     }
 
     private boolean hasDirectPdfFiles(Path dir) {
@@ -2783,47 +3188,51 @@ public class DuckDbService {
     /** List PDF plots (not in gene subfolders) for a cancer + source. */
     public List<CancerAssetDto> getStatisticsPlots(String cancer, String source) {
         String validated = validateCancer(cancer);
-        Path plotDir = resolveStatisticsPlotDir(validated, source);
-        if (!Files.isDirectory(plotDir)) {
-            return List.of();
-        }
-        try (Stream<Path> stream = Files.list(plotDir)) {
-            return stream
-                    .filter(Files::isRegularFile)
-                    .filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".pdf"))
-                    .sorted()
-                    .map(path -> {
-                        try {
-                            long sizeBytes = Files.size(path);
-                            String fileName = path.getFileName().toString();
-                            String assetUrl = "/api/v1/statistics/" + validated + "/plots/file?source=" +
+        String sql = "SELECT title, file_name, size_bytes FROM statistics_asset_index " +
+                "WHERE cancer_type = ? AND source = ? AND asset_type = 'statistics_plot' ORDER BY file_name ASC";
+        List<CancerAssetDto> plots = new ArrayList<>();
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validated);
+            statement.setString(2, source);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    String fileName = rs.getString("file_name");
+                    plots.add(new CancerAssetDto(
+                            source,
+                            rs.getString("title"),
+                            fileName,
+                            rs.getLong("size_bytes"),
+                            "/api/v1/statistics/" + validated + "/plots/file?source=" +
                                     UriUtils.encodeQueryParam(source, StandardCharsets.UTF_8) + "&fileName=" +
-                                    UriUtils.encodeQueryParam(fileName, StandardCharsets.UTF_8);
-                            return new CancerAssetDto(source, humanizeFileName(fileName), fileName, sizeBytes, assetUrl);
-                        } catch (IOException e) {
-                            throw new IllegalStateException("Failed to inspect " + path, e);
-                        }
-                    })
-                    .toList();
-        } catch (IOException e) {
-            log.warn("Failed to list statistics plots for {}/{}", cancer, source, e);
-            return List.of();
+                                    UriUtils.encodeQueryParam(fileName, StandardCharsets.UTF_8)));
+                }
+            }
+            return plots;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to list statistics plots for " + validated + "/" + source, exception);
         }
     }
 
     /** Serve a specific statistics plot PDF file. */
     public CancerAssetResource loadStatisticsPlot(String cancer, String source, String fileName) {
         String validated = validateCancer(cancer);
-        Path plotDir = resolveStatisticsPlotDir(validated, source);
-        Path filePath = plotDir.resolve(fileName);
-        if (!Files.isRegularFile(filePath)) {
-            throw new ResourceNotFoundException("Plot not found: " + source + "/" + fileName);
-        }
-        try {
-            long size = Files.size(filePath);
-            return new CancerAssetResource(new FileSystemResource(filePath), fileName, "application/pdf", size);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to read " + filePath, e);
+        String sql = "SELECT file_path, size_bytes FROM statistics_asset_index " +
+                "WHERE cancer_type = ? AND source = ? AND asset_type = 'statistics_plot' AND file_name = ? LIMIT 1";
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validated);
+            statement.setString(2, source);
+            statement.setString(3, fileName);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    throw new ResourceNotFoundException("Plot not found: " + source + "/" + fileName);
+                }
+                return new CancerAssetResource(new FileSystemResource(Path.of(rs.getString("file_path"))),
+                        fileName, "application/pdf", rs.getLong("size_bytes"));
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to read statistics plot " + fileName, exception);
         }
     }
 
@@ -2844,48 +3253,64 @@ public class DuckDbService {
     /** List gene names available as lollipop plots, filtered by query prefix. */
     public List<String> getGenePlotNames(String cancer, String source, String query) {
         String validated = validateCancer(cancer);
-        Path geneDir = findGenePlotFolder(validated, source);
-        if (geneDir == null) return List.of();
         String q = (query == null) ? "" : query.trim().toLowerCase(Locale.ROOT);
-        try (Stream<Path> stream = Files.list(geneDir)) {
-            return stream
-                    .filter(Files::isRegularFile)
-                    .map(p -> p.getFileName().toString())
-                    .filter(n -> n.startsWith("lollipop_") && n.endsWith(".pdf"))
-                    .map(n -> n.substring("lollipop_".length(), n.length() - ".pdf".length()))
-                    .filter(gene -> q.isEmpty() || gene.toLowerCase(Locale.ROOT).startsWith(q))
-                    .sorted()
-                    .limit(50)
-                    .toList();
-        } catch (IOException e) {
-            log.warn("Failed to list gene plots for {}/{}", cancer, source, e);
-            return List.of();
+        String sql = "SELECT DISTINCT gene_name FROM statistics_asset_index " +
+                "WHERE cancer_type = ? AND source = ? AND asset_type = 'gene_plot' " +
+                "AND COALESCE(gene_name, '') <> '' AND LOWER(gene_name) LIKE ? " +
+                "ORDER BY gene_name ASC LIMIT 50";
+        List<String> genes = new ArrayList<>();
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validated);
+            statement.setString(2, source);
+            statement.setString(3, q.isEmpty() ? "%" : q + "%");
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    genes.add(rs.getString("gene_name"));
+                }
+            }
+            return genes;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to list gene plots for " + validated + "/" + source, exception);
         }
     }
 
     /** Check if gene lollipop plots are available for a cancer + source. */
     public boolean hasGenePlots(String cancer, String source) {
         String validated = validateCancer(cancer);
-        return findGenePlotFolder(validated, source) != null;
+        String sql = "SELECT COUNT(*) FROM statistics_asset_index WHERE cancer_type = ? AND source = ? AND asset_type = 'gene_plot'";
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validated);
+            statement.setString(2, source);
+            try (ResultSet rs = statement.executeQuery()) {
+                rs.next();
+                return rs.getLong(1) > 0;
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to check gene plots for " + validated + "/" + source, exception);
+        }
     }
 
     /** Serve a specific gene lollipop plot PDF. */
     public CancerAssetResource loadGenePlot(String cancer, String source, String gene) {
         String validated = validateCancer(cancer);
-        Path geneDir = findGenePlotFolder(validated, source);
-        if (geneDir == null) {
-            throw new ResourceNotFoundException("No gene plot folder for " + cancer + "/" + source);
-        }
-        String fileName = "lollipop_" + gene + ".pdf";
-        Path filePath = geneDir.resolve(fileName);
-        if (!Files.isRegularFile(filePath)) {
-            throw new ResourceNotFoundException("Gene plot not found: " + gene);
-        }
-        try {
-            long size = Files.size(filePath);
-            return new CancerAssetResource(new FileSystemResource(filePath), fileName, "application/pdf", size);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to read " + filePath, e);
+        String sql = "SELECT file_name, file_path, size_bytes FROM statistics_asset_index " +
+                "WHERE cancer_type = ? AND source = ? AND asset_type = 'gene_plot' AND gene_name = ? LIMIT 1";
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, validated);
+            statement.setString(2, source);
+            statement.setString(3, gene);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    throw new ResourceNotFoundException("Gene plot not found: " + gene);
+                }
+                return new CancerAssetResource(new FileSystemResource(Path.of(rs.getString("file_path"))),
+                        rs.getString("file_name"), "application/pdf", rs.getLong("size_bytes"));
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to read gene plot " + gene, exception);
         }
     }
 
@@ -2911,5 +3336,80 @@ public class DuckDbService {
         public String getFileName() { return fileName; }
         public String getContentType() { return contentType; }
         public long getFileSizeBytes() { return fileSizeBytes; }
+    }
+
+    // ---- VAF Distribution (ridgeline plot data) ----
+
+    /**
+     * Reads all *_VAF_statistics.txt files from the vafDataDir and returns
+     * per-cancer-type lists of Average VAF values. Excludes GEO_ and Experiment_ prefixed files.
+     */
+    public List<VafDistributionDto> getVafDistribution() {
+        List<VafDistributionDto> result = new ArrayList<>();
+        if (!Files.isDirectory(vafDataDir)) {
+            log.warn("[VAF] vafDataDir does not exist: {}", vafDataDir);
+            return result;
+        }
+        try (Stream<Path> files = Files.list(vafDataDir)) {
+            List<Path> vafFiles = files
+                    .filter(p -> p.getFileName().toString().endsWith("_VAF_statistics.txt"))
+                    .filter(p -> {
+                        String name = p.getFileName().toString();
+                        return !name.startsWith("GEO_") && !name.startsWith("Experiment_");
+                    })
+                    .sorted()
+                    .collect(Collectors.toList());
+
+            for (Path vafFile : vafFiles) {
+                String fileName = vafFile.getFileName().toString();
+                String cancerType = fileName.replace("_VAF_statistics.txt", "");
+                List<Double> values = readVafValues(vafFile);
+                if (!values.isEmpty()) {
+                    result.add(new VafDistributionDto(cancerType, values));
+                }
+            }
+        } catch (IOException e) {
+            log.error("[VAF] Failed to list vafDataDir: {}", vafDataDir, e);
+        }
+        // Sort by median VAF descending
+        result.sort((a, b) -> {
+            double medA = median(a.getValues());
+            double medB = median(b.getValues());
+            return Double.compare(medB, medA);
+        });
+        return result;
+    }
+
+    private List<Double> readVafValues(Path file) {
+        List<Double> values = new ArrayList<>();
+        try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            String header = reader.readLine(); // skip header
+            if (header == null) return values;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\t");
+                if (parts.length >= 3) {
+                    try {
+                        double avgVaf = Double.parseDouble(parts[2]);
+                        values.add(avgVaf);
+                    } catch (NumberFormatException e) {
+                        // skip malformed lines
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.warn("[VAF] Failed to read file: {}", file, e);
+        }
+        return values;
+    }
+
+    private static double median(List<Double> vals) {
+        if (vals.isEmpty()) return 0;
+        List<Double> sorted = new ArrayList<>(vals);
+        Collections.sort(sorted);
+        int mid = sorted.size() / 2;
+        return sorted.size() % 2 == 0
+                ? (sorted.get(mid - 1) + sorted.get(mid)) / 2.0
+                : sorted.get(mid);
     }
 }

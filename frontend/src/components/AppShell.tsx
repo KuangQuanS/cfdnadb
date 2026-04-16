@@ -8,6 +8,7 @@ const navItems = [
   { to: "/browse", label: "Browse" },
   { to: "/gene-search", label: "Gene Search" },
   { to: "/statistics", label: "Statistics" },
+  { to: "/survival", label: "Survival" },
   { to: "/downloads", label: "Downloads" },
   { to: "/help", label: "Help" },
   { to: "/about", label: "About" }

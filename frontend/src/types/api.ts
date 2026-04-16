@@ -324,6 +324,12 @@ export interface StatisticsSource {
   hasGenePlots: boolean;
 }
 
+export interface VafDistribution {
+  cancerType: string;
+  values: number[];
+  sampleCount: number;
+}
+
 export interface OncoplottCell {
   gene: string;
   sample: string;

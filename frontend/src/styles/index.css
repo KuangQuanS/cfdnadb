@@ -2390,8 +2390,19 @@ button, input, select { font: inherit; }
   gap: 22px;
 }
 
+.statistics-pdf-layout--browse {
+  justify-items: center;
+}
+
 .statistics-pdf-featured-row {
   display: block;
+}
+
+.statistics-pdf-stack {
+  display: grid;
+  gap: 24px;
+  width: 100%;
+  justify-items: center;
 }
 
 .statistics-plot-layout {
@@ -2452,6 +2463,11 @@ button, input, select { font: inherit; }
   grid-column: 1 / -1;
 }
 
+.browse-pdf-card {
+  width: min(100%, 1060px);
+  margin: 0 auto;
+}
+
 .statistics-panel-header {
   padding: 14px 18px;
   border-bottom: 1px solid #e3eaf4;
@@ -2508,6 +2524,16 @@ button, input, select { font: inherit; }
 
 .statistics-inline-pdf--stat .statistics-inline-pdf-page canvas {
   margin: 0 auto;
+}
+
+.browse-pdf-card .statistics-inline-pdf--stat .statistics-inline-pdf-page canvas {
+  max-width: 100%;
+}
+
+.browse-pdf-card--summary .statistics-inline-pdf--stat .statistics-inline-pdf-page canvas,
+.browse-pdf-card--spectrum .statistics-inline-pdf--stat .statistics-inline-pdf-page canvas,
+.browse-pdf-card--titv .statistics-inline-pdf--stat .statistics-inline-pdf-page canvas {
+  max-width: min(100%, 980px);
 }
 
 .stat-pdf-card--featured .statistics-inline-pdf--stat .statistics-inline-pdf-page canvas {
@@ -6038,6 +6064,55 @@ button:disabled:hover {
   padding: 8px 0 0;
 }
 
+.maf-source-block {
+  display: grid;
+  gap: 20px;
+  padding: 20px 0 8px;
+  border-top: 1px solid rgba(200, 210, 230, 0.7);
+}
+
+.maf-source-block:first-of-type {
+  border-top: none;
+  padding-top: 8px;
+}
+
+.maf-source-block-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.maf-source-block-header h3 {
+  margin: 0;
+  color: #1c2b4a;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.maf-source-block-stats {
+  color: #5c6b86;
+  font-size: 0.88rem;
+}
+
+.maf-page-size-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #5c6b86;
+}
+
+.maf-page-size-field select {
+  padding: 4px 8px;
+  border: 1px solid #c6cfde;
+  border-radius: 6px;
+  background: #fff;
+  color: #1c2b4a;
+  font-size: 0.85rem;
+}
+
 .maf-results-header {
   display: flex;
   justify-content: space-between;
@@ -7003,6 +7078,14 @@ button:disabled:hover {
   }
 }
 
+.statistics-private-ridge-section {
+  margin-top: 4px;
+}
+
+.statistics-private-card-wide {
+  width: 100%;
+}
+
 .downloads-page {
   gap: 36px;
 }
@@ -7087,15 +7170,14 @@ button:disabled:hover {
 }
 
 .downloads-filtered-control-summary {
-  display: flex;
-  justify-content: flex-end;
+  display: block;
 }
 
 .downloads-filtered-control-metrics {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  width: min(500px, 100%);
+  width: 100%;
 }
 
 .downloads-filtered-control-metrics .browse-samples-metric-tile {
@@ -7382,6 +7464,10 @@ button:disabled:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .downloads-filtered-control-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .downloads-filtered-control-bar {
     grid-template-columns: 1fr;
     display: grid;
@@ -7408,6 +7494,10 @@ button:disabled:hover {
     grid-template-columns: 1fr;
   }
 
+  .downloads-filtered-control-metrics {
+    grid-template-columns: 1fr;
+  }
+
   .downloads-filtered-control-search,
   .downloads-filtered-control-actions {
     flex-direction: column;
@@ -7417,5 +7507,400 @@ button:disabled:hover {
   .downloads-filtered-hero-card--downloads .browse-samples-hero,
   .downloads-filtered-hero-card--downloads .browse-samples-toolbar {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   Survival Analysis page
+   ============================================================ */
+.survival-page {
+  gap: 22px;
+}
+
+.survival-shell {
+  padding: 0;
+  overflow: hidden;
+}
+
+.survival-masthead {
+  display: grid;
+  gap: 14px;
+  padding: 28px 32px 24px;
+  border: none;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at top right, rgba(103, 84, 187, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.98) 100%);
+  box-shadow: none;
+}
+
+.survival-shell-divider {
+  height: 1px;
+  margin: 0 32px;
+  background: #e6edf5;
+}
+
+.survival-masthead-copy {
+  display: grid;
+  gap: 12px;
+}
+
+.survival-masthead-eyebrow {
+  margin: 0;
+  color: #7083a2;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.survival-masthead-copy h1 {
+  margin: 0;
+  color: #1f2c46;
+  font-size: clamp(1.9rem, 2.8vw, 2.75rem);
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+}
+
+.survival-masthead-copy p {
+  max-width: 780px;
+  margin: 0;
+  color: #5d718f;
+  font-size: 0.98rem;
+  line-height: 1.68;
+}
+
+.survival-controls {
+  padding: 0;
+}
+
+.survival-workspace {
+  padding: 0 0 8px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.survival-controls-header {
+  display: grid;
+  gap: 8px;
+  padding: 24px 32px 18px;
+}
+
+.survival-controls-header .section-eyebrow,
+.survival-results .section-eyebrow {
+  margin: 0;
+}
+
+.survival-controls-header h2,
+.survival-results h2 {
+  margin: 0;
+  color: #20304b;
+  font-size: clamp(1.2rem, 2vw, 1.7rem);
+  line-height: 1.15;
+}
+
+.survival-controls-header h2 span,
+.survival-results h2 span {
+  color: #406faa;
+}
+
+.survival-controls-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.95fr) minmax(260px, 0.9fr) minmax(260px, 1fr) minmax(220px, 0.8fr);
+  gap: 0;
+  align-items: start;
+}
+
+.survival-control-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 100%;
+  padding: 14px 24px 26px;
+}
+
+.survival-control-block--query,
+.survival-control-block--plots,
+.survival-control-block--dataset,
+.survival-action {
+  border: none;
+  border-right: 1px solid #e4ebf4;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.survival-action {
+  border-right: none;
+}
+
+.survival-control-block .section-eyebrow {
+  margin: 0;
+}
+
+.survival-block-note,
+.survival-action-copy p {
+  margin: 0;
+  color: #667b98;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.survival-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #4b5569;
+}
+
+.survival-field span {
+  font-weight: 600;
+}
+
+.survival-field input,
+.survival-field select,
+.survival-cohort-list {
+  padding: 10px 12px;
+  border: 1px solid #d7e0eb;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  background: #fbfcfe;
+  color: #1f2a44;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.survival-field input:focus,
+.survival-field select:focus,
+.survival-cohort-list:focus {
+  border-color: #6548b8;
+  box-shadow: 0 0 0 3px rgba(101, 72, 184, 0.15);
+}
+
+.survival-cohort-list {
+  min-height: 232px;
+  font-family: "SF Mono", Menlo, monospace;
+}
+
+.survival-check-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.survival-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #2d3748;
+  cursor: pointer;
+}
+
+.survival-check input {
+  accent-color: #6548b8;
+  width: 15px;
+  height: 15px;
+}
+
+.survival-action {
+  align-items: stretch;
+  justify-content: space-between;
+}
+
+.survival-plot-btn {
+  min-height: 52px;
+  padding: 0 22px;
+  background: linear-gradient(135deg, #5d45bc 0%, #396eb6 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(76, 81, 176, 0.22);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.survival-plot-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(76, 81, 176, 0.28);
+}
+
+.survival-plot-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.survival-error {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #fdecea;
+  color: #b0332a;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.survival-plots {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0;
+}
+
+.survival-results {
+  padding: 0;
+  overflow: hidden;
+}
+
+.survival-results .survival-masthead-copy {
+  padding: 28px 32px 18px;
+}
+
+.survival-plot-card {
+  padding: 22px 32px 30px;
+  border-top: 1px solid #e4ebf4;
+  border-left: 1px solid #e4ebf4;
+  border-radius: 0;
+  border-right: none;
+  border-bottom: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.survival-plot-card:nth-child(2n + 1) {
+  border-left: none;
+}
+
+.survival-plot-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.survival-plot-card-header .section-eyebrow {
+  margin: 0;
+}
+
+.survival-plot-card-header h3 {
+  margin: 0;
+  color: #20304b;
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.survival-chart-frame {
+  width: min(100%, 720px);
+  margin: 0 auto;
+}
+
+.survival-chart-frame--km {
+  aspect-ratio: 1 / 1;
+}
+
+.survival-chart-frame--vaf {
+  aspect-ratio: 1 / 1;
+}
+
+.survival-plot-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.survival-plot-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #d8e0ed;
+  border-radius: 999px;
+  background: #f8fbff;
+  color: #45689a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+}
+
+.survival-plot-actions button:hover {
+  background: #eef4ff;
+  border-color: #bfd0ea;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 1100px) {
+  .survival-controls-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .survival-plots {
+    grid-template-columns: 1fr;
+  }
+
+  .survival-plot-card {
+    border-left: none;
+  }
+
+  .survival-chart-frame {
+    width: min(100%, 760px);
+  }
+
+  .survival-action {
+    grid-column: span 2;
+    flex-direction: row;
+    gap: 16px;
+    align-items: center;
+    border-top: 1px solid #e4ebf4;
+    border-right: none;
+  }
+}
+
+@media (max-width: 680px) {
+  .survival-controls-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .survival-masthead {
+    padding: 22px 20px 18px;
+  }
+
+  .survival-shell-divider {
+    margin: 0 20px;
+  }
+
+  .survival-controls-header,
+  .survival-results .survival-masthead-copy,
+  .survival-plot-card {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .survival-plot-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .survival-chart-frame,
+  .survival-chart-frame--km,
+  .survival-chart-frame--vaf {
+    width: 100%;
+    aspect-ratio: auto;
+  }
+
+  .survival-action {
+    grid-column: auto;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .survival-control-block--query,
+  .survival-control-block--plots,
+  .survival-control-block--dataset {
+    border-right: none;
+    border-bottom: 1px solid #e4ebf4;
   }
 }

@@ -17,68 +17,359 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class MafDuckDbImportService {
 
     private static final Logger log = LoggerFactory.getLogger(MafDuckDbImportService.class);
+
     private static final String CFDNA_TSV = "cfDNA_MAF_Mutations.tsv";
     private static final String TCGA_TSV = "TCGA_maf_mutation.tsv";
-    private static final String MAF_DB_DEFAULT_FILE = "maf.duckdb";
-    private static final int BATCH_SIZE = 5_000;
+    private static final String QUERY_DB_DEFAULT_FILE = "cfdnadb.duckdb";
+    private static final String PAN_CANCER_CLINICAL_FILE = "clinical_data.txt";
+    private static final String PAN_CANCER_MUTATIONS_FILE = "mutations_data.txt";
+    private static final int JDBC_BATCH_SIZE = 1_000;
+    private static final List<String> CANCERS = List.of(
+            "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
+            "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
+            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "NGY");
+    private static final List<String> REQUIRED_AGGREGATE_COLUMNS = List.of(
+            "Chr", "Start", "End", "Ref", "Alt",
+            "Func.refGene", "Gene.refGene", "ExonicFunc.refGene",
+            "AAChange.refGene", "Tumor_Sample_Barcode");
 
     private final Path dataDir;
-    private final String mafDbFileName;
+    private final Path panCancerDir;
+    private final String queryDbFileName;
 
     public MafDuckDbImportService(@Value("${app.data-dir:/400T/cfdnadb}") String dataDir,
-                                  @Value("${app.maf-db-file:maf.duckdb}") String mafDbFileName) {
+                                  @Value("${app.pan-cancer-dir:/400T/cfdnadb/statistics/oncoplot/pan_cancer}") String panCancerDir,
+                                  @Value("${app.query-db-file:${app.maf-db-file:cfdnadb.duckdb}}") String queryDbFileName) {
         this.dataDir = Path.of(dataDir);
-        this.mafDbFileName = mafDbFileName == null || mafDbFileName.isBlank() ? MAF_DB_DEFAULT_FILE : mafDbFileName;
+        this.panCancerDir = Path.of(panCancerDir);
+        this.queryDbFileName = queryDbFileName == null || queryDbFileName.isBlank()
+                ? QUERY_DB_DEFAULT_FILE
+                : queryDbFileName;
     }
 
     public Path rebuildDatabase() {
-        Path dbPath = dataDir.resolve(mafDbFileName).toAbsolutePath();
-        Path cfDnaPath = dataDir.resolve(CFDNA_TSV).toAbsolutePath();
-        Path tcgaPath = dataDir.resolve(TCGA_TSV).toAbsolutePath();
-
-        if (!Files.isRegularFile(cfDnaPath)) {
-            throw new IllegalStateException("cfDNA MAF TSV not found: " + cfDnaPath);
-        }
-        if (!Files.isRegularFile(tcgaPath)) {
-            throw new IllegalStateException("TCGA MAF TSV not found: " + tcgaPath);
-        }
+        Path dbPath = dataDir.resolve(queryDbFileName).toAbsolutePath();
+        Path cfDnaPath = requireFile(dataDir.resolve(CFDNA_TSV).toAbsolutePath(), "cfDNA MAF TSV");
+        Path tcgaPath = requireFile(dataDir.resolve(TCGA_TSV).toAbsolutePath(), "TCGA MAF TSV");
+        Path panClinical = panCancerDir.resolve(PAN_CANCER_CLINICAL_FILE).toAbsolutePath();
+        Path panMutations = panCancerDir.resolve(PAN_CANCER_MUTATIONS_FILE).toAbsolutePath();
 
         try {
             Files.createDirectories(dataDir);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to create data directory " + dataDir, e);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to create data directory " + dataDir, exception);
         }
 
-        log.info("[MAF-IMPORT] rebuilding database at {}", dbPath);
+        ImportPlan plan = inspectFilesystem(panClinical, panMutations);
+        try {
+            Files.deleteIfExists(dbPath);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to clean old query database files near " + dbPath, exception);
+        }
+
+        log.info("[QUERY-IMPORT] building {} with aggregates={}, samples={}, cohortFiles={}, assets={}",
+                dbPath,
+                plan.aggregateFiles.size(),
+                plan.sampleRows.size(),
+                plan.cohortFileRows.size(),
+                plan.assetRows.size());
+
         try (Connection connection = DriverManager.getConnection("jdbc:duckdb:" + dbPath)) {
             connection.setAutoCommit(false);
             recreateTables(connection);
-            long cfDnaRows = importCfDna(connection, cfDnaPath);
+
+            long cfdnaRows = importCfDna(connection, cfDnaPath);
             long tcgaRows = importTcga(connection, tcgaPath);
+            long aggregateRows = importAggregateFiles(connection, plan.aggregateFiles);
+            long panClinicalRows = importPanCancerFile(connection, panClinical, "pan_cancer_clinical");
+            long panMutationRows = importPanCancerFile(connection, panMutations, "pan_cancer_mutations");
+            insertSampleInventory(connection, plan.sampleRows);
+            insertSampleTopGenes(connection, plan.sampleTopGeneRows);
+            enrichTcgaSamples(connection);
+            insertCohortFileIndex(connection, plan.cohortFileRows);
+            insertStatisticsAssetIndex(connection, plan.assetRows);
             createIndexes(connection);
             connection.commit();
-            log.info("[MAF-IMPORT] finished: cfDNA rows={}, TCGA rows={}, db={}", cfDnaRows, tcgaRows, dbPath);
+
+            log.info("[QUERY-IMPORT] finished db={}, cfdna_maf={}, tcga_maf={}, aggregate_multianno={}, pan_clinical={}, pan_mutations={}",
+                    dbPath, cfdnaRows, tcgaRows, aggregateRows, panClinicalRows, panMutationRows);
             return dbPath;
-        } catch (SQLException e) {
-            throw new IllegalStateException("Failed to rebuild DuckDB database at " + dbPath, e);
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to rebuild query DuckDB database at " + dbPath, exception);
         }
+    }
+
+    private ImportPlan inspectFilesystem(Path panClinical, Path panMutations) {
+        ImportPlan plan = new ImportPlan();
+        if (!Files.isRegularFile(panClinical)) {
+            log.warn("[QUERY-IMPORT] pan-cancer clinical file missing: {}", panClinical);
+        }
+        if (!Files.isRegularFile(panMutations)) {
+            log.warn("[QUERY-IMPORT] pan-cancer mutations file missing: {}", panMutations);
+        }
+
+        for (String cancer : CANCERS) {
+            Path aggregateFile = dataDir.resolve(cancer).resolve(cancer + "_all_sample_multianno.txt").toAbsolutePath();
+            if (Files.isRegularFile(aggregateFile)) {
+                validateAggregateColumns(aggregateFile);
+                plan.aggregateFiles.add(new AggregateFile(cancer, aggregateFile));
+            }
+            inspectCancerFiles(cancer, plan);
+        }
+
+        for (SampleRow row : plan.sampleRows.values()) {
+            int rank = 1;
+            for (Map.Entry<String, Long> entry : row.topGenes.entrySet()) {
+                plan.sampleTopGeneRows.add(new SampleTopGeneRow(
+                        row.cancerType,
+                        row.source,
+                        row.sampleId,
+                        entry.getKey(),
+                        entry.getValue(),
+                        rank++));
+            }
+        }
+        return plan;
+    }
+
+    private void inspectCancerFiles(String cancer, ImportPlan plan) {
+        for (String source : List.of("private", "public")) {
+            Path sourceDir = dataDir.resolve(cancer).resolve(source);
+            collectSampleFiles(plan, cancer, source, sourceDir.resolve("avinput"), "avinput");
+            collectSampleFiles(plan, cancer, source, sourceDir.resolve("multianno"), "multianno");
+            collectSampleFiles(plan, cancer, source, sourceDir.resolve("vcf"), "vcf");
+            collectSampleFiles(plan, cancer, source, sourceDir.resolve("filtered_vcf"), "vcf");
+        }
+
+        Path mutationsFile = dataDir.resolve(cancer).resolve(cancer + "_mutations.txt");
+        if (Files.isRegularFile(mutationsFile)) {
+            plan.cohortFileRows.add(new CohortFileRow(
+                    cancer,
+                    "Summary",
+                    "mutations",
+                    mutationsFile.getFileName().toString(),
+                    humanizeFileName(mutationsFile.getFileName().toString()),
+                    null,
+                    mutationsFile.toAbsolutePath(),
+                    safeFileSize(mutationsFile)));
+        }
+
+        collectStatisticsAssets(plan, cancer, "private", dataDir.resolve(cancer).resolve("private").resolve("stats"));
+        collectStatisticsAssets(plan, cancer, "public", dataDir.resolve(cancer).resolve("public").resolve("stats"));
+        collectStatisticsAssets(plan, cancer, "tcga", dataDir.resolve(cancer).resolve("tcga").resolve("stats"));
+        collectStatisticsAssets(plan, cancer, "Overview", dataDir.resolve(cancer).resolve("stats"));
+        collectTcgaSamples(plan, cancer);
+    }
+
+    private void collectSampleFiles(ImportPlan plan, String cancer, String source, Path directory, String category) {
+        if (!Files.isDirectory(directory)) {
+            return;
+        }
+        try (Stream<Path> stream = Files.walk(directory)) {
+            stream.filter(Files::isRegularFile)
+                    .sorted()
+                    .forEach(path -> {
+                        String fileName = path.getFileName().toString();
+                        String sampleId = extractSampleId(fileName, category);
+                        if (sampleId == null || sampleId.isBlank()) {
+                            return;
+                        }
+
+                        SampleKey key = new SampleKey(cancer, source, sampleId.trim());
+                        SampleRow row = plan.sampleRows.computeIfAbsent(key, ignored -> new SampleRow(cancer, source, sampleId.trim()));
+                        if ("multianno".equals(category)) {
+                            row.annoFileName = fileName;
+                            row.annoFilePath = path.toAbsolutePath();
+                            row.hasAnnotated = true;
+                            row.variantCount = countDataRows(path);
+                            row.topGenes.clear();
+                            row.topGenes.putAll(readTopGenes(path));
+                        } else if ("vcf".equals(category)) {
+                            row.vcfFileName = fileName;
+                            row.vcfFilePath = path.toAbsolutePath();
+                            row.hasSomatic = true;
+                        } else if ("avinput".equals(category)) {
+                            row.avinputFileName = fileName;
+                            row.avinputFilePath = path.toAbsolutePath();
+                        }
+
+                        plan.cohortFileRows.add(new CohortFileRow(
+                                cancer,
+                                source,
+                                category,
+                                fileName,
+                                humanizeFileName(fileName),
+                                sampleId.trim(),
+                                path.toAbsolutePath(),
+                                safeFileSize(path)));
+                    });
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to inspect sample files under " + directory, exception);
+        }
+    }
+
+    private void collectTcgaSamples(ImportPlan plan, String cancer) {
+        for (String sampleId : readTcgaSampleBarcodes(cancer)) {
+            if (sampleId == null || sampleId.isBlank()) {
+                continue;
+            }
+            plan.sampleRows.computeIfAbsent(
+                    new SampleKey(cancer, "tcga", sampleId.trim()),
+                    ignored -> new SampleRow(cancer, "tcga", sampleId.trim()));
+        }
+    }
+
+    private void collectStatisticsAssets(ImportPlan plan, String cancer, String source, Path statsDir) {
+        if (!Files.isDirectory(statsDir)) {
+            return;
+        }
+
+        try (Stream<Path> stream = Files.walk(statsDir)) {
+            stream.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".pdf"))
+                    .sorted()
+                    .forEach(path -> {
+                        String relativeCategory = toRelativeCategory(cancer, path.getParent());
+                        if (isLollipopCategory(relativeCategory)) {
+                            return;
+                        }
+                        String fileName = path.getFileName().toString();
+                        plan.assetRows.add(new AssetRow(
+                                cancer,
+                                source,
+                                "cancer_asset",
+                                relativeCategory,
+                                humanizeFileName(fileName),
+                                fileName,
+                                path.toAbsolutePath(),
+                                safeFileSize(path),
+                                null,
+                                null,
+                                null,
+                                null));
+                    });
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to inspect statistics assets under " + statsDir, exception);
+        }
+
+        try (Stream<Path> direct = Files.list(statsDir)) {
+            direct.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".pdf"))
+                    .sorted()
+                    .forEach(path -> {
+                        String fileName = path.getFileName().toString();
+                        plan.assetRows.add(new AssetRow(
+                                cancer,
+                                source,
+                                "statistics_plot",
+                                toRelativeCategory(cancer, path.getParent()),
+                                humanizeFileName(fileName),
+                                fileName,
+                                path.toAbsolutePath(),
+                                safeFileSize(path),
+                                null,
+                                null,
+                                null,
+                                null));
+                    });
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to inspect statistics plot root " + statsDir, exception);
+        }
+
+        Path lollipopDir = statsDir.resolve("lollipop");
+        if (!Files.isDirectory(lollipopDir)) {
+            return;
+        }
+        try (Stream<Path> stream = Files.list(lollipopDir)) {
+            stream.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".pdf"))
+                    .sorted()
+                    .forEach(path -> {
+                        AssetRow row = parseGenePlotAsset(cancer, source, path);
+                        if (row != null) {
+                            plan.assetRows.add(row);
+                        }
+                    });
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to inspect gene plots under " + lollipopDir, exception);
+        }
+    }
+
+    private AssetRow parseGenePlotAsset(String cancer, String source, Path path) {
+        String fileName = path.getFileName().toString();
+        String stem = fileName.substring(0, fileName.length() - ".pdf".length());
+        String geneName = null;
+        String chromosome = null;
+        String startPosition = null;
+        String endPosition = null;
+
+        if (stem.startsWith("lollipop_CFDNA_")) {
+            String[] parts = stem.split("_");
+            if (parts.length >= 7) {
+                geneName = parts[3];
+                chromosome = parts[4];
+                startPosition = parts[5];
+                endPosition = parts[6];
+            }
+        } else if (stem.startsWith("lollipop_")) {
+            geneName = stem.substring("lollipop_".length());
+        }
+
+        if (geneName == null || geneName.isBlank()) {
+            return null;
+        }
+
+        return new AssetRow(
+                cancer,
+                source,
+                "gene_plot",
+                toRelativeCategory(cancer, path.getParent()),
+                humanizeFileName(fileName),
+                fileName,
+                path.toAbsolutePath(),
+                safeFileSize(path),
+                geneName,
+                chromosome,
+                startPosition,
+                endPosition);
     }
 
     private void recreateTables(Connection connection) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute("DROP TABLE IF EXISTS cfdna_maf");
             statement.execute("DROP TABLE IF EXISTS tcga_maf");
+            statement.execute("DROP TABLE IF EXISTS aggregate_multianno");
+            statement.execute("DROP TABLE IF EXISTS pan_cancer_clinical");
+            statement.execute("DROP TABLE IF EXISTS pan_cancer_mutations");
+            statement.execute("DROP TABLE IF EXISTS sample_inventory");
+            statement.execute("DROP TABLE IF EXISTS sample_top_genes");
+            statement.execute("DROP TABLE IF EXISTS cohort_file_index");
+            statement.execute("DROP TABLE IF EXISTS statistics_asset_index");
 
             statement.execute(
                     "CREATE TABLE cfdna_maf (" +
@@ -88,7 +379,6 @@ public class MafDuckDbImportService {
                             "tx_change VARCHAR, aa_change VARCHAR, variant_type VARCHAR, functional_region VARCHAR, " +
                             "gene_refgene VARCHAR, gene_detail_refgene VARCHAR, exonic_function VARCHAR, " +
                             "aa_change_refgene VARCHAR, location VARCHAR)");
-
             statement.execute(
                     "CREATE TABLE tcga_maf (" +
                             "hugo_symbol VARCHAR, chromosome VARCHAR, start_position VARCHAR, end_position VARCHAR, " +
@@ -96,112 +386,447 @@ public class MafDuckDbImportService {
                             "variant_classification VARCHAR, variant_type VARCHAR, cancer_type VARCHAR, " +
                             "transcript VARCHAR, exon VARCHAR, aa_change VARCHAR, functional_region VARCHAR, " +
                             "exonic_function VARCHAR)");
+            statement.execute(
+                    "CREATE TABLE aggregate_multianno (" +
+                            "cancer_type VARCHAR, source VARCHAR, sample_id VARCHAR, filename VARCHAR, file_path VARCHAR, " +
+                            "\"Chr\" VARCHAR, \"Start\" VARCHAR, \"End\" VARCHAR, \"Ref\" VARCHAR, \"Alt\" VARCHAR, " +
+                            "\"Func.refGene\" VARCHAR, \"Gene.refGene\" VARCHAR, \"ExonicFunc.refGene\" VARCHAR, " +
+                            "\"AAChange.refGene\" VARCHAR, \"Tumor_Sample_Barcode\" VARCHAR)");
+            statement.execute("CREATE TABLE pan_cancer_clinical (Tumor_Sample_Barcode VARCHAR, CancerType VARCHAR)");
+            statement.execute("CREATE TABLE pan_cancer_mutations (Hugo_Symbol VARCHAR, Tumor_Sample_Barcode VARCHAR, Variant_Classification VARCHAR)");
+            statement.execute(
+                    "CREATE TABLE sample_inventory (" +
+                            "cancer_type VARCHAR, source VARCHAR, sample_id VARCHAR, variant_count BIGINT, " +
+                            "has_annotated BOOLEAN, has_somatic BOOLEAN, " +
+                            "anno_file_name VARCHAR, anno_file_path VARCHAR, " +
+                            "vcf_file_name VARCHAR, vcf_file_path VARCHAR, " +
+                            "avinput_file_name VARCHAR, avinput_file_path VARCHAR, " +
+                            "updated_at TIMESTAMP)");
+            statement.execute("CREATE TABLE sample_top_genes (cancer_type VARCHAR, source VARCHAR, sample_id VARCHAR, gene_name VARCHAR, gene_count BIGINT, rank_no INTEGER)");
+            statement.execute(
+                    "CREATE TABLE cohort_file_index (" +
+                            "cancer_type VARCHAR, source VARCHAR, category VARCHAR, file_name VARCHAR, display_name VARCHAR, " +
+                            "sample_id VARCHAR, file_path VARCHAR, size_bytes BIGINT)");
+            statement.execute(
+                    "CREATE TABLE statistics_asset_index (" +
+                            "cancer_type VARCHAR, source VARCHAR, asset_type VARCHAR, category VARCHAR, title VARCHAR, " +
+                            "file_name VARCHAR, file_path VARCHAR, size_bytes BIGINT, gene_name VARCHAR, " +
+                            "chromosome VARCHAR, start_position VARCHAR, end_position VARCHAR)");
         }
     }
 
     private long importCfDna(Connection connection, Path filePath) throws SQLException {
-        String sql = "INSERT INTO cfdna_maf (" +
-                "cancer_type, chromosome, start_position, end_position, reference_allele, tumor_seq_allele2, " +
-                "tumor_sample_barcode, hugo_symbol, variant_classification, transcript, exon, tx_change, aa_change, " +
-                "variant_type, functional_region, gene_refgene, gene_detail_refgene, exonic_function, aa_change_refgene, location" +
-                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-        try (Reader reader = newBomAwareReader(filePath);
-             CSVParser parser = CSVFormat.TDF.builder().setHeader().setSkipHeaderRecord(true).build().parse(reader);
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            long rowCount = 0;
-            for (CSVRecord record : parser) {
-                statement.setString(1, csvValue(record, "Cancer_Type"));
-                statement.setString(2, csvValue(record, "Chromosome"));
-                statement.setString(3, csvValue(record, "Start_Position"));
-                statement.setString(4, csvValue(record, "End_Position"));
-                statement.setString(5, csvValue(record, "Reference_Allele"));
-                statement.setString(6, csvValue(record, "Tumor_Seq_Allele2"));
-                statement.setString(7, csvValue(record, "Tumor_Sample_Barcode"));
-                statement.setString(8, csvValue(record, "Hugo_Symbol"));
-                statement.setString(9, csvValue(record, "Variant_Classification"));
-                statement.setString(10, csvValue(record, "tx"));
-                statement.setString(11, csvValue(record, "exon"));
-                statement.setString(12, csvValue(record, "txChange"));
-                statement.setString(13, csvValue(record, "aaChange"));
-                statement.setString(14, csvValue(record, "Variant_Type"));
-                statement.setString(15, csvValue(record, "Func.refGene"));
-                statement.setString(16, csvValue(record, "Gene.refGene"));
-                statement.setString(17, csvValue(record, "GeneDetail.refGene"));
-                statement.setString(18, csvValue(record, "ExonicFunc.refGene"));
-                statement.setString(19, csvValue(record, "AAChange.refGene"));
-                statement.setString(20, csvValue(record, "Location"));
-                statement.addBatch();
-
-                rowCount++;
-                if (rowCount % BATCH_SIZE == 0) {
-                    statement.executeBatch();
-                    connection.commit();
-                    log.info("[MAF-IMPORT] cfDNA imported {} rows", rowCount);
-                }
-            }
-            statement.executeBatch();
-            connection.commit();
-            return rowCount;
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to import cfDNA TSV " + filePath, e);
+        String sql =
+                "INSERT INTO cfdna_maf " +
+                        "SELECT " +
+                        "COALESCE(CAST(Cancer_Type AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Chromosome AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Start_Position AS VARCHAR), ''), " +
+                        "COALESCE(CAST(End_Position AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Reference_Allele AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Tumor_Seq_Allele2 AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Hugo_Symbol AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Variant_Classification AS VARCHAR), ''), " +
+                        "COALESCE(CAST(tx AS VARCHAR), ''), " +
+                        "COALESCE(CAST(exon AS VARCHAR), ''), " +
+                        "COALESCE(CAST(txChange AS VARCHAR), ''), " +
+                        "COALESCE(CAST(aaChange AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Variant_Type AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"Func.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"Gene.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"GeneDetail.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"ExonicFunc.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"AAChange.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Location AS VARCHAR), '') " +
+                        "FROM read_csv_auto('" + duckPath(filePath) + "', delim='\\t', header=true, ignore_errors=true)";
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
         }
+        return tableCount(connection, "cfdna_maf");
     }
 
     private long importTcga(Connection connection, Path filePath) throws SQLException {
-        String sql = "INSERT INTO tcga_maf (" +
-                "hugo_symbol, chromosome, start_position, end_position, reference_allele, tumor_seq_allele2, " +
-                "tumor_sample_barcode, variant_classification, variant_type, cancer_type, transcript, exon, aa_change, functional_region, exonic_function" +
-                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '', '', '')";
+        String sql =
+                "INSERT INTO tcga_maf " +
+                        "SELECT " +
+                        "COALESCE(CAST(Hugo_Symbol AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Chromosome AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Start_Position AS VARCHAR), ''), " +
+                        "COALESCE(CAST(End_Position AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Reference_Allele AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Tumor_Seq_Allele2 AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Variant_Classification AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Variant_Type AS VARCHAR), ''), " +
+                        "'' AS cancer_type, '' AS transcript, '' AS exon, '' AS aa_change, '' AS functional_region, '' AS exonic_function " +
+                        "FROM read_csv_auto('" + duckPath(filePath) + "', delim='\\t', header=true, ignore_errors=true)";
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
+        }
+        return tableCount(connection, "tcga_maf");
+    }
 
-        try (Reader reader = newBomAwareReader(filePath);
-             CSVParser parser = CSVFormat.TDF.builder().setHeader().setSkipHeaderRecord(true).build().parse(reader);
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            long rowCount = 0;
-            for (CSVRecord record : parser) {
-                statement.setString(1, csvValue(record, "Hugo_Symbol"));
-                statement.setString(2, csvValue(record, "Chromosome"));
-                statement.setString(3, csvValue(record, "Start_Position"));
-                statement.setString(4, csvValue(record, "End_Position"));
-                statement.setString(5, csvValue(record, "Reference_Allele"));
-                statement.setString(6, csvValue(record, "Tumor_Seq_Allele2"));
-                statement.setString(7, csvValue(record, "Tumor_Sample_Barcode"));
-                statement.setString(8, csvValue(record, "Variant_Classification"));
-                statement.setString(9, csvValue(record, "Variant_Type"));
+    private long importAggregateFiles(Connection connection, List<AggregateFile> aggregateFiles) throws SQLException {
+        String sql =
+                "INSERT INTO aggregate_multianno " +
+                        "SELECT ?, '', COALESCE(CAST(\"Tumor_Sample_Barcode\" AS VARCHAR), ''), ?, ?, " +
+                        "COALESCE(CAST(Chr AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Start AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"End\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Ref AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Alt AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"Func.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"Gene.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"ExonicFunc.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"AAChange.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"Tumor_Sample_Barcode\" AS VARCHAR), '') " +
+                        "FROM read_csv_auto(?, delim='\\t', header=true, ignore_errors=true)";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            for (AggregateFile aggregateFile : aggregateFiles) {
+                statement.setString(1, aggregateFile.cancer);
+                statement.setString(2, aggregateFile.path.getFileName().toString());
+                statement.setString(3, aggregateFile.path.toAbsolutePath().toString());
+                statement.setString(4, aggregateFile.path.toAbsolutePath().toString());
                 statement.addBatch();
-
-                rowCount++;
-                if (rowCount % BATCH_SIZE == 0) {
-                    statement.executeBatch();
-                    connection.commit();
-                    log.info("[MAF-IMPORT] TCGA imported {} rows", rowCount);
-                }
             }
             statement.executeBatch();
-            connection.commit();
-            return rowCount;
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to import TCGA TSV " + filePath, e);
+        }
+        return tableCount(connection, "aggregate_multianno");
+    }
+
+    private long importPanCancerFile(Connection connection, Path filePath, String tableName) throws SQLException {
+        if (!Files.isRegularFile(filePath)) {
+            return 0;
+        }
+
+        String sql;
+        if ("pan_cancer_clinical".equals(tableName)) {
+            sql = "INSERT INTO pan_cancer_clinical " +
+                    "SELECT COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), ''), COALESCE(CAST(CancerType AS VARCHAR), '') " +
+                    "FROM read_csv_auto('" + duckPath(filePath) + "', delim='\\t', header=true, ignore_errors=true)";
+        } else {
+            sql = "INSERT INTO pan_cancer_mutations " +
+                    "SELECT COALESCE(CAST(Hugo_Symbol AS VARCHAR), ''), " +
+                    "COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), ''), " +
+                    "COALESCE(CAST(Variant_Classification AS VARCHAR), '') " +
+                    "FROM read_csv_auto('" + duckPath(filePath) + "', delim='\\t', header=true, ignore_errors=true)";
+        }
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
+        }
+        return tableCount(connection, tableName);
+    }
+
+    private void insertSampleInventory(Connection connection, Map<SampleKey, SampleRow> sampleRows) throws SQLException {
+        String sql = "INSERT INTO sample_inventory (" +
+                "cancer_type, source, sample_id, variant_count, has_annotated, has_somatic, " +
+                "anno_file_name, anno_file_path, vcf_file_name, vcf_file_path, avinput_file_name, avinput_file_path, updated_at" +
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            List<SampleRow> rows = sampleRows.values().stream()
+                    .sorted(Comparator.comparing((SampleRow row) -> row.cancerType)
+                            .thenComparing(row -> row.source)
+                            .thenComparing(row -> row.sampleId))
+                    .toList();
+            int batchCount = 0;
+            for (SampleRow row : rows) {
+                statement.setString(1, row.cancerType);
+                statement.setString(2, row.source);
+                statement.setString(3, row.sampleId);
+                statement.setLong(4, row.variantCount);
+                statement.setBoolean(5, row.hasAnnotated);
+                statement.setBoolean(6, row.hasSomatic);
+                statement.setString(7, row.annoFileName);
+                statement.setString(8, pathValue(row.annoFilePath));
+                statement.setString(9, row.vcfFileName);
+                statement.setString(10, pathValue(row.vcfFilePath));
+                statement.setString(11, row.avinputFileName);
+                statement.setString(12, pathValue(row.avinputFilePath));
+                statement.setTimestamp(13, Timestamp.from(Instant.now()));
+                statement.addBatch();
+                batchCount = flushBatchIfNeeded(connection, statement, batchCount + 1);
+            }
+            flushRemainingBatch(connection, statement, batchCount);
         }
     }
 
-    private void createIndexes(Connection connection) throws SQLException {
-        List<String> statements = List.of(
-                "CREATE INDEX IF NOT EXISTS idx_cfdna_maf_gene ON cfdna_maf(hugo_symbol)",
-                "CREATE INDEX IF NOT EXISTS idx_cfdna_maf_sample ON cfdna_maf(tumor_sample_barcode)",
-                "CREATE INDEX IF NOT EXISTS idx_cfdna_maf_cancer ON cfdna_maf(cancer_type)",
-                "CREATE INDEX IF NOT EXISTS idx_cfdna_maf_chr ON cfdna_maf(chromosome)",
-                "CREATE INDEX IF NOT EXISTS idx_tcga_maf_gene ON tcga_maf(hugo_symbol)",
-                "CREATE INDEX IF NOT EXISTS idx_tcga_maf_sample ON tcga_maf(tumor_sample_barcode)",
-                "CREATE INDEX IF NOT EXISTS idx_tcga_maf_chr ON tcga_maf(chromosome)"
-        );
+    private void insertSampleTopGenes(Connection connection, List<SampleTopGeneRow> rows) throws SQLException {
+        String sql = "INSERT INTO sample_top_genes (cancer_type, source, sample_id, gene_name, gene_count, rank_no) VALUES (?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            int batchCount = 0;
+            for (SampleTopGeneRow row : rows) {
+                statement.setString(1, row.cancerType);
+                statement.setString(2, row.source);
+                statement.setString(3, row.sampleId);
+                statement.setString(4, row.geneName);
+                statement.setLong(5, row.geneCount);
+                statement.setInt(6, row.rankNo);
+                statement.addBatch();
+                batchCount = flushBatchIfNeeded(connection, statement, batchCount + 1);
+            }
+            flushRemainingBatch(connection, statement, batchCount);
+        }
+    }
 
+    private void enrichTcgaSamples(Connection connection) throws SQLException {
         try (Statement statement = connection.createStatement()) {
-            for (String sql : statements) {
+            statement.execute(
+                    "UPDATE sample_inventory s " +
+                            "SET variant_count = counts.variant_count " +
+                            "FROM (" +
+                            "  SELECT si.cancer_type, si.sample_id, COUNT(*) AS variant_count " +
+                            "  FROM sample_inventory si " +
+                            "  JOIN tcga_maf t ON t.tumor_sample_barcode = si.sample_id " +
+                            "  WHERE si.source = 'tcga' " +
+                            "  GROUP BY si.cancer_type, si.sample_id" +
+                            ") counts " +
+                            "WHERE s.source = 'tcga' AND s.cancer_type = counts.cancer_type AND s.sample_id = counts.sample_id");
+
+            statement.execute(
+                    "INSERT INTO sample_top_genes " +
+                            "SELECT cancer_type, source, sample_id, gene_name, gene_count, rank_no " +
+                            "FROM (" +
+                            "  SELECT si.cancer_type AS cancer_type, si.source AS source, si.sample_id AS sample_id, " +
+                            "         t.hugo_symbol AS gene_name, COUNT(*) AS gene_count, " +
+                            "         ROW_NUMBER() OVER (PARTITION BY si.cancer_type, si.sample_id ORDER BY COUNT(*) DESC, t.hugo_symbol ASC) AS rank_no " +
+                            "  FROM sample_inventory si " +
+                            "  JOIN tcga_maf t ON t.tumor_sample_barcode = si.sample_id " +
+                            "  WHERE si.source = 'tcga' AND COALESCE(t.hugo_symbol, '') <> '' " +
+                            "  GROUP BY si.cancer_type, si.source, si.sample_id, t.hugo_symbol" +
+                            ") ranked WHERE rank_no <= 10");
+        }
+    }
+
+    private void insertCohortFileIndex(Connection connection, List<CohortFileRow> rows) throws SQLException {
+        String sql = "INSERT INTO cohort_file_index (cancer_type, source, category, file_name, display_name, sample_id, file_path, size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            int batchCount = 0;
+            for (CohortFileRow row : rows) {
+                statement.setString(1, row.cancerType);
+                statement.setString(2, row.source);
+                statement.setString(3, row.category);
+                statement.setString(4, row.fileName);
+                statement.setString(5, row.displayName);
+                statement.setString(6, row.sampleId);
+                statement.setString(7, row.filePath.toAbsolutePath().toString());
+                statement.setLong(8, row.sizeBytes);
+                statement.addBatch();
+                batchCount = flushBatchIfNeeded(connection, statement, batchCount + 1);
+            }
+            flushRemainingBatch(connection, statement, batchCount);
+        }
+    }
+
+    private void insertStatisticsAssetIndex(Connection connection, List<AssetRow> rows) throws SQLException {
+        String sql = "INSERT INTO statistics_asset_index (" +
+                "cancer_type, source, asset_type, category, title, file_name, file_path, size_bytes, gene_name, chromosome, start_position, end_position" +
+                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            int batchCount = 0;
+            for (AssetRow row : rows) {
+                statement.setString(1, row.cancerType);
+                statement.setString(2, row.source);
+                statement.setString(3, row.assetType);
+                statement.setString(4, row.category);
+                statement.setString(5, row.title);
+                statement.setString(6, row.fileName);
+                statement.setString(7, row.filePath.toAbsolutePath().toString());
+                statement.setLong(8, row.sizeBytes);
+                statement.setString(9, row.geneName);
+                statement.setString(10, row.chromosome);
+                statement.setString(11, row.startPosition);
+                statement.setString(12, row.endPosition);
+                statement.addBatch();
+                batchCount = flushBatchIfNeeded(connection, statement, batchCount + 1);
+            }
+            flushRemainingBatch(connection, statement, batchCount);
+        }
+    }
+
+    private int flushBatchIfNeeded(Connection connection, PreparedStatement statement, int batchCount) throws SQLException {
+        if (batchCount < JDBC_BATCH_SIZE) {
+            return batchCount;
+        }
+        statement.executeBatch();
+        statement.clearBatch();
+        connection.commit();
+        return 0;
+    }
+
+    private void flushRemainingBatch(Connection connection, PreparedStatement statement, int batchCount) throws SQLException {
+        if (batchCount <= 0) {
+            return;
+        }
+        statement.executeBatch();
+        statement.clearBatch();
+        connection.commit();
+    }
+
+    private void createIndexes(Connection connection) throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            for (String sql : List.of(
+                    "CREATE INDEX IF NOT EXISTS idx_cfdna_maf_gene ON cfdna_maf(hugo_symbol)",
+                    "CREATE INDEX IF NOT EXISTS idx_cfdna_maf_sample ON cfdna_maf(tumor_sample_barcode)",
+                    "CREATE INDEX IF NOT EXISTS idx_cfdna_maf_cancer ON cfdna_maf(cancer_type)",
+                    "CREATE INDEX IF NOT EXISTS idx_tcga_maf_gene ON tcga_maf(hugo_symbol)",
+                    "CREATE INDEX IF NOT EXISTS idx_tcga_maf_sample ON tcga_maf(tumor_sample_barcode)",
+                    "CREATE INDEX IF NOT EXISTS idx_aggregate_cancer ON aggregate_multianno(cancer_type)",
+                    "CREATE INDEX IF NOT EXISTS idx_aggregate_sample ON aggregate_multianno(\"Tumor_Sample_Barcode\")",
+                    "CREATE INDEX IF NOT EXISTS idx_sample_inventory_lookup ON sample_inventory(cancer_type, source, sample_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_sample_top_genes_lookup ON sample_top_genes(cancer_type, source, sample_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_cohort_file_lookup ON cohort_file_index(cancer_type, source, category, file_name)",
+                    "CREATE INDEX IF NOT EXISTS idx_statistics_asset_lookup ON statistics_asset_index(cancer_type, source, asset_type, file_name)"
+            )) {
                 statement.execute(sql);
             }
-            statement.execute("ANALYZE cfdna_maf");
-            statement.execute("ANALYZE tcga_maf");
+            for (String table : List.of(
+                    "cfdna_maf", "tcga_maf", "aggregate_multianno",
+                    "pan_cancer_clinical", "pan_cancer_mutations",
+                    "sample_inventory", "sample_top_genes",
+                    "cohort_file_index", "statistics_asset_index")) {
+                statement.execute("ANALYZE " + table);
+            }
+        }
+    }
+
+    private Path requireFile(Path path, String label) {
+        if (!Files.isRegularFile(path)) {
+            throw new IllegalStateException(label + " not found: " + path);
+        }
+        return path;
+    }
+
+    private List<String> readTcgaSampleBarcodes(String cancer) {
+        String tcgaCode;
+        switch (cancer) {
+            case "Breast":
+                tcgaCode = "BRCA";
+                break;
+            case "Colorectal":
+                tcgaCode = "COAD";
+                break;
+            case "Liver":
+                tcgaCode = "LIHC";
+                break;
+            case "Lung":
+                tcgaCode = "LUAD";
+                break;
+            case "Pancreatic":
+                tcgaCode = "PAAD";
+                break;
+            case "Bladder":
+                tcgaCode = "BLCA";
+                break;
+            case "Cervical":
+                tcgaCode = "CESC";
+                break;
+            case "Endometrial":
+                tcgaCode = "UCEC";
+                break;
+            case "Esophageal":
+                tcgaCode = "ESCA";
+                break;
+            case "Gastric":
+                tcgaCode = "STAD";
+                break;
+            case "HeadAndNeck":
+                tcgaCode = "HNSC";
+                break;
+            case "Kidney":
+                tcgaCode = "KIRC";
+                break;
+            case "Ovarian":
+                tcgaCode = "OV";
+                break;
+            case "Thyroid":
+                tcgaCode = "THCA";
+                break;
+            default:
+                tcgaCode = null;
+        }
+        if (tcgaCode == null) {
+            return List.of();
+        }
+
+        Path matrixFile = dataDir.resolve(cancer)
+                .resolve("stats")
+                .resolve("oncoplot")
+                .resolve("oncoplot_matrix_TCGA_" + tcgaCode + ".txt");
+        if (!Files.isRegularFile(matrixFile)) {
+            return List.of();
+        }
+
+        List<String> barcodes = new ArrayList<>();
+        try (BufferedReader reader = Files.newBufferedReader(matrixFile, StandardCharsets.UTF_8)) {
+            reader.readLine();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                int tab = line.indexOf('\t');
+                String barcode = tab > 0 ? line.substring(0, tab).trim() : line.trim();
+                if (!barcode.isBlank()) {
+                    barcodes.add(barcode);
+                }
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to read TCGA matrix " + matrixFile, exception);
+        }
+        return barcodes;
+    }
+
+    private Map<String, Long> readTopGenes(Path multiannoPath) {
+        Map<String, Long> counts = new HashMap<>();
+        try (Reader reader = newBomAwareReader(multiannoPath);
+             CSVParser parser = CSVFormat.TDF.builder().setHeader().setSkipHeaderRecord(true).build().parse(reader)) {
+            for (CSVRecord record : parser) {
+                String raw = csvValue(record, "Gene.refGene");
+                if (raw.isBlank()) {
+                    continue;
+                }
+                for (String gene : raw.split(";")) {
+                    String normalized = gene == null ? "" : gene.trim();
+                    if (normalized.isEmpty() || ".".equals(normalized)) {
+                        continue;
+                    }
+                    counts.merge(normalized, 1L, Long::sum);
+                }
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to read top genes from " + multiannoPath, exception);
+        }
+
+        return counts.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
+                .limit(10)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (left, right) -> left,
+                        LinkedHashMap::new));
+    }
+
+    private long countDataRows(Path path) {
+        try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+            long lines = reader.lines().count();
+            return Math.max(0L, lines - 1L);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to count rows in " + path, exception);
+        }
+    }
+
+    private void validateAggregateColumns(Path filePath) {
+        try (BufferedReader reader = Files.newBufferedReader(filePath, StandardCharsets.UTF_8)) {
+            String header = reader.readLine();
+            if (header == null || header.isBlank()) {
+                throw new IllegalStateException("Aggregate file has no header row: " + filePath);
+            }
+            List<String> columns = Arrays.asList(header.split("\t", -1));
+            if (!columns.containsAll(REQUIRED_AGGREGATE_COLUMNS)) {
+                throw new IllegalStateException("Aggregate file missing required columns " + REQUIRED_AGGREGATE_COLUMNS + ": " + filePath);
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to validate aggregate file " + filePath, exception);
         }
     }
 
@@ -227,5 +852,220 @@ public class MafDuckDbImportService {
         }
         String value = record.get(header);
         return value == null ? "" : value.trim();
+    }
+
+    private long tableCount(Connection connection, String tableName) throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
+            resultSet.next();
+            return resultSet.getLong(1);
+        }
+    }
+
+    private String pathValue(Path path) {
+        return path == null ? null : path.toAbsolutePath().toString();
+    }
+
+    private String duckPath(Path path) {
+        return path.toAbsolutePath().toString().replace("\\", "/").replace("'", "''");
+    }
+
+    private long safeFileSize(Path path) {
+        try {
+            return Files.size(path);
+        } catch (IOException exception) {
+            return 0L;
+        }
+    }
+
+    private String humanizeFileName(String fileName) {
+        return fileName.replace('_', ' ').replace(".pdf", "").trim();
+    }
+
+    private String toRelativeCategory(String cancer, Path directory) {
+        Path cancerDir = dataDir.resolve(cancer).toAbsolutePath();
+        Path absoluteDirectory = directory.toAbsolutePath();
+        if (!absoluteDirectory.startsWith(cancerDir)) {
+            return directory.getFileName().toString();
+        }
+        return cancerDir.relativize(absoluteDirectory).toString().replace("\\", "/");
+    }
+
+    private boolean isLollipopCategory(String category) {
+        String normalized = category == null ? "" : category.toLowerCase(Locale.ROOT).replace("\\", "/");
+        return normalized.endsWith("/lollipop") || "lollipop".equals(normalized);
+    }
+
+    private String extractSampleId(String fileName, String category) {
+        if ("multianno".equals(category)) {
+            int idx = fileName.indexOf(".hg38_multianno");
+            if (idx > 0) {
+                return fileName.substring(0, idx);
+            }
+            idx = fileName.indexOf("_multianno");
+            if (idx > 0) {
+                return fileName.substring(0, idx);
+            }
+        } else if ("vcf".equals(category)) {
+            int idx = fileName.indexOf(".filtered");
+            if (idx > 0) {
+                return fileName.substring(0, idx);
+            }
+            idx = fileName.indexOf(".vcf");
+            if (idx > 0) {
+                return fileName.substring(0, idx);
+            }
+        } else if ("avinput".equals(category)) {
+            int idx = fileName.indexOf(".avinput");
+            if (idx > 0) {
+                return fileName.substring(0, idx);
+            }
+        }
+        int dot = fileName.indexOf('.');
+        return dot > 0 ? fileName.substring(0, dot) : fileName;
+    }
+
+    private static final class ImportPlan {
+        private final List<AggregateFile> aggregateFiles = new ArrayList<>();
+        private final LinkedHashMap<SampleKey, SampleRow> sampleRows = new LinkedHashMap<>();
+        private final List<SampleTopGeneRow> sampleTopGeneRows = new ArrayList<>();
+        private final List<CohortFileRow> cohortFileRows = new ArrayList<>();
+        private final List<AssetRow> assetRows = new ArrayList<>();
+    }
+
+    private static final class AggregateFile {
+        private final String cancer;
+        private final Path path;
+
+        private AggregateFile(String cancer, Path path) {
+            this.cancer = cancer;
+            this.path = path;
+        }
+    }
+
+    private static final class SampleKey {
+        private final String cancerType;
+        private final String source;
+        private final String sampleId;
+
+        private SampleKey(String cancerType, String source, String sampleId) {
+            this.cancerType = cancerType;
+            this.source = source;
+            this.sampleId = sampleId;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof SampleKey)) {
+                return false;
+            }
+            SampleKey that = (SampleKey) other;
+            return Objects.equals(cancerType, that.cancerType)
+                    && Objects.equals(source, that.source)
+                    && Objects.equals(sampleId, that.sampleId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(cancerType, source, sampleId);
+        }
+    }
+
+    private static final class SampleRow {
+        private final String cancerType;
+        private final String source;
+        private final String sampleId;
+        private long variantCount;
+        private boolean hasAnnotated;
+        private boolean hasSomatic;
+        private String annoFileName;
+        private Path annoFilePath;
+        private String vcfFileName;
+        private Path vcfFilePath;
+        private String avinputFileName;
+        private Path avinputFilePath;
+        private final LinkedHashMap<String, Long> topGenes = new LinkedHashMap<>();
+
+        private SampleRow(String cancerType, String source, String sampleId) {
+            this.cancerType = cancerType;
+            this.source = source;
+            this.sampleId = sampleId;
+        }
+    }
+
+    private static final class SampleTopGeneRow {
+        private final String cancerType;
+        private final String source;
+        private final String sampleId;
+        private final String geneName;
+        private final long geneCount;
+        private final int rankNo;
+
+        private SampleTopGeneRow(String cancerType, String source, String sampleId, String geneName, long geneCount, int rankNo) {
+            this.cancerType = cancerType;
+            this.source = source;
+            this.sampleId = sampleId;
+            this.geneName = geneName;
+            this.geneCount = geneCount;
+            this.rankNo = rankNo;
+        }
+    }
+
+    private static final class CohortFileRow {
+        private final String cancerType;
+        private final String source;
+        private final String category;
+        private final String fileName;
+        private final String displayName;
+        private final String sampleId;
+        private final Path filePath;
+        private final long sizeBytes;
+
+        private CohortFileRow(String cancerType, String source, String category, String fileName, String displayName,
+                              String sampleId, Path filePath, long sizeBytes) {
+            this.cancerType = cancerType;
+            this.source = source;
+            this.category = category;
+            this.fileName = fileName;
+            this.displayName = displayName;
+            this.sampleId = sampleId;
+            this.filePath = filePath;
+            this.sizeBytes = sizeBytes;
+        }
+    }
+
+    private static final class AssetRow {
+        private final String cancerType;
+        private final String source;
+        private final String assetType;
+        private final String category;
+        private final String title;
+        private final String fileName;
+        private final Path filePath;
+        private final long sizeBytes;
+        private final String geneName;
+        private final String chromosome;
+        private final String startPosition;
+        private final String endPosition;
+
+        private AssetRow(String cancerType, String source, String assetType, String category, String title,
+                         String fileName, Path filePath, long sizeBytes, String geneName,
+                         String chromosome, String startPosition, String endPosition) {
+            this.cancerType = cancerType;
+            this.source = source;
+            this.assetType = assetType;
+            this.category = category;
+            this.title = title;
+            this.fileName = fileName;
+            this.filePath = filePath;
+            this.sizeBytes = sizeBytes;
+            this.geneName = geneName;
+            this.chromosome = chromosome;
+            this.startPosition = startPosition;
+            this.endPosition = endPosition;
+        }
     }
 }

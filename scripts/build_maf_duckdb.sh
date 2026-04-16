@@ -8,5 +8,6 @@ SERVER_PORT="${3:-18081}"
 java -jar "${WAR_PATH}" \
   --server.port="${SERVER_PORT}" \
   --app.data-dir="${DATA_DIR}" \
+  --app.query-db-file="cfdnadb.duckdb" \
   --app.maf-import.enabled=true \
   --app.maf-import.exit-after-run=true

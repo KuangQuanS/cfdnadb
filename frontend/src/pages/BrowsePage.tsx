@@ -131,13 +131,14 @@ export function BrowsePage() {
     () => plotAssets.filter((asset) => getPlotKind(asset) !== "oncoplot"),
     [plotAssets]
   );
-  const featuredSummaryPlot = useMemo(
-    () => summaryPlotAssets.find((asset) => getPlotKind(asset) === "spectrum") ?? summaryPlotAssets[0] ?? null,
+  const orderedSummaryPlots = useMemo(
+    () => {
+      const byKind = new Map(summaryPlotAssets.map((asset) => [getPlotKind(asset), asset]));
+      return ["summary", "spectrum", "titv"]
+        .map((kind) => byKind.get(kind))
+        .filter((asset): asset is CancerAsset => Boolean(asset));
+    },
     [summaryPlotAssets]
-  );
-  const secondarySummaryPlots = useMemo(
-    () => summaryPlotAssets.filter((asset) => asset.fileName !== featuredSummaryPlot?.fileName),
-    [summaryPlotAssets, featuredSummaryPlot]
   );
 
   const sourceSummary = useMemo(() => {
@@ -232,20 +233,17 @@ export function BrowsePage() {
           </div>
 
           {plotsQ.isLoading ? <p className="panel-note">Loading plots...</p> : null}
-          {summaryPlotAssets.length > 0 ? (
-            <div className="statistics-pdf-layout">
-              {featuredSummaryPlot ? (
-                <div className="statistics-pdf-featured-row">
-                  <BrowsePlotCard asset={featuredSummaryPlot} className="stat-pdf-card--featured" />
-                </div>
-              ) : null}
-              {secondarySummaryPlots.length > 0 ? (
-                <div className="statistics-pdf-grid">
-                  {secondarySummaryPlots.map((asset) => (
-                    <BrowsePlotCard key={asset.fileName} asset={asset} />
-                  ))}
-                </div>
-              ) : null}
+          {orderedSummaryPlots.length > 0 ? (
+            <div className="statistics-pdf-layout statistics-pdf-layout--browse">
+              <div className="statistics-pdf-stack">
+                {orderedSummaryPlots.map((asset) => (
+                  <BrowsePlotCard
+                    key={asset.fileName}
+                    asset={asset}
+                    className={`browse-pdf-card browse-pdf-card--${getPlotKind(asset)}`}
+                  />
+                ))}
+              </div>
             </div>
           ) : plotsQ.data ? (
             <section className="detail-card empty-card">

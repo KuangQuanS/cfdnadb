@@ -10,6 +10,7 @@ import type {
   StatisticsOverview,
   StudyDetail,
   TopGene,
+  VafDistribution,
   VcfDemo,
   VisualizationSummary
 } from "../types/api";
@@ -673,3 +674,11 @@ export const statisticsOverviewMock: StatisticsOverview = {
   chromDistribution: chromDistributionMock,
   topGenes: statisticsTopGenesMock
 };
+
+export const vafDistributionMock: VafDistribution[] = [
+  { cancerType: "Breast", values: [0.43, 0.42, 0.44, 0.51, 0.45, 0.47, 0.41, 0.46, 0.43, 0.48], sampleCount: 10 },
+  { cancerType: "Lung", values: [0.44, 0.45, 0.43, 0.47, 0.50, 0.42, 0.46, 0.49, 0.44, 0.48], sampleCount: 10 },
+  { cancerType: "Liver", values: [0.46, 0.48, 0.47, 0.49, 0.50, 0.45, 0.51, 0.47, 0.48, 0.46], sampleCount: 10 },
+  { cancerType: "Gastric", values: [0.45, 0.50, 0.48, 0.55, 0.47, 0.52, 0.49, 0.53, 0.46, 0.51], sampleCount: 10 },
+  { cancerType: "Pdac", values: [0.44, 0.46, 0.48, 0.45, 0.47, 0.49, 0.43, 0.50, 0.46, 0.44], sampleCount: 10 },
+];

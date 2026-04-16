@@ -31,8 +31,12 @@ server:
 
 app:
   data-dir: ${APP_DATA_DIR:/400T/cfdnaweb}
+  query-db-file: ${APP_QUERY_DB_FILE:cfdnadb.duckdb}
   maf-db-file: ${APP_MAF_DB_FILE:maf.duckdb}
+  tcga-igv-file: ${APP_TCGA_IGV_FILE:/400T/cfdnaweb/tcga_maf.txt}
   pan-cancer-dir: ${APP_PAN_CANCER_DIR:/400T/cfdnaweb/statistics/oncoplot/pan_cancer}
+  vaf-data-dir: ${APP_VAF_DATA_DIR:/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF}
+  tcga-dir: ${APP_TCGA_DIR:/400T/cfDNAweb/tcga}
   maf-import:
     enabled: ${APP_MAF_IMPORT_ENABLED:false}
     exit-after-run: ${APP_MAF_IMPORT_EXIT_AFTER_RUN:true}

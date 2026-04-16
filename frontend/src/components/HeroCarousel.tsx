@@ -1,8 +1,10 @@
 import { type CSSProperties, type FormEvent, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import ReactECharts from "echarts-for-react";
+import type { EChartsOption } from "echarts";
 import { Link, useNavigate } from "react-router-dom";
 import { getCancerSummary } from "../api/client";
-import { CANCER_OPTIONS, DEFAULT_CANCER, DEFAULT_GENE, HERO_QUICK_LINKS } from "../constants/cfdna";
+import { DEFAULT_GENE } from "../constants/cfdna";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/human_body.png";
@@ -10,36 +12,58 @@ import "../styles/home.css";
 
 const MOCK_COHORTS: CancerSummary[] = [
   { cancer: "Breast", sampleCount: 486, totalDataFiles: 972, avinputCount: 486, filteredCount: 486, annotatedCount: 486, somaticCount: 0, plotAssetCount: 12, externalAssetCount: 8, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
-  { cancer: "Colonrector", sampleCount: 352, totalDataFiles: 704, avinputCount: 352, filteredCount: 352, annotatedCount: 352, somaticCount: 0, plotAssetCount: 10, externalAssetCount: 6, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Colorectal", sampleCount: 352, totalDataFiles: 704, avinputCount: 352, filteredCount: 352, annotatedCount: 352, somaticCount: 0, plotAssetCount: 10, externalAssetCount: 6, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
   { cancer: "Liver", sampleCount: 278, totalDataFiles: 556, avinputCount: 278, filteredCount: 278, annotatedCount: 278, somaticCount: 0, plotAssetCount: 8, externalAssetCount: 4, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
   { cancer: "Lung", sampleCount: 312, totalDataFiles: 624, avinputCount: 312, filteredCount: 312, annotatedCount: 312, somaticCount: 0, plotAssetCount: 9, externalAssetCount: 5, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
-  { cancer: "Pdac", sampleCount: 99, totalDataFiles: 198, avinputCount: 99, filteredCount: 99, annotatedCount: 99, somaticCount: 0, plotAssetCount: 5, externalAssetCount: 3, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Pancreatic", sampleCount: 99, totalDataFiles: 198, avinputCount: 99, filteredCount: 99, annotatedCount: 99, somaticCount: 0, plotAssetCount: 5, externalAssetCount: 3, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "HeadAndNeck", sampleCount: 118, totalDataFiles: 236, avinputCount: 118, filteredCount: 118, annotatedCount: 118, somaticCount: 0, plotAssetCount: 4, externalAssetCount: 2, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Gastric", sampleCount: 144, totalDataFiles: 288, avinputCount: 144, filteredCount: 144, annotatedCount: 144, somaticCount: 0, plotAssetCount: 4, externalAssetCount: 3, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Kidney", sampleCount: 76, totalDataFiles: 152, avinputCount: 76, filteredCount: 76, annotatedCount: 76, somaticCount: 0, plotAssetCount: 3, externalAssetCount: 2, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Ovarian", sampleCount: 92, totalDataFiles: 184, avinputCount: 92, filteredCount: 92, annotatedCount: 92, somaticCount: 0, plotAssetCount: 3, externalAssetCount: 2, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
 ];
 
-const COHORT_COLORS: Record<string, string> = {
+const CORE_COHORT_COLORS: Record<string, string> = {
   Breast: "#eb6a7f",
-  Colonrector: "#5a49b7",
+  Colorectal: "#5a49b7",
   Liver: "#28a07f",
   Lung: "#2f79b7",
-  Pdac: "#f29a4a",
+  Pancreatic: "#f29a4a",
 };
 
-const COHORT_LABELS: Record<string, string> = {
-  Breast: "Breast",
-  Colonrector: "Colorectal",
-  Liver: "Liver",
-  Lung: "Lung",
-  Pdac: "Pancreatic",
-};
+const COHORT_COLOR_FALLBACK = [
+  "#eb6a7f",
+  "#2f79b7",
+  "#28a07f",
+  "#5a49b7",
+  "#f29a4a",
+  "#7b61c9",
+  "#1f9d8a",
+  "#d06a8a",
+  "#4f8bc9",
+  "#84b547",
+  "#cf7f44",
+  "#7d8da6",
+  "#a05195",
+  "#2d7f5e",
+  "#c1556b",
+];
 
-const COHORT_ORDER = ["Breast", "Colonrector", "Lung", "Liver", "Pdac"] as const;
+const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
 
-const CALLOUTS = [
-  { id: "Lung", label: "Lung", side: "left", topPct: 34, anchorPct: 39, browseKey: "Lung" },
-  { id: "Liver", label: "Liver", side: "left", topPct: 51, anchorPct: 38, browseKey: "Liver" },
-  { id: "Breast", label: "Breast", side: "right", topPct: 38, anchorPct: 61, browseKey: "Breast" },
-  { id: "Pdac", label: "Pancreas", side: "right", topPct: 56, anchorPct: 60, browseKey: "Pancreatic" },
-  { id: "Colonrector", label: "Colorectal", side: "right", topPct: 68, anchorPct: 58, browseKey: "Colorectal" },
+const ALL_CALLOUTS = [
+  /* ── left side (top → bottom) ── */
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 15, anchorPct: 46, browseKey: "HeadAndNeck", alwaysShow: false },
+  { id: "Lung", label: "Lung", side: "left", topPct: 30, anchorPct: 39, browseKey: "Lung", alwaysShow: true },
+  { id: "Liver", label: "Liver", side: "left", topPct: 40, anchorPct: 38, browseKey: "Liver", alwaysShow: true },
+  { id: "Kidney", label: "Kidney", side: "left", topPct: 48, anchorPct: 41, browseKey: "Kidney", alwaysShow: false },
+  { id: "Endometrial", label: "Endometrial", side: "left", topPct: 59, anchorPct: 47, browseKey: "Endometrial", alwaysShow: false },
+  /* ── right side (top → bottom) ── */
+  { id: "Breast", label: "Breast", side: "right", topPct: 33, anchorPct: 57, browseKey: "Breast", alwaysShow: true },
+  { id: "Gastric", label: "Gastric", side: "right", topPct: 42, anchorPct: 52, browseKey: "Gastric", alwaysShow: false },
+  { id: "Pancreatic", label: "Pancreas", side: "right", topPct: 49, anchorPct: 53, browseKey: "Pancreatic", alwaysShow: true },
+  { id: "Ovarian", label: "Ovarian", side: "right", topPct: 56, anchorPct: 50, browseKey: "Ovarian", alwaysShow: false },
+  { id: "Colorectal", label: "Colorectal", side: "right", topPct: 62, anchorPct: 51, browseKey: "Colorectal", alwaysShow: true },
+  { id: "Bladder", label: "Bladder", side: "right", topPct: 68, anchorPct: 49, browseKey: "Bladder", alwaysShow: false },
 ] as const;
 
 type HeroRingEntry = {
@@ -47,48 +71,161 @@ type HeroRingEntry = {
   label: string;
   color: string;
   value: number;
+  browseKey: string;
 };
 
-function buildDonutGradient(entries: HeroRingEntry[]) {
-  if (!entries.length) {
-    return "conic-gradient(#d6e0ef 0deg 360deg)";
+function buildSunburstEntries(entries: HeroRingEntry[], limit = 7) {
+  const sorted = [...entries].sort((a, b) => b.value - a.value);
+  const head = sorted.slice(0, limit);
+  const tail = sorted.slice(limit);
+  const otherValue = tail.reduce((sum, entry) => sum + entry.value, 0);
+
+  const children = head.map((entry) => ({
+    name: entry.label,
+    value: entry.value,
+    browseKey: entry.browseKey,
+    itemStyle: { color: entry.color },
+  }));
+
+  if (otherValue > 0) {
+    children.push({
+      name: "Other",
+      value: otherValue,
+      browseKey: "",
+      itemStyle: { color: "#d9e2ee" },
+    });
   }
 
-  const total = entries.reduce((sum, entry) => sum + entry.value, 0);
-  let cursor = 0;
-  const stops = entries.map((entry) => {
-    const start = cursor;
-    const sweep = total > 0 ? (entry.value / total) * 360 : 0;
-    cursor += sweep;
-    return `${entry.color} ${start.toFixed(2)}deg ${cursor.toFixed(2)}deg`;
-  });
+  return children;
+}
 
-  return `conic-gradient(${stops.join(", ")})`;
+function buildHeroSunburstOption(title: string, total: number, entries: HeroRingEntry[]): EChartsOption {
+  const children = buildSunburstEntries(entries);
+
+  return {
+    animationDuration: 600,
+    tooltip: {
+      trigger: "item",
+      backgroundColor: "rgba(18, 27, 48, 0.94)",
+      borderWidth: 0,
+      textStyle: {
+        color: "#f7fbff",
+        fontSize: 12,
+      },
+      formatter: (params: { name?: string; value?: number }) => {
+        const value = params.value ?? 0;
+        const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0.0";
+        return `${params.name}<br/>${formatNumber(value)} ${title.toLowerCase()} (${pct}%)`;
+      },
+    },
+    series: [
+      {
+        type: "sunburst",
+        radius: [0, "84%"],
+        center: ["50%", "54%"],
+        sort: undefined,
+        nodeClick: false,
+        data: [
+          {
+            name: title,
+            value: total,
+            itemStyle: { color: "#1d5f38" },
+            label: {
+              rotate: 0,
+              color: "#ffffff",
+              fontWeight: 800,
+              fontSize: 12,
+              formatter: `${title}\n${formatNumber(total)}`,
+            },
+            children,
+          },
+        ],
+        levels: [
+          {},
+          {
+            r0: "0%",
+            r: "44%",
+            itemStyle: {
+              borderColor: "#ffffff",
+              borderWidth: 2,
+            },
+            label: {
+              rotate: 0,
+            },
+          },
+          {
+            r0: "46%",
+            r: "84%",
+            itemStyle: {
+              borderColor: "#ffffff",
+              borderWidth: 2,
+            },
+            label: {
+              rotate: "radial",
+              color: "#ffffff",
+              minAngle: 9,
+              fontSize: 10,
+              overflow: "truncate",
+              formatter: (params: { name?: string; value?: number }) => {
+                const value = params.value ?? 0;
+                if (!params.name || params.name === "Other") {
+                  return value > 0 ? `Other\n${formatNumber(value)}` : "";
+                }
+                return value >= Math.max(40, total * 0.035)
+                  ? `${params.name}\n${formatNumber(value)}`
+                  : "";
+              },
+            },
+          },
+        ],
+        emphasis: {
+          scale: true,
+          itemStyle: {
+            shadowBlur: 18,
+            shadowColor: "rgba(28, 45, 84, 0.18)",
+          },
+        },
+      },
+    ],
+  };
 }
 
 function HeroRingChart({
   title,
   total,
-  subtitle,
   entries,
+  caption,
+  onSliceClick,
 }: {
   title: string;
   total: number;
-  subtitle: string;
   entries: HeroRingEntry[];
+  caption: string;
+  onSliceClick: (browseKey: string) => void;
 }) {
+  const option = useMemo(() => buildHeroSunburstOption(title, total, entries), [entries, title, total]);
+
   return (
     <article className="gdc-overview-chart" aria-label={title}>
-      <div className="gdc-overview-ring" style={{ backgroundImage: buildDonutGradient(entries) }}>
-        <div className="gdc-overview-ring-core">
-          <strong>{formatNumber(total)}</strong>
-          <span>{title}</span>
-        </div>
+      <h3 className="gdc-overview-chart-title">
+        {formatNumber(total)} {title}
+      </h3>
+      <div className="gdc-overview-chart-shell">
+        <ReactECharts
+          option={option}
+          style={{ height: 240, width: "100%" }}
+          opts={{ renderer: "svg" }}
+          onEvents={{
+            click: (params: { data?: { browseKey?: string; name?: string } }) => {
+              const browseKey = params.data?.browseKey;
+              if (browseKey) {
+                onSliceClick(browseKey);
+              }
+            },
+          }}
+        />
       </div>
-      <div className="gdc-overview-chart-copy">
-        <h2>{title}</h2>
-        <p>{subtitle}</p>
-      </div>
+      <p className="gdc-overview-chart-caption">{caption}</p>
     </article>
   );
 }
@@ -102,19 +239,27 @@ export function HeroCarousel() {
     [cohorts],
   );
   const ringEntries = useMemo(
-    () => COHORT_ORDER
-      .map((cohortId) => {
-        const cohort = cohorts.find((item) => item.cancer === cohortId);
-        if (!cohort) return null;
-        return {
-          id: cohortId,
-          label: COHORT_LABELS[cohortId],
-          color: COHORT_COLORS[cohortId],
-          sampleCount: cohort.sampleCount,
-          fileCount: cohort.totalDataFiles,
-        };
-      })
-      .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
+    () => {
+      const priority = new Map(COHORT_PRIORITY.map((name, index) => [name, index]));
+      const sorted = [...cohorts].sort((a, b) => {
+        const aPriority = priority.get(a.cancer);
+        const bPriority = priority.get(b.cancer);
+        if (aPriority != null && bPriority != null) return aPriority - bPriority;
+        if (aPriority != null) return -1;
+        if (bPriority != null) return 1;
+        return a.cancer.localeCompare(b.cancer);
+      });
+
+      return sorted.map((cohort, index) => ({
+        id: cohort.cancer,
+        label: cohort.cancer,
+        color: CORE_COHORT_COLORS[cohort.cancer] ?? COHORT_COLOR_FALLBACK[index % COHORT_COLOR_FALLBACK.length],
+        sampleCount: cohort.sampleCount,
+        fileCount: cohort.totalDataFiles,
+        annotatedCount: cohort.annotatedCount,
+        assetCount: cohort.plotAssetCount + cohort.externalAssetCount,
+      }));
+    },
     [cohorts],
   );
   const totalSamples = useMemo(
@@ -126,20 +271,75 @@ export function HeroCarousel() {
     [ringEntries],
   );
   const sampleRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, sampleCount }) => ({ id, label, color, value: sampleCount })),
+    () => ringEntries.map(({ id, label, color, sampleCount }) => ({ id, label, color, value: sampleCount, browseKey: label })),
     [ringEntries],
   );
   const fileRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, fileCount }) => ({ id, label, color, value: fileCount })),
+    () => ringEntries.map(({ id, label, color, fileCount }) => ({ id, label, color, value: fileCount, browseKey: label })),
     [ringEntries],
+  );
+  const totalAnnotated = useMemo(
+    () => ringEntries.reduce((sum, entry) => sum + entry.annotatedCount, 0),
+    [ringEntries],
+  );
+  const totalAssets = useMemo(
+    () => ringEntries.reduce((sum, entry) => sum + entry.assetCount, 0),
+    [ringEntries],
+  );
+  const visibleCallouts = useMemo(
+    () => ALL_CALLOUTS.filter((entry) => {
+      if (entry.alwaysShow) return true;
+      return (countMap[entry.id] ?? 0) > 0;
+    }),
+    [countMap],
+  );
+  const annotatedRingEntries = useMemo(
+    () => ringEntries.map(({ id, label, color, annotatedCount }) => ({ id, label, color, value: annotatedCount, browseKey: label })),
+    [ringEntries],
+  );
+  const assetRingEntries = useMemo(
+    () => ringEntries.map(({ id, label, color, assetCount }) => ({ id, label, color, value: assetCount, browseKey: label })),
+    [ringEntries],
+  );
+  const overviewCards = useMemo(
+    () => [
+      {
+        id: "samples",
+        title: "Samples",
+        total: totalSamples,
+        entries: sampleRingEntries,
+        caption: "Cohort distribution of curated plasma samples.",
+      },
+      {
+        id: "files",
+        title: "Data files",
+        total: totalFiles,
+        entries: fileRingEntries,
+        caption: "Imported mutation and cohort-level source files.",
+      },
+      {
+        id: "annotated",
+        title: "Annotated",
+        total: totalAnnotated,
+        entries: annotatedRingEntries,
+        caption: "Variants with functional annotations per cohort.",
+      },
+      {
+        id: "assets",
+        title: "Assets",
+        total: totalAssets,
+        entries: assetRingEntries,
+        caption: "Plots and external downloadable resources.",
+      },
+    ],
+    [annotatedRingEntries, assetRingEntries, fileRingEntries, sampleRingEntries, totalAnnotated, totalAssets, totalFiles, totalSamples],
   );
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const fd = new FormData(event.currentTarget);
-    const cancer = fd.get("cancer")?.toString() || DEFAULT_CANCER;
     const gene = fd.get("gene")?.toString().trim() || DEFAULT_GENE;
-    navigate(`/gene-search?source=cfDNA&cancer=${encodeURIComponent(cancer)}&gene=${encodeURIComponent(gene)}`);
+    navigate(`/gene-search?source=cfDNA&gene=${encodeURIComponent(gene)}`);
   };
 
   const goToBrowse = (browseKey: string) => {
@@ -151,14 +351,36 @@ export function HeroCarousel() {
       <div className="gdc-hero-inner">
 
         <div className="gdc-col-left">
-          <h1 className="gdc-title">cfDNA cancer<br />database</h1>
+          <p className="gdc-eyebrow">Plasma somatic mutation database</p>
+          <h1 className="gdc-title">
+            Welcome to <span>cfDNAdb</span>
+          </h1>
+          <p className="gdc-hero-tagline">A cell-free DNA mutation atlas across the indexed cancer cohorts</p>
           <p className="gdc-subtitle">
-            A curated resource of plasma cell-free DNA somatic mutations spanning five cancer cohorts.
-            Supports cohort-level browse, gene-level query, and downloadable analysis outputs for academic research.
+            cfDNAdb centralizes cohort-level somatic mutation profiles, sample browse, gene-oriented querying,
+            and downloadable analysis resources across the full imported cancer collection, with anatomical browse highlights for breast, colorectal, liver, lung, and pancreatic cohorts.
           </p>
-          <div className="gdc-hero-links">
-            <Link to="/browse" className="gdc-hero-link gdc-hero-link--primary">Browse cohorts</Link>
-            <Link to="/gene-search" className="gdc-hero-link">Gene search</Link>
+
+          <div className="gdc-search-dock gdc-search-dock--inline">
+            <div className="gdc-search-dock-head">
+              <h2>Gene search</h2>
+              <p>Jump straight into the cfDNA mutation workbench with a gene symbol.</p>
+            </div>
+
+            <form className="gdc-hero-search" onSubmit={handleSearch}>
+              <div className="gdc-search-row">
+                <input
+                  name="gene"
+                  type="text"
+                  defaultValue={DEFAULT_GENE}
+                  placeholder="HGNC symbol, e.g. TP53"
+                  aria-label="Enter gene symbol"
+                  className="gdc-search-input"
+                />
+                <button type="submit" className="gdc-search-submit">Search</button>
+                <Link to="/gene-search" className="gdc-search-link">Advanced search</Link>
+              </div>
+            </form>
           </div>
         </div>
 
@@ -166,7 +388,7 @@ export function HeroCarousel() {
           <div className="body-map">
             <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" />
 
-            {CALLOUTS.map((cfg) => (
+            {visibleCallouts.map((cfg) => (
               <button
                 key={cfg.id}
                 type="button"
@@ -202,67 +424,16 @@ export function HeroCarousel() {
         <div className="gdc-col-right">
           <div className="gdc-side-rail">
             <div className="gdc-overview-grid">
-              <HeroRingChart
-                title="Samples"
-                total={totalSamples}
-                subtitle="Distribution across the five curated cancer cohorts."
-                entries={sampleRingEntries}
-              />
-              <HeroRingChart
-                title="Data files"
-                total={totalFiles}
-                subtitle="Imported cohort-level mutation and analysis files."
-                entries={fileRingEntries}
-              />
-            </div>
-
-            <div className="gdc-overview-legend" aria-label="Cohort legend">
-              {ringEntries.map((entry) => (
-                <span key={entry.id} className="gdc-legend-chip">
-                  <i style={{ "--legend-color": entry.color } as CSSProperties} />
-                  {entry.label}
-                </span>
+              {overviewCards.map((card) => (
+                <HeroRingChart
+                  key={card.id}
+                  title={card.title}
+                  total={card.total}
+                  entries={card.entries}
+                  caption={card.caption}
+                  onSliceClick={goToBrowse}
+                />
               ))}
-            </div>
-
-            <div className="gdc-search-dock">
-              <div className="gdc-search-dock-head">
-                <h2>Search the database</h2>
-                <p>Jump directly to a gene-level query without leaving the hero.</p>
-              </div>
-
-              <form className="gdc-hero-search" onSubmit={handleSearch}>
-                <div className="gdc-search-fields">
-                  <label className="gdc-search-field">
-                    <span>Cohort</span>
-                    <select name="cancer" defaultValue={DEFAULT_CANCER}>
-                      {CANCER_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="gdc-search-field">
-                    <span>Gene Symbol</span>
-                    <input name="gene" type="text" defaultValue={DEFAULT_GENE} placeholder="TP53, KRAS, EGFR" />
-                  </label>
-                </div>
-                <div className="gdc-search-actions">
-                  <button type="submit" className="gdc-search-submit">Search</button>
-                  <Link to="/gene-search" className="gdc-search-link">Advanced search</Link>
-                </div>
-              </form>
-
-              <div className="gdc-search-shortcuts" aria-label="Quick queries">
-                {HERO_QUICK_LINKS.map((item) => (
-                  <Link
-                    key={item.label}
-                    to={`/gene-search?source=cfDNA&cancer=${encodeURIComponent(item.cancer)}&gene=${encodeURIComponent(item.gene)}`}
-                    className="gdc-search-shortcut"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
             </div>
           </div>
         </div>
