@@ -13,7 +13,12 @@
       "Bash(npx vite:*)",
       "Bash(ls *)",
       "Bash(mvn -f backend/pom.xml clean package -DskipTests -q)",
-      "Bash(npm run)"
+      "Bash(npm run)",
+      "Bash(npm list *)",
+      "Bash(npx --yes sharp-cli --version)",
+      "Bash(npx --yes sharp-cli -i background.png -o background_compressed.png --resize 1920 -- --png --quality 70)",
+      "Bash(npx --yes sharp-cli --help)",
+      "Bash(npx sharp-cli *)"
     ]
   }
 }

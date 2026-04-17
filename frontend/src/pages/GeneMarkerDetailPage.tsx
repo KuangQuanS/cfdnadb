@@ -8,16 +8,20 @@ import { formatNumber } from "../utils/format";
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
 const DEFAULT_PAGE_SIZE = 5;
 
-type SourceKey = "cfDNA" | "TCGA";
+type SourceKey = "cfDNA" | "private" | "GEO" | "TCGA";
 
 const SOURCE_LABELS: Record<SourceKey, string> = {
-  cfDNA: "cfDNA Liquid Biopsy",
-  TCGA: "TCGA Solid Tumor",
+  cfDNA: "cfDNA All",
+  private: "cfDNA Private",
+  GEO: "cfDNA GEO",
+  TCGA: "TCGA",
 };
 
 export function GeneMarkerDetailPage() {
   const { geneSymbol = "" } = useParams();
   const [searchParams] = useSearchParams();
+  const urlSource = searchParams.get("source");
+  const detailSource: SourceKey = (urlSource === "TCGA" || urlSource === "GEO" || urlSource === "private") ? urlSource : "cfDNA";
 
   const buildBackLink = () => {
     const params = new URLSearchParams();
@@ -34,8 +38,7 @@ export function GeneMarkerDetailPage() {
           <span className="maf-eyebrow">Gene Detail</span>
           <h2>{geneSymbol}</h2>
           <p>
-            Sample-level mutation records for <strong>{geneSymbol}</strong>. cfDNA liquid-biopsy and TCGA
-            solid-tumor results are shown together: an IGV browser and a per-sample table for each source.
+            Sample-level mutation records for <strong>{geneSymbol}</strong> from {SOURCE_LABELS[detailSource] ?? detailSource}.
           </p>
         </div>
         <div className="maf-detail-actions">
@@ -43,14 +46,13 @@ export function GeneMarkerDetailPage() {
         </div>
       </section>
 
-      <SourceDetailPanel source="cfDNA" geneSymbol={geneSymbol} />
-      <SourceDetailPanel source="TCGA" geneSymbol={geneSymbol} />
+      <SourceDetailPanel source={detailSource} geneSymbol={geneSymbol} />
     </div>
   );
 }
 
 function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymbol: string }) {
-  const isCfDNA = source === "cfDNA";
+  const isCfDNA = source !== "TCGA";
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 

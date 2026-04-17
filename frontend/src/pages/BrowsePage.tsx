@@ -4,21 +4,25 @@ import { useSearchParams } from "react-router-dom";
 import {
   getOncoplottData,
   getStatisticsPlots,
-  getStatisticsSources,
   toApiUrl,
 } from "../api/client";
 import { PdfPagePreview } from "../components/PdfPagePreview";
 import { SectionHeader } from "../components/SectionHeader";
 import { WaterfallChart } from "../components/WaterfallChart";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
-import type { CancerAsset, StatisticsSource } from "../types/api";
+import type { CancerAsset } from "../types/api";
 
-const SOURCE_LABELS: Record<string, string> = {
-  private: "cfDNA Liquid Biopsy",
-  public: "Public",
-  tcga: "TCGA Solid Tumor",
-  Overview: "Overview",
-};
+/** Fixed source buttons shown on the Browse toolbar. */
+const BROWSE_SOURCES = [
+  { source: "cfDNA", label: "cfDNA All" },
+  { source: "private", label: "cfDNA Private" },
+  { source: "geo", label: "cfDNA GEO" },
+  { source: "tcga", label: "TCGA" },
+] as const;
+
+const SOURCE_LABELS: Record<string, string> = Object.fromEntries(
+  BROWSE_SOURCES.map((item) => [item.source, item.label])
+);
 
 function normalizeCancerLabel(value: string) {
   if (value === "HeadAndNeck") return "Head & Neck";
@@ -86,16 +90,7 @@ export function BrowsePage() {
   const cancer = searchParams.get("cancer") ?? DEFAULT_CANCER;
   const source = searchParams.get("source") ?? "";
 
-  const sourcesQ = useQuery({
-    queryKey: ["browse-sources", cancer],
-    queryFn: () => getStatisticsSources(cancer),
-  });
-
-  const sources: StatisticsSource[] = useMemo(
-    () => (sourcesQ.data ?? []).filter((item) => item.source !== "public"),
-    [sourcesQ.data]
-  );
-  const activeSource = source && sources.some((item) => item.source === source) ? source : sources[0]?.source ?? "";
+  const activeSource = source && BROWSE_SOURCES.some((item) => item.source === source) ? source : BROWSE_SOURCES[0].source;
   const selectedLabel = SOURCE_LABELS[activeSource] ?? activeSource;
 
   const setParam = useCallback(
@@ -110,16 +105,19 @@ export function BrowsePage() {
     [searchParams, setSearchParams]
   );
 
+  // "cfDNA" (All) maps to "private" for plots/oncoplot since the backend indexes use "private"
+  const plotSource = activeSource === "cfDNA" ? "private" : activeSource;
+
   const plotsQ = useQuery({
-    queryKey: ["browse-plots", cancer, activeSource],
-    queryFn: () => getStatisticsPlots(cancer, activeSource),
-    enabled: !!activeSource,
+    queryKey: ["browse-plots", cancer, plotSource],
+    queryFn: () => getStatisticsPlots(cancer, plotSource),
+    enabled: !!plotSource,
   });
 
   const oncoplottQ = useQuery({
-    queryKey: ["browse-oncoplot", activeSource, cancer],
-    queryFn: () => getOncoplottData(activeSource, [cancer], 40),
-    enabled: !!activeSource && !!cancer,
+    queryKey: ["browse-oncoplot", plotSource, cancer],
+    queryFn: () => getOncoplottData(plotSource, [cancer], 40),
+    enabled: !!plotSource && !!cancer,
     staleTime: 5 * 60_000,
   });
 
@@ -170,14 +168,14 @@ export function BrowsePage() {
           <div className="statistics-toolbar-group">
             <span className="statistics-toolbar-label">Data Source</span>
             <div className="statistics-source-tabs">
-              {sources.map((item) => (
+              {BROWSE_SOURCES.map((item) => (
                 <button
                   key={item.source}
                   className={`statistics-source-tab${activeSource === item.source ? " active" : ""}`}
                   onClick={() => setParam("source", item.source)}
                   type="button"
                 >
-                  {SOURCE_LABELS[item.source] ?? item.source}
+                  {item.label}
                 </button>
               ))}
             </div>
@@ -192,13 +190,6 @@ export function BrowsePage() {
         </div>
       </section>
 
-      {sourcesQ.isLoading ? <p className="panel-note">Discovering data sources...</p> : null}
-      {sources.length === 0 && !sourcesQ.isLoading ? (
-        <section className="detail-card empty-card">
-          <h3>No data sources found</h3>
-          <p>{normalizeCancerLabel(cancer)} does not have any discoverable plot directories.</p>
-        </section>
-      ) : null}
 
       {activeSource ? (
         <article className="stat-pdf-card stat-pdf-card--oncoplot statistics-oncoplot-card">

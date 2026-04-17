@@ -14,9 +14,8 @@ import { formatNumber } from "../utils/format";
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const PRESETS_KEY = "cfdnadb-browse-sample-presets";
 const SOURCE_OPTIONS = [
-  { value: "private", label: "Private cfDNA" },
-  { value: "public", label: "Public cfDNA" },
-  { value: "tcga", label: "TCGA" }
+  { value: "private", label: "cfDNA Private" },
+  { value: "geo", label: "cfDNA GEO" },
 ] as const;
 const COLUMN_OPTIONS = [
   { key: "sampleId", label: "Sample ID" },
@@ -54,7 +53,7 @@ interface SampleBrowsePanelProps {
 function defaultDraft(mode: "browse" | "downloads"): BrowseDraft {
   return {
     cancers: [DEFAULT_CANCER],
-    sources: mode === "downloads" ? ["private", "public"] : ["private", "public", "tcga"],
+    sources: ["private", "geo"],
     gene: "",
     sample: "",
     minVariants: "",
@@ -134,9 +133,7 @@ export function SampleBrowsePanel({
   const [selectedRows, setSelectedRows] = useState<Record<string, SampleBrowseItem>>({});
   const [detailTarget, setDetailTarget] = useState<SampleSelection | null>(null);
   const [downloadingType, setDownloadingType] = useState<string | null>(null);
-  const sourceOptions = mode === "downloads"
-    ? SOURCE_OPTIONS.filter((option) => option.value !== "tcga")
-    : SOURCE_OPTIONS;
+  const sourceOptions = SOURCE_OPTIONS;
   const showSomaticFilter = mode !== "downloads";
   const includeTopGenes = mode !== "downloads";
   const isDownloadsCompact = compact && mode === "downloads";
@@ -188,7 +185,7 @@ export function SampleBrowsePanel({
     setSubmitted({
       ...draft,
       cancers: draft.cancers.length > 0 ? draft.cancers : [DEFAULT_CANCER],
-      sources: draft.sources.length > 0 ? draft.sources : (mode === "downloads" ? ["private", "public"] : ["private", "public", "tcga"])
+      sources: draft.sources.length > 0 ? draft.sources : ["private", "geo"]
     });
   };
 

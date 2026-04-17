@@ -741,6 +741,8 @@ public class DuckDbService {
     private static final String MAF_DB_DEFAULT_FILE = "cfdnadb.duckdb";
     private static final String CFDNA_MAF_TABLE = "cfdna_maf";
     private static final String TCGA_MAF_TABLE = "tcga_maf";
+    private static final String GEO_MAF_TABLE = "geo_maf";
+    private static final String ALL_CFDNA_MAF_VIEW = "all_cfdna_maf";
 
     /**
      * Maps frontend cancer names to the cancer_type values stored in the cfdna_maf table.
@@ -839,6 +841,24 @@ public class DuckDbService {
         return "TCGA".equalsIgnoreCase(source);
     }
 
+    private boolean isGeo(String source) {
+        return "GEO".equalsIgnoreCase(source);
+    }
+
+    /** Return the SELECT fragment for detail columns that may not exist in every MAF table. */
+    private String mafDetailColumns(String source) {
+        if (isGeo(source)) {
+            return "  COALESCE(functional_region, '') AS functional_region, " +
+                    "  COALESCE(aa_change_refgene, '') AS aa_change, " +
+                    "  '' AS transcript, '' AS exon, '' AS exonic_function ";
+        }
+        return "  COALESCE(transcript, '') AS transcript, " +
+                "  COALESCE(exon, '') AS exon, " +
+                "  COALESCE(aa_change, '') AS aa_change, " +
+                "  COALESCE(functional_region, '') AS functional_region, " +
+                "  COALESCE(exonic_function, '') AS exonic_function ";
+    }
+
     private boolean tcgaIgvFileAvailable() {
         return Files.isRegularFile(tcgaIgvFile);
     }
@@ -903,8 +923,25 @@ public class DuckDbService {
                 .collect(Collectors.joining(", "));
     }
 
+    private boolean isPrivate(String source) {
+        return "private".equalsIgnoreCase(source);
+    }
+
     private String resolveMafTable(String source) {
-        return isTcga(source) ? TCGA_MAF_TABLE : CFDNA_MAF_TABLE;
+        if (isTcga(source)) return TCGA_MAF_TABLE;
+        if (isGeo(source)) return GEO_MAF_TABLE;
+        if (isPrivate(source)) return CFDNA_MAF_TABLE;
+        // "cfDNA" default → union view if available, else fall back to private table
+        return allCfdnaViewAvailable() ? ALL_CFDNA_MAF_VIEW : CFDNA_MAF_TABLE;
+    }
+
+    private boolean allCfdnaViewAvailable() {
+        if (!mafDatabaseAvailable()) return false;
+        try (Connection conn = openMafConnection()) {
+            return mafTableExists(conn, ALL_CFDNA_MAF_VIEW);
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     private Connection openMafConnection() throws SQLException {
@@ -922,8 +959,13 @@ public class DuckDbService {
 
     private boolean mafTableExists(Connection connection, String tableName) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'main' AND table_name = ?")) {
+                "SELECT COUNT(*) FROM (" +
+                        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND table_name = ? " +
+                        "UNION ALL " +
+                        "SELECT view_name FROM duckdb_views() WHERE schema_name = 'main' AND view_name = ?" +
+                        ")")) {
             statement.setString(1, tableName);
+            statement.setString(2, tableName);
             try (ResultSet resultSet = statement.executeQuery()) {
                 resultSet.next();
                 return resultSet.getLong(1) > 0;
@@ -1183,6 +1225,7 @@ public class DuckDbService {
 
         String where = buildMafExactGeneWhereClause(hasSample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
         String countSql = "SELECT COUNT(*) AS total FROM " + table + " " + where;
+        String detailCols = mafDetailColumns(source);
         String dataSql = "SELECT " +
                 "  COALESCE(hugo_symbol, '') AS hugo_symbol, " +
                 "  COALESCE(cancer_type, '') AS cancer_type, " +
@@ -1194,11 +1237,7 @@ public class DuckDbService {
                 "  COALESCE(variant_classification, '') AS variant_classification, " +
                 "  COALESCE(variant_type, '') AS variant_type, " +
                 "  COALESCE(tumor_sample_barcode, '') AS tumor_sample_barcode, " +
-                "  COALESCE(transcript, '') AS transcript, " +
-                "  COALESCE(exon, '') AS exon, " +
-                "  COALESCE(aa_change, '') AS aa_change, " +
-                "  COALESCE(functional_region, '') AS functional_region, " +
-                "  COALESCE(exonic_function, '') AS exonic_function " +
+                detailCols +
                 "FROM " + table + " " +
                 where +
                 "ORDER BY chromosome ASC, TRY_CAST(start_position AS BIGINT) ASC NULLS LAST, tumor_sample_barcode ASC " +
@@ -1284,6 +1323,7 @@ public class DuckDbService {
 
         String where = buildMafWhereClause(hasGene, hasSample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
 
+        String detailCols2 = mafDetailColumns(source);
         String countSql = "SELECT COUNT(*) AS total FROM " + table + " " + where;
         String dataSql = "SELECT " +
                 "  COALESCE(hugo_symbol, '') AS hugo_symbol, " +
@@ -1296,11 +1336,7 @@ public class DuckDbService {
                 "  COALESCE(variant_classification, '') AS variant_classification, " +
                 "  COALESCE(variant_type, '') AS variant_type, " +
                 "  COALESCE(tumor_sample_barcode, '') AS tumor_sample_barcode, " +
-                "  COALESCE(transcript, '') AS transcript, " +
-                "  COALESCE(exon, '') AS exon, " +
-                "  COALESCE(aa_change, '') AS aa_change, " +
-                "  COALESCE(functional_region, '') AS functional_region, " +
-                "  COALESCE(exonic_function, '') AS exonic_function " +
+                detailCols2 +
                 "FROM " + table + " " +
                 where +
                 "ORDER BY hugo_symbol ASC, chromosome ASC, TRY_CAST(start_position AS BIGINT) ASC NULLS LAST " +
@@ -2172,15 +2208,15 @@ public class DuckDbService {
                         "    SUM(CASE WHEN category = 'avinput' THEN 1 ELSE 0 END) AS avinput_count, " +
                         "    SUM(CASE WHEN category = 'vcf' THEN 1 ELSE 0 END) AS vcf_count, " +
                         "    SUM(CASE WHEN category = 'multianno' THEN 1 ELSE 0 END) AS multianno_count " +
-                        "  FROM cohort_file_index WHERE cancer_type = ? AND source IN ('private', 'public')" +
+                        "  FROM cohort_file_index WHERE cancer_type = ? AND source IN ('private', 'public', 'geo')" +
                         "), sample_stats AS (" +
                         "  SELECT COUNT(*) AS sample_count FROM sample_inventory " +
-                        "  WHERE cancer_type = ? AND source IN ('private', 'public') " +
+                        "  WHERE cancer_type = ? AND source IN ('private', 'public', 'geo') " +
                         "    AND avinput_file_path IS NOT NULL AND avinput_file_path <> ''" +
                         "), assets AS (" +
                         "  SELECT " +
                         "    SUM(CASE WHEN asset_type = 'cancer_asset' THEN 1 ELSE 0 END) AS plot_asset_count, " +
-                        "    SUM(CASE WHEN source IN ('public', 'tcga') THEN 1 ELSE 0 END) AS external_asset_count " +
+                        "    SUM(CASE WHEN source IN ('public', 'tcga', 'geo') THEN 1 ELSE 0 END) AS external_asset_count " +
                         "  FROM statistics_asset_index WHERE cancer_type = ?" +
                         ") " +
                         "SELECT sample_count, avinput_count, vcf_count, multianno_count, plot_asset_count, external_asset_count " +
@@ -2361,7 +2397,7 @@ public class DuckDbService {
 
     // ---- Cohort files: per-source file listing for Browse Files tab ----
 
-    private static final List<String> DATA_SOURCES = List.of("private", "public", "tcga");
+    private static final List<String> DATA_SOURCES = List.of("private", "public", "tcga", "geo");
 
     private static final List<String> FILE_CATEGORIES = List.of("multianno", "vcf");
 
@@ -2635,7 +2671,7 @@ public class DuckDbService {
     public List<LabelCountDto> getSourceDistribution(String cancer) {
         String validatedCancer = validateCancer(cancer);
         String sql = "SELECT source, COUNT(*) AS cnt FROM cohort_file_index " +
-                "WHERE cancer_type = ? AND source IN ('private', 'public', 'tcga') AND category IN ('multianno', 'vcf') " +
+                "WHERE cancer_type = ? AND source IN ('private', 'public', 'tcga', 'geo') AND category IN ('multianno', 'vcf') " +
                 "GROUP BY source ORDER BY source ASC";
         List<LabelCountDto> results = new ArrayList<>();
         try (Connection connection = openMafConnection();
@@ -3151,6 +3187,7 @@ public class DuckDbService {
             case "private":  return cancerDir.resolve("private").resolve("stats");
             case "public":   return cancerDir.resolve("public").resolve("stats");
             case "tcga":     return cancerDir.resolve("tcga").resolve("stats");
+            case "geo":      return cancerDir.resolve("geo").resolve("stats");
             case "Overview": return cancerDir.resolve("stats");
             default: throw new IllegalArgumentException("Unknown data source: " + source);
         }

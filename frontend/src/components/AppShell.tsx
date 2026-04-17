@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { PageLoader } from "./PageLoader";
-import headerBgPng from "../assets/background.png";
+import headerBgPng from "../assets/background.jpg";
 
 const navItems = [
   { to: "/", label: "Home" },

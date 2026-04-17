@@ -99,29 +99,84 @@ public class MafDuckDbImportService {
                 plan.cohortFileRows.size(),
                 plan.assetRows.size());
 
-        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:" + dbPath)) {
-            connection.setAutoCommit(false);
-            recreateTables(connection);
+        String jdbcUrl = "jdbc:duckdb:" + dbPath;
 
-            long cfdnaRows = importCfDna(connection, cfDnaPath);
-            long tcgaRows = importTcga(connection, tcgaPath);
-            long aggregateRows = importAggregateFiles(connection, plan.aggregateFiles);
-            long panClinicalRows = importPanCancerFile(connection, panClinical, "pan_cancer_clinical");
-            long panMutationRows = importPanCancerFile(connection, panMutations, "pan_cancer_mutations");
-            insertSampleInventory(connection, plan.sampleRows);
-            insertSampleTopGenes(connection, plan.sampleTopGeneRows);
-            enrichTcgaSamples(connection);
-            insertCohortFileIndex(connection, plan.cohortFileRows);
-            insertStatisticsAssetIndex(connection, plan.assetRows);
-            createIndexes(connection);
-            connection.commit();
-
-            log.info("[QUERY-IMPORT] finished db={}, cfdna_maf={}, tcga_maf={}, aggregate_multianno={}, pan_clinical={}, pan_mutations={}",
-                    dbPath, cfdnaRows, tcgaRows, aggregateRows, panClinicalRows, panMutationRows);
-            return dbPath;
-        } catch (SQLException exception) {
-            throw new IllegalStateException("Failed to rebuild query DuckDB database at " + dbPath, exception);
+        // Phase 1: create tables & import MAF data (separate connections to avoid DuckDB JNI SIGSEGV in long transactions)
+        long cfdnaRows, tcgaRows, geoRows;
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
+            recreateTables(conn);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 1/5: tables created");
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to create tables in " + dbPath, e);
         }
+
+        // Phase 2: import MAF data — each source in its own connection
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
+            cfdnaRows = importCfDna(conn, cfDnaPath);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 2a/5: cfdna_maf={}", cfdnaRows);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to import cfDNA MAF into " + dbPath, e);
+        }
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
+            tcgaRows = importTcga(conn, tcgaPath);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 2b/5: tcga_maf={}", tcgaRows);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to import TCGA MAF into " + dbPath, e);
+        }
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
+            geoRows = importGeo(conn);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 2c/5: geo_maf={}", geoRows);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to import GEO MAF into " + dbPath, e);
+        }
+
+        // Phase 3: aggregates, pan-cancer, sample inventory
+        long aggregateRows, panClinicalRows, panMutationRows;
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
+            aggregateRows = importAggregateFiles(conn, plan.aggregateFiles);
+            panClinicalRows = importPanCancerFile(conn, panClinical, "pan_cancer_clinical");
+            panMutationRows = importPanCancerFile(conn, panMutations, "pan_cancer_mutations");
+            insertSampleInventory(conn, plan.sampleRows);
+            insertSampleTopGenes(conn, plan.sampleTopGeneRows);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 3/5: aggregates={}, pan_clinical={}, pan_mutations={}", aggregateRows, panClinicalRows, panMutationRows);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to import aggregates/samples into " + dbPath, e);
+        }
+
+        // Phase 4: enrich TCGA, cohort files, statistics assets
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
+            enrichTcgaSamples(conn);
+            insertCohortFileIndex(conn, plan.cohortFileRows);
+            insertStatisticsAssetIndex(conn, plan.assetRows);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 4/5: enrichment & file indexes done");
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to enrich/index data in " + dbPath, e);
+        }
+
+        // Phase 5: indexes & ANALYZE
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
+            createIndexes(conn);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 5/5: indexes created");
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to create indexes in " + dbPath, e);
+        }
+
+        log.info("[QUERY-IMPORT] finished db={}, cfdna_maf={}, tcga_maf={}, geo_maf={}", dbPath, cfdnaRows, tcgaRows, geoRows);
+        return dbPath;
     }
 
     private ImportPlan inspectFilesystem(Path panClinical, Path panMutations) {
@@ -166,6 +221,23 @@ public class MafDuckDbImportService {
             collectSampleFiles(plan, cancer, source, sourceDir.resolve("filtered_vcf"), "vcf");
         }
 
+        // GEO: scan {cancer}/geo/{GSE*}/ for sample-level files
+        Path geoBaseDir = dataDir.resolve(cancer).resolve("geo");
+        if (Files.isDirectory(geoBaseDir)) {
+            try (Stream<Path> datasets = Files.list(geoBaseDir)) {
+                datasets.filter(Files::isDirectory)
+                        .filter(p -> p.getFileName().toString().startsWith("GSE"))
+                        .sorted()
+                        .forEach(dseDir -> {
+                            collectSampleFiles(plan, cancer, "geo", dseDir.resolve("avinput"), "avinput");
+                            collectSampleFiles(plan, cancer, "geo", dseDir.resolve("multianno"), "multianno");
+                            collectSampleFiles(plan, cancer, "geo", dseDir.resolve("vcf"), "vcf");
+                        });
+            } catch (IOException e) {
+                log.warn("[QUERY-IMPORT] failed to scan GEO dirs for {}: {}", cancer, e.getMessage());
+            }
+        }
+
         Path mutationsFile = dataDir.resolve(cancer).resolve(cancer + "_mutations.txt");
         if (Files.isRegularFile(mutationsFile)) {
             plan.cohortFileRows.add(new CohortFileRow(
@@ -182,8 +254,10 @@ public class MafDuckDbImportService {
         collectStatisticsAssets(plan, cancer, "private", dataDir.resolve(cancer).resolve("private").resolve("stats"));
         collectStatisticsAssets(plan, cancer, "public", dataDir.resolve(cancer).resolve("public").resolve("stats"));
         collectStatisticsAssets(plan, cancer, "tcga", dataDir.resolve(cancer).resolve("tcga").resolve("stats"));
+        collectStatisticsAssets(plan, cancer, "geo", dataDir.resolve(cancer).resolve("geo").resolve("stats"));
         collectStatisticsAssets(plan, cancer, "Overview", dataDir.resolve(cancer).resolve("stats"));
         collectTcgaSamples(plan, cancer);
+        collectGeoSamples(plan, cancer);
     }
 
     private void collectSampleFiles(ImportPlan plan, String cancer, String source, Path directory, String category) {
@@ -241,6 +315,60 @@ public class MafDuckDbImportService {
             plan.sampleRows.computeIfAbsent(
                     new SampleKey(cancer, "tcga", sampleId.trim()),
                     ignored -> new SampleRow(cancer, "tcga", sampleId.trim()));
+        }
+    }
+
+    private void collectGeoSamples(ImportPlan plan, String cancer) {
+        Path geoBaseDir = dataDir.resolve(cancer).resolve("geo");
+        if (!Files.isDirectory(geoBaseDir)) {
+            return;
+        }
+        try (Stream<Path> datasets = Files.list(geoBaseDir)) {
+            datasets.filter(Files::isDirectory)
+                    .filter(p -> p.getFileName().toString().startsWith("GSE"))
+                    .sorted()
+                    .forEach(dseDir -> {
+                        Path annoFile = null;
+                        try (Stream<Path> files = Files.list(dseDir)) {
+                            annoFile = files.filter(Files::isRegularFile)
+                                    .filter(p -> p.getFileName().toString().endsWith("_anno.txt"))
+                                    .findFirst().orElse(null);
+                        } catch (IOException ignored) {
+                        }
+                        if (annoFile == null) {
+                            return;
+                        }
+                        try (BufferedReader reader = Files.newBufferedReader(annoFile, StandardCharsets.UTF_8)) {
+                            String header = reader.readLine();
+                            if (header == null) return;
+                            String[] cols = header.split("\t");
+                            int barcodeIdx = -1;
+                            for (int i = 0; i < cols.length; i++) {
+                                if ("Tumor_Sample_Barcode".equals(cols[i].trim())) {
+                                    barcodeIdx = i;
+                                    break;
+                                }
+                            }
+                            if (barcodeIdx < 0) return;
+                            java.util.Set<String> seen = new java.util.HashSet<>();
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                String[] parts = line.split("\t");
+                                if (parts.length > barcodeIdx) {
+                                    String sampleId = parts[barcodeIdx].trim();
+                                    if (!sampleId.isEmpty() && seen.add(sampleId)) {
+                                        plan.sampleRows.computeIfAbsent(
+                                                new SampleKey(cancer, "geo", sampleId),
+                                                ignored -> new SampleRow(cancer, "geo", sampleId));
+                                    }
+                                }
+                            }
+                        } catch (IOException e) {
+                            log.warn("[QUERY-IMPORT] failed to read GEO samples from {}: {}", annoFile, e.getMessage());
+                        }
+                    });
+        } catch (IOException e) {
+            log.warn("[QUERY-IMPORT] failed to scan GEO dirs for {}: {}", cancer, e.getMessage());
         }
     }
 
@@ -363,6 +491,7 @@ public class MafDuckDbImportService {
         try (Statement statement = connection.createStatement()) {
             statement.execute("DROP TABLE IF EXISTS cfdna_maf");
             statement.execute("DROP TABLE IF EXISTS tcga_maf");
+            statement.execute("DROP TABLE IF EXISTS geo_maf");
             statement.execute("DROP TABLE IF EXISTS aggregate_multianno");
             statement.execute("DROP TABLE IF EXISTS pan_cancer_clinical");
             statement.execute("DROP TABLE IF EXISTS pan_cancer_mutations");
@@ -386,6 +515,13 @@ public class MafDuckDbImportService {
                             "variant_classification VARCHAR, variant_type VARCHAR, cancer_type VARCHAR, " +
                             "transcript VARCHAR, exon VARCHAR, aa_change VARCHAR, functional_region VARCHAR, " +
                             "exonic_function VARCHAR)");
+            statement.execute(
+                    "CREATE TABLE geo_maf (" +
+                            "cancer_type VARCHAR, geo_accession VARCHAR, chromosome VARCHAR, start_position VARCHAR, end_position VARCHAR, " +
+                            "reference_allele VARCHAR, tumor_seq_allele2 VARCHAR, tumor_sample_barcode VARCHAR, " +
+                            "hugo_symbol VARCHAR, variant_classification VARCHAR, variant_type VARCHAR, " +
+                            "functional_region VARCHAR, gene_detail_refgene VARCHAR, aa_change_refgene VARCHAR, " +
+                            "sample_type VARCHAR)");
             statement.execute(
                     "CREATE TABLE aggregate_multianno (" +
                             "cancer_type VARCHAR, source VARCHAR, sample_id VARCHAR, filename VARCHAR, file_path VARCHAR, " +
@@ -412,6 +548,25 @@ public class MafDuckDbImportService {
                             "cancer_type VARCHAR, source VARCHAR, asset_type VARCHAR, category VARCHAR, title VARCHAR, " +
                             "file_name VARCHAR, file_path VARCHAR, size_bytes BIGINT, gene_name VARCHAR, " +
                             "chromosome VARCHAR, start_position VARCHAR, end_position VARCHAR)");
+
+            // VIEW that unions private cfDNA + GEO for "all cfDNA" queries
+            statement.execute("DROP VIEW IF EXISTS all_cfdna_maf");
+            statement.execute(
+                    "CREATE VIEW all_cfdna_maf AS " +
+                            "SELECT cancer_type, chromosome, start_position, end_position, " +
+                            "reference_allele, tumor_seq_allele2, tumor_sample_barcode, " +
+                            "hugo_symbol, variant_classification, variant_type, " +
+                            "transcript, exon, aa_change, functional_region, exonic_function, " +
+                            "gene_refgene, gene_detail_refgene, aa_change_refgene, location, tx_change " +
+                            "FROM cfdna_maf " +
+                            "UNION ALL " +
+                            "SELECT cancer_type, chromosome, start_position, end_position, " +
+                            "reference_allele, tumor_seq_allele2, tumor_sample_barcode, " +
+                            "hugo_symbol, variant_classification, variant_type, " +
+                            "'' AS transcript, '' AS exon, aa_change_refgene AS aa_change, " +
+                            "functional_region, '' AS exonic_function, " +
+                            "'' AS gene_refgene, gene_detail_refgene, aa_change_refgene, '' AS location, '' AS tx_change " +
+                            "FROM geo_maf");
         }
     }
 
@@ -465,6 +620,66 @@ public class MafDuckDbImportService {
             statement.execute(sql);
         }
         return tableCount(connection, "tcga_maf");
+    }
+
+    private long importGeo(Connection connection) throws SQLException {
+        long totalBefore = tableCount(connection, "geo_maf");
+        for (String cancer : CANCERS) {
+            Path geoDir = dataDir.resolve(cancer).resolve("geo");
+            if (!Files.isDirectory(geoDir)) {
+                continue;
+            }
+            try (Stream<Path> datasets = Files.list(geoDir)) {
+                List<Path> dseDirs = datasets.filter(Files::isDirectory)
+                        .filter(p -> p.getFileName().toString().startsWith("GSE"))
+                        .sorted()
+                        .collect(Collectors.toList());
+                for (Path dseDir : dseDirs) {
+                    String accession = dseDir.getFileName().toString();
+                    try (Stream<Path> files = Files.list(dseDir)) {
+                        List<Path> annoFiles = files.filter(Files::isRegularFile)
+                                .filter(p -> p.getFileName().toString().endsWith("_anno.txt"))
+                                .sorted()
+                                .collect(Collectors.toList());
+                        for (Path annoFile : annoFiles) {
+                            importGeoAnnoFile(connection, cancer, accession, annoFile);
+                            log.info("[QUERY-IMPORT] imported GEO file cancer={}, accession={}, file={}",
+                                    cancer, accession, annoFile.getFileName());
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                log.warn("[QUERY-IMPORT] failed to scan GEO directory for {}: {}", cancer, e.getMessage());
+            }
+        }
+        long total = tableCount(connection, "geo_maf");
+        log.info("[QUERY-IMPORT] geo_maf total rows: {}", total);
+        return total - totalBefore;
+    }
+
+    private void importGeoAnnoFile(Connection connection, String cancer, String accession, Path filePath) throws SQLException {
+        String sql =
+                "INSERT INTO geo_maf " +
+                        "SELECT " +
+                        "'" + cancer.replace("'", "''") + "', " +
+                        "'" + accession.replace("'", "''") + "', " +
+                        "COALESCE(CAST(Chromosome AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Start_Position AS VARCHAR), ''), " +
+                        "COALESCE(CAST(End_Position AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Reference_Allele AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Tumor_Seq_Allele2 AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Hugo_Symbol AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Variant_Classification AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Variant_Type AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Variant_Region AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"GeneDetail.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"AAChange.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Sample_Type AS VARCHAR), '') " +
+                        "FROM read_csv_auto('" + duckPath(filePath) + "', delim='\\t', header=true, all_varchar=true, ignore_errors=true)";
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
+        }
     }
 
     private long importAggregateFiles(Connection connection, List<AggregateFile> aggregateFiles) throws SQLException {
@@ -672,6 +887,9 @@ public class MafDuckDbImportService {
                     "CREATE INDEX IF NOT EXISTS idx_cfdna_maf_cancer ON cfdna_maf(cancer_type)",
                     "CREATE INDEX IF NOT EXISTS idx_tcga_maf_gene ON tcga_maf(hugo_symbol)",
                     "CREATE INDEX IF NOT EXISTS idx_tcga_maf_sample ON tcga_maf(tumor_sample_barcode)",
+                    "CREATE INDEX IF NOT EXISTS idx_geo_maf_gene ON geo_maf(hugo_symbol)",
+                    "CREATE INDEX IF NOT EXISTS idx_geo_maf_sample ON geo_maf(tumor_sample_barcode)",
+                    "CREATE INDEX IF NOT EXISTS idx_geo_maf_cancer ON geo_maf(cancer_type)",
                     "CREATE INDEX IF NOT EXISTS idx_aggregate_cancer ON aggregate_multianno(cancer_type)",
                     "CREATE INDEX IF NOT EXISTS idx_aggregate_sample ON aggregate_multianno(\"Tumor_Sample_Barcode\")",
                     "CREATE INDEX IF NOT EXISTS idx_sample_inventory_lookup ON sample_inventory(cancer_type, source, sample_id)",
@@ -682,7 +900,7 @@ public class MafDuckDbImportService {
                 statement.execute(sql);
             }
             for (String table : List.of(
-                    "cfdna_maf", "tcga_maf", "aggregate_multianno",
+                    "cfdna_maf", "tcga_maf", "geo_maf", "aggregate_multianno",
                     "pan_cancer_clinical", "pan_cancer_mutations",
                     "sample_inventory", "sample_top_genes",
                     "cohort_file_index", "statistics_asset_index")) {

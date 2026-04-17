@@ -5924,6 +5924,32 @@ button:disabled:hover {
   line-height: 1.55;
 }
 
+.maf-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.maf-filter-group-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #607088;
+}
+
+.maf-source-select {
+  padding: 7px 11px;
+  border: 1px solid #d7dfef;
+  border-radius: 8px;
+  background: #fff;
+  color: #41506a;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  max-width: 200px;
+}
+
 .maf-filter-title {
   font-size: 0.82rem;
   font-weight: 800;

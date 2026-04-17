@@ -10,29 +10,17 @@ import { Link, useSearchParams } from "react-router-dom";
 import { formatNumber } from "../utils/format";
 
 const PAGE_SIZE = 25;
-const SOURCE_OPTIONS = ["cfDNA", "TCGA"] as const;
-
-const SOURCE_COPY: Record<(typeof SOURCE_OPTIONS)[number], { title: string; description: string }> = {
-  cfDNA: {
-    title: "cfDNA Liquid Biopsy Workbench",
-    description: "Search plasma-derived mutation calls in a gene-centric table and expand into sample-level mutation detail only when needed."
-  },
-  TCGA: {
-    title: "TCGA Solid Tumor Workbench",
-    description: "Browse TCGA mutations with the same gene-centric surface, then open any gene to inspect its sample-level mutation records."
-  }
-};
-const SOURCE_LABELS: Record<(typeof SOURCE_OPTIONS)[number], string> = {
-  cfDNA: "cfDNA Liquid Biopsy",
-  TCGA: "TCGA Solid Tumor",
-};
+const DATA_SOURCE_OPTIONS = ["private", "GEO"] as const;
+const DATA_SOURCE_LABELS: Record<string, string> = { private: "Private", GEO: "GEO" };
 
 const HARDCODED_CHROMOSOMES = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","X","Y"];
 
 export function GeneSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const source = normalizeSource(searchParams.get("source"));
+  const dataSources = searchParams.getAll("dataSource");
+  // both or neither selected → cfDNA (union); single → that source
+  const source = dataSources.length === 1 ? dataSources[0] : "cfDNA";
   const gene = searchParams.get("gene") ?? "";
   const cancerTypes = searchParams.getAll("cancerType");
   const chromosomes = searchParams.getAll("chromosome");
@@ -47,8 +35,7 @@ export function GeneSearchPage() {
   }, [gene]);
 
   const deferredGeneInput = useDeferredValue(geneInput.trim());
-  const isCfDNA = source === "cfDNA";
-  const sourceCopy = SOURCE_COPY[source];
+  const isCfDNA = true;
 
   const filterQ = useQuery({
     queryKey: ["maf-filter-options", source],
@@ -104,12 +91,13 @@ export function GeneSearchPage() {
 
   const activeFilters = useMemo(
     () => [
+      ...dataSources.map((value) => ({ label: "Source", value: DATA_SOURCE_LABELS[value] ?? value })),
       ...cancerTypes.map((value) => ({ label: "Cancer", value })),
       ...chromosomes.map((value) => ({ label: "Chr", value: formatChromosome(value) })),
       ...variantClasses.map((value) => ({ label: "Class", value })),
       ...variantTypes.map((value) => ({ label: "Type", value }))
     ],
-    [cancerTypes, chromosomes, variantClasses, variantTypes]
+    [dataSources, cancerTypes, chromosomes, variantClasses, variantTypes]
   );
 
   const pagePreview = useMemo(
@@ -122,7 +110,7 @@ export function GeneSearchPage() {
 
   const mutateSearchParams = (mutator: (params: URLSearchParams) => void) => {
     const next = new URLSearchParams();
-    next.set("source", source);
+    for (const value of dataSources) next.append("dataSource", value);
     if (gene) next.set("gene", gene);
     for (const value of cancerTypes) next.append("cancerType", value);
     for (const value of chromosomes) next.append("chromosome", value);
@@ -144,13 +132,12 @@ export function GeneSearchPage() {
 
   const clearFilters = () => {
     const next = new URLSearchParams();
-    next.set("source", source);
     if (geneInput.trim()) next.set("gene", geneInput.trim());
     next.set("page", "1");
     setSearchParams(next);
   };
 
-  const toggleMultiValue = (key: "cancerType" | "chromosome" | "variantClass" | "variantType", value: string) => {
+  const toggleMultiValue = (key: "dataSource" | "cancerType" | "chromosome" | "variantClass" | "variantType", value: string) => {
     mutateSearchParams((params) => {
       const current = params.getAll(key);
       params.delete(key);
@@ -170,6 +157,7 @@ export function GeneSearchPage() {
   const buildDetailLink = (geneSymbol: string) => {
     const params = new URLSearchParams();
     params.set("source", source);
+    for (const value of dataSources) params.append("dataSource", value);
     for (const value of cancerTypes) params.append("cancerType", value);
     for (const value of chromosomes) params.append("chromosome", value);
     for (const value of variantClasses) params.append("variantClass", value);
@@ -182,8 +170,8 @@ export function GeneSearchPage() {
       <section className="maf-hero">
         <div className="maf-hero-copy">
           <span className="maf-eyebrow">Mutation Workbench</span>
-          <h2>{sourceCopy.title}</h2>
-          <p>{sourceCopy.description}</p>
+          <h2>Gene Search</h2>
+          <p>Search mutation calls in a gene-centric table. Use the Data Source filter to switch between cfDNA, GEO, and TCGA datasets.</p>
         </div>
 
         <div className="detail-card maf-search-card">
@@ -204,6 +192,15 @@ export function GeneSearchPage() {
           </form>
 
           <div className="maf-filter-board">
+            <MultiSelectGroup
+              title="Data Source"
+              values={dataSources}
+              options={[...DATA_SOURCE_OPTIONS]}
+              loading={false}
+              formatLabel={(v) => DATA_SOURCE_LABELS[v] ?? v}
+              onToggle={(value) => toggleMultiValue("dataSource", value)}
+            />
+
             {isCfDNA ? (
               <MultiSelectGroup
                 title="Cancer Type"
@@ -272,7 +269,7 @@ export function GeneSearchPage() {
       <section className="maf-active-panel">
         <div className="maf-active-header">
           <h3>Current Query</h3>
-          <span>{SOURCE_LABELS[source]}</span>
+          <span>{dataSources.length === 0 ? "All cfDNA" : dataSources.map((s) => DATA_SOURCE_LABELS[s] ?? s).join(" + ")}</span>
         </div>
         <div className="maf-active-tags">
           {gene ? <span className="maf-tag"><strong>Gene:</strong> {gene}</span> : null}
@@ -411,9 +408,6 @@ export function GeneSearchPage() {
   );
 }
 
-function normalizeSource(value: string | null): (typeof SOURCE_OPTIONS)[number] {
-  return value === "TCGA" ? "TCGA" : "cfDNA";
-}
 
 function formatChromosome(value: string) {
   if (!value) return "-";
