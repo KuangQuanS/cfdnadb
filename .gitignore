@@ -23,6 +23,9 @@ start-*.cmd
 .DS_Store
 *.md
 *.cmd
+!README.md
+!start-backend.cmd
+!start-frontend.cmd
 *.xlsx
 *.txt
 *.csv
@@ -34,3 +37,5 @@ converted_csv/maf.duckdb
 docs
 .claude/
 CLAUDE.md
+*.zip
+*.tmp
