@@ -32,3 +32,5 @@ start-*.cmd
 converted_csv/*
 converted_csv/maf.duckdb
 docs
+.claude/
+CLAUDE.md
