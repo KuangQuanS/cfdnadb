@@ -1,21 +1,66 @@
 import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { PageLoader } from "./PageLoader";
-import headerBgPng from "../assets/background.jpg";
+import headerBgPng from "../assets/background_original.png";
 
 const navItems = [
   { to: "/", label: "Home" },
   { to: "/browse", label: "Browse" },
-  { to: "/gene-search", label: "Gene Search" },
   { to: "/statistics", label: "Statistics" },
-  { to: "/survival", label: "Survival" },
   { to: "/downloads", label: "Downloads" },
   { to: "/help", label: "Help" },
   { to: "/about", label: "About" }
 ];
 
+function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
+  const [dismissed, setDismissed] = useState(false);
+
+  const dismiss = () => {
+    setDismissed(true);
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  return (
+    <div
+      className={`site-nav-dropdown${dismissed ? " site-nav-dropdown-dismissed" : ""}`}
+      onMouseLeave={() => setDismissed(false)}
+    >
+      <Link
+        className={`nav-link nav-link-menu${geneMenuActive ? " active" : ""}`}
+        to="/gene-search"
+        onClick={dismiss}
+        aria-haspopup="menu"
+      >
+        Gene Search
+        <svg className="nav-caret" viewBox="0 0 12 8" aria-hidden="true">
+          <path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </Link>
+      <div className="site-nav-dropdown-menu" role="menu" aria-label="Gene tools">
+        <NavLink
+          to="/gene-search"
+          onClick={dismiss}
+          className={({ isActive }) => `site-nav-dropdown-link${isActive ? " active" : ""}`}
+        >
+          Gene Search
+        </NavLink>
+        <NavLink
+          to="/survival"
+          onClick={dismiss}
+          className={({ isActive }) => `site-nav-dropdown-link${isActive ? " active" : ""}`}
+        >
+          Survival
+        </NavLink>
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
+  const geneMenuActive = location.pathname.startsWith("/gene-search") || location.pathname.startsWith("/survival");
   const [routeLoading, setRouteLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const firstRenderRef = useRef(true);
@@ -74,11 +119,23 @@ export function AppShell({ children }: PropsWithChildren) {
             </div>
           </div>
           <nav className="site-nav">
-            {navItems.map((item) => (
+            {navItems.slice(0, 2).map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.to === "/"}
+                className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+
+            <GeneMenu geneMenuActive={geneMenuActive} />
+
+            {navItems.slice(2).map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
                 className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
               >
                 {item.label}

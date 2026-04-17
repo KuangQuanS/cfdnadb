@@ -45,8 +45,21 @@ export function GeneMarkerDetailPage() {
           </p>
         </div>
         <div className="maf-detail-actions">
-          <Link className="button-secondary" to={`/gene-search?gene=${encodeURIComponent(geneSymbol)}`}>
-            Back to Gene Search
+          <Link className="button-secondary inline-button gene-detail-primary-action" to={`/survival?gene=${encodeURIComponent(geneSymbol)}`}>
+            <span className="gene-detail-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 3v18h18" />
+                <path d="M7 15c3 0 3-6 6-6s3 4 6 4" />
+              </svg>
+            </span>
+            <span className="gene-survival-cta-label">
+              <span className="gene-survival-cta-title">Survival Analysis</span>
+              <span className="gene-survival-cta-sub">Kaplan–Meier for {geneSymbol}</span>
+            </span>
+            <span className="gene-survival-cta-arrow" aria-hidden="true">→</span>
+          </Link>
+          <Link className="gene-survival-back gene-detail-secondary-action" to={`/gene-search?gene=${encodeURIComponent(geneSymbol)}`}>
+            ← Back to Gene Search
           </Link>
         </div>
       </section>

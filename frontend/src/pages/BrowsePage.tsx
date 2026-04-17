@@ -12,11 +12,10 @@ import { WaterfallChart } from "../components/WaterfallChart";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
 import type { CancerAsset } from "../types/api";
 
-/** Fixed source buttons shown on the Browse toolbar. */
 const BROWSE_SOURCES = [
-  { source: "cfDNA", label: "cfDNA All" },
-  { source: "private", label: "cfDNA Private" },
-  { source: "geo", label: "cfDNA GEO" },
+  { source: "cfDNA", label: "cfDNA" },
+  { source: "private", label: "Private" },
+  { source: "geo", label: "GEO" },
   { source: "tcga", label: "TCGA" },
 ] as const;
 
@@ -165,21 +164,16 @@ export function BrowsePage() {
             </select>
           </label>
 
-          <div className="statistics-toolbar-group">
-            <span className="statistics-toolbar-label">Data Source</span>
-            <div className="statistics-source-tabs">
+          <label className="statistics-toolbar-field statistics-toolbar-field--compact">
+            <span>Data Source</span>
+            <select value={activeSource} onChange={(event) => setParam("source", event.target.value)}>
               {BROWSE_SOURCES.map((item) => (
-                <button
-                  key={item.source}
-                  className={`statistics-source-tab${activeSource === item.source ? " active" : ""}`}
-                  onClick={() => setParam("source", item.source)}
-                  type="button"
-                >
+                <option key={item.source} value={item.source}>
                   {item.label}
-                </button>
+                </option>
               ))}
-            </div>
-          </div>
+            </select>
+          </label>
         </div>
 
         <div className="statistics-toolbar-meta">

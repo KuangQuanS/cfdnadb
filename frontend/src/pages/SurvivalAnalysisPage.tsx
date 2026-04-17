@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 
@@ -523,10 +524,14 @@ async function createKmExportCanvas(chartDataUrl: string, result: KmResult): Pro
 type PlotKey = "mutStatus" | "mutType" | "vafStage" | "vafMut";
 
 export function SurvivalAnalysisPage() {
+  const [searchParams] = useSearchParams();
+  const queryGene = (searchParams.get("gene") ?? "").trim().toUpperCase();
+  const initialGene = queryGene || "TP53";
+
   const [cohorts, setCohorts] = useState<string[]>([]);
   const [cohort, setCohort] = useState<string>("TCGA-BRCA");
-  const [gene, setGene] = useState<string>("TP53");
-  const [geneInput, setGeneInput] = useState<string>("TP53");
+  const [gene, setGene] = useState<string>(initialGene);
+  const [geneInput, setGeneInput] = useState<string>(initialGene);
   const [timeUnit, setTimeUnit] = useState<string>("months");
   const [enabledPlots, setEnabledPlots] = useState<Record<string, boolean>>({
     mutStatus: true,
@@ -552,6 +557,13 @@ export function SurvivalAnalysisPage() {
       .catch((e) => setError(String(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!queryGene) return;
+    setGene(queryGene);
+    setGeneInput(queryGene);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryGene]);
 
   const runPlot = async () => {
     if (!gene || !cohort) return;

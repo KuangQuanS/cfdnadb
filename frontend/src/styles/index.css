@@ -224,6 +224,10 @@ button, input, select { font: inherit; }
   gap: 8px;
 }
 
+.site-nav-dropdown {
+  position: relative;
+}
+
 .nav-link {
   padding: 8px 16px;
   border-radius: var(--radius-pill);
@@ -243,6 +247,97 @@ button, input, select { font: inherit; }
   background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.nav-link-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-caret {
+  width: 10px;
+  height: 7px;
+  opacity: 0.78;
+  transition: transform 0.22s ease, opacity 0.18s ease;
+}
+
+.site-nav-dropdown:hover .nav-caret,
+.site-nav-dropdown:focus-within .nav-caret {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+.site-nav-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  min-width: 160px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(28, 22, 60, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 14px 28px rgba(10, 6, 30, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.18s ease, visibility 0s linear 0.18s;
+  z-index: 30;
+}
+
+.site-nav-dropdown-menu::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+}
+
+.site-nav-dropdown:hover .site-nav-dropdown-menu,
+.site-nav-dropdown:focus-within .site-nav-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: opacity 0.16s ease, transform 0.18s ease, visibility 0s linear 0s;
+}
+
+.site-nav-dropdown.site-nav-dropdown-dismissed:hover .site-nav-dropdown-menu,
+.site-nav-dropdown.site-nav-dropdown-dismissed:focus-within .site-nav-dropdown-menu {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0s linear 0.12s;
+}
+
+.site-nav-dropdown-link {
+  display: block;
+  padding: 8px 14px;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.site-nav-dropdown-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+}
+
+.site-nav-dropdown-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
 }
 
 @media (max-width: 760px) {
@@ -2293,6 +2388,15 @@ button, input, select { font: inherit; }
   box-shadow: 0 0 0 3px rgba(79, 115, 184, 0.1);
 }
 
+.statistics-toolbar-field--compact {
+  width: 190px;
+  justify-self: start;
+}
+
+.statistics-toolbar-field--compact select {
+  width: 100%;
+}
+
 .statistics-source-tabs {
   display: flex;
   gap: 10px;
@@ -2833,6 +2937,10 @@ button, input, select { font: inherit; }
 @media (max-width: 1100px) {
   .statistics-toolbar-top {
     grid-template-columns: 1fr;
+  }
+
+  .statistics-toolbar-field--compact {
+    width: 100%;
   }
 
   .statistics-pdf-grid {
@@ -3614,6 +3722,25 @@ button, input, select { font: inherit; }
 .pagination-bar button:hover:not(:disabled) {
   background: var(--accent);
   color: white;
+}
+
+.maf-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.maf-page-size select {
+  padding: 6px 10px;
+  border: 1px solid #c7d2e2;
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+  font-size: 0.9rem;
+  cursor: pointer;
 }
 
 /* Browse workspace */
@@ -6102,6 +6229,11 @@ button:disabled:hover {
   padding-top: 8px;
 }
 
+.maf-hero + .maf-source-block {
+  border-top: none;
+  padding-top: 8px;
+}
+
 .maf-source-block-header {
   display: flex;
   align-items: baseline;
@@ -6254,6 +6386,37 @@ button:disabled:hover {
 .maf-gene-table th,
 .maf-gene-table td {
   padding: 14px 12px;
+}
+
+.maf-gene-table tbody tr {
+  height: 180px;
+}
+
+.maf-gene-table tbody td {
+  height: 180px;
+  vertical-align: top;
+  overflow: hidden;
+}
+
+.maf-gene-table tbody td > * {
+  max-height: 152px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #c7d2e2 transparent;
+}
+
+.maf-gene-table tbody td > *::-webkit-scrollbar {
+  width: 6px;
+}
+
+.maf-gene-table tbody td > *::-webkit-scrollbar-thumb {
+  background: #c7d2e2;
+  border-radius: 3px;
+}
+
+.maf-gene-table tbody td > *::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .maf-table th,
@@ -6618,7 +6781,164 @@ button:disabled:hover {
 
 .maf-detail-actions {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.gene-detail-primary-action {
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: none;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.gene-detail-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.gene-detail-primary-action .gene-survival-cta-sub,
+.gene-detail-primary-action .gene-survival-cta-arrow {
+  display: none;
+}
+
+.gene-detail-primary-action .gene-survival-cta-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.gene-detail-primary-action .gene-survival-cta-title,
+.gene-detail-primary-action > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.gene-detail-secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid #d5dfef;
+  background: #fff;
+  color: #345a8a;
+  font-size: 0.94rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+
+.gene-detail-secondary-action:hover {
+  background: #f5f9ff;
+  border-color: #bfd0ea;
+  color: #274c7b;
+  text-decoration: none;
+}
+
+.gene-survival-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px 12px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #4b359a 0%, #6b4fd8 55%, #9d6cff 100%);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(75, 53, 154, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.gene-survival-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), transparent 55%);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  pointer-events: none;
+}
+
+.gene-survival-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(75, 53, 154, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  color: #fff;
+  text-decoration: none;
+}
+
+.gene-survival-cta:hover::before {
+  opacity: 1;
+}
+
+.gene-survival-cta:active {
+  transform: translateY(0);
+}
+
+.gene-survival-cta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.gene-survival-cta-label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.gene-survival-cta-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+
+.gene-survival-cta-sub {
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.gene-survival-cta-arrow {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-left: 4px;
+  transition: transform 0.22s ease;
+}
+
+.gene-survival-cta:hover .gene-survival-cta-arrow {
+  transform: translateX(3px);
+}
+
+.gene-survival-back {
+  color: inherit;
+  text-decoration: none;
+}
+
+.gene-survival-back:hover {
+  color: inherit;
+  text-decoration: none;
 }
 
 .maf-detail-grid {

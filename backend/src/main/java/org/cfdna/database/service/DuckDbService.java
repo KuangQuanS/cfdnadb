@@ -2015,9 +2015,6 @@ public class DuckDbService {
                         "WHEN NULLIF(TRIM(COALESCE(reference_allele, '')), '') IS NOT NULL AND NULLIF(TRIM(COALESCE(tumor_seq_allele2, '')), '') IS NOT NULL " +
                         "THEN COALESCE(reference_allele, '') || '>' || COALESCE(tumor_seq_allele2, '') " +
                         "ELSE '' END";
-        String annotationValueExpr =
-                "TRIM(CONCAT_WS(' | ', NULLIF(functional_region, ''), NULLIF(exonic_function, ''), NULLIF(exon, ''), NULLIF(aa_change, '')))";
-
         String cancerPreview = tcga
                 ? "-"
                 : joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
@@ -2034,8 +2031,7 @@ public class DuckDbService {
                 "COALESCE(variant_type, '')", "COALESCE(variant_type, '')", "value ASC", 4));
         String annotationPreview = tcga
                 ? "-"
-                : joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, false,
-                annotationValueExpr, annotationValueExpr, "value ASC", 4));
+                : buildMafAnnotationPreview(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, 4);
 
         return new MafGeneSummaryDto(
                 geneSymbol,
@@ -2092,6 +2088,101 @@ public class DuckDbService {
 
     private String joinPreview(List<String> values) {
         return values.isEmpty() ? "-" : String.join(", ", values);
+    }
+
+    private String buildMafAnnotationPreview(Connection conn,
+                                             String table,
+                                             String geneSymbol,
+                                             boolean hasSample,
+                                             String sample,
+                                             List<String> cancerTypes,
+                                             List<String> chromosomes,
+                                             List<String> variantClasses,
+                                             List<String> variantTypes,
+                                             int limit) throws SQLException {
+        String where = buildMafExactGeneWhereClause(hasSample, cancerTypes, chromosomes, variantClasses, variantTypes, false);
+        String sql =
+                "SELECT DISTINCT " +
+                        "COALESCE(functional_region, '') AS fr, " +
+                        "COALESCE(exonic_function, '') AS ef, " +
+                        "COALESCE(exon, '') AS ex, " +
+                        "COALESCE(aa_change, '') AS aa " +
+                        "FROM " + table + " " +
+                        where +
+                        "AND NULLIF(TRIM(COALESCE(functional_region, '') || COALESCE(exonic_function, '') || COALESCE(exon, '') || COALESCE(aa_change, '')), '') IS NOT NULL " +
+                        "ORDER BY fr, ef, ex, aa " +
+                        "LIMIT ?";
+
+        int fetchLimit = Math.max(limit * 6, 24);
+        List<String> entries = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            int idx = bindMafExactGeneParams(stmt, 1, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, false);
+            stmt.setInt(idx, fetchLimit);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    if (entries.size() >= limit) break;
+                    String fr = nullToEmpty(rs.getString("fr")).trim();
+                    String ef = nullToEmpty(rs.getString("ef")).trim();
+                    String ex = nullToEmpty(rs.getString("ex")).trim();
+                    String aa = nullToEmpty(rs.getString("aa")).trim();
+
+                    List<List<String>> aaGroups = splitAaChangeEntries(aa);
+                    for (List<String> aaParts : aaGroups) {
+                        LinkedHashSet<String> parts = new LinkedHashSet<>();
+                        if (!fr.isEmpty()) parts.add(fr);
+                        if (!ef.isEmpty()) parts.add(ef);
+                        if (!ex.isEmpty()) parts.add(ex);
+                        for (String p : aaParts) {
+                            if (!p.isEmpty()) parts.add(p);
+                        }
+                        if (parts.isEmpty()) continue;
+                        String joined = String.join(" | ", parts);
+                        if (seen.add(joined)) {
+                            entries.add(joined);
+                            if (entries.size() >= limit) break;
+                        }
+                    }
+                }
+            }
+        }
+        return entries.isEmpty() ? "-" : String.join(", ", entries);
+    }
+
+    private List<List<String>> splitAaChangeEntries(String aa) {
+        List<List<String>> out = new ArrayList<>();
+        if (aa == null || aa.isBlank()) {
+            out.add(Collections.emptyList());
+            return out;
+        }
+        for (String chunk : aa.split(",")) {
+            String trimmed = chunk.trim();
+            if (trimmed.isEmpty()) continue;
+            String[] parts = trimmed.split(":");
+            int start = (parts.length > 1 && looksLikeGeneSymbol(parts[0])) ? 1 : 0;
+            List<String> result = new ArrayList<>();
+            for (int i = start; i < parts.length; i++) {
+                String p = parts[i].trim();
+                if (!p.isEmpty()) result.add(p);
+            }
+            if (!result.isEmpty()) out.add(result);
+        }
+        if (out.isEmpty()) out.add(Collections.emptyList());
+        return out;
+    }
+
+    private boolean looksLikeGeneSymbol(String s) {
+        if (s == null || s.isEmpty()) return false;
+        String lower = s.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("nm_") || lower.startsWith("nr_") || lower.startsWith("xm_") || lower.startsWith("xr_")) return false;
+        if (lower.startsWith("exon")) return false;
+        if (lower.startsWith("c.") || lower.startsWith("p.") || lower.startsWith("n.") || lower.startsWith("g.")) return false;
+        return s.matches("^[A-Za-z][A-Za-z0-9.\\-]*$");
+    }
+
+    private String nullToEmpty(String s) {
+        return s == null ? "" : s;
     }
 
     private String buildMafWhereClause(boolean hasGene, boolean hasSample, List<String> cancerTypes,

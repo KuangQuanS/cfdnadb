@@ -7,7 +7,7 @@ import { getCancerSummary } from "../api/client";
 import { DEFAULT_GENE } from "../constants/cfdna";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
-import humanBodyImg from "../assets/human_body.png";
+import humanBodyImg from "../assets/human_body_new.png";
 import "../styles/home.css";
 
 const MOCK_COHORTS: CancerSummary[] = [

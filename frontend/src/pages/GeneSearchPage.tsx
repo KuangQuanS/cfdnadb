@@ -9,7 +9,8 @@ import {
 import { Link, useSearchParams } from "react-router-dom";
 import { formatNumber } from "../utils/format";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 10;
 const DATA_SOURCE_OPTIONS = ["private", "GEO"] as const;
 const DATA_SOURCE_LABELS: Record<string, string> = { private: "Private", GEO: "GEO" };
 
@@ -27,6 +28,8 @@ export function GeneSearchPage() {
   const variantClasses = searchParams.getAll("variantClass");
   const variantTypes = searchParams.getAll("variantType");
   const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1);
+  const pageSizeParam = Number(searchParams.get("size") ?? "");
+  const pageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(pageSizeParam) ? pageSizeParam : DEFAULT_PAGE_SIZE;
 
   const [geneInput, setGeneInput] = useState(gene);
 
@@ -59,7 +62,7 @@ export function GeneSearchPage() {
   });
 
   const dataQ = useQuery({
-    queryKey: ["maf-genes", source, gene, cancerTypes, chromosomes, variantClasses, variantTypes, page],
+    queryKey: ["maf-genes", source, gene, cancerTypes, chromosomes, variantClasses, variantTypes, page, pageSize],
     queryFn: () =>
       queryMafGenes({
         source,
@@ -69,7 +72,7 @@ export function GeneSearchPage() {
         variantClass: variantClasses,
         variantType: variantTypes,
         page,
-        size: PAGE_SIZE
+        size: pageSize
       }),
     placeholderData: keepPreviousData
   });
@@ -86,7 +89,7 @@ export function GeneSearchPage() {
   const totalElements = dataQ.data?.totalElements ?? 0;
   const totalPages = dataQ.data?.totalPages ?? 1;
   const currentPage = Math.min(page, totalPages || 1);
-  const startIndex = totalElements === 0 ? 0 : (currentPage - 1) * PAGE_SIZE;
+  const startIndex = totalElements === 0 ? 0 : (currentPage - 1) * pageSize;
   const summary = summaryQ.data;
 
   const activeFilters = useMemo(
@@ -117,6 +120,7 @@ export function GeneSearchPage() {
     for (const value of variantClasses) next.append("variantClass", value);
     for (const value of variantTypes) next.append("variantType", value);
     next.set("page", "1");
+    if (pageSize !== DEFAULT_PAGE_SIZE) next.set("size", String(pageSize));
     mutator(next);
     setSearchParams(next);
   };
@@ -133,6 +137,15 @@ export function GeneSearchPage() {
   const clearFilters = () => {
     const next = new URLSearchParams();
     if (geneInput.trim()) next.set("gene", geneInput.trim());
+    next.set("page", "1");
+    if (pageSize !== DEFAULT_PAGE_SIZE) next.set("size", String(pageSize));
+    setSearchParams(next);
+  };
+
+  const changePageSize = (nextSize: number) => {
+    const next = new URLSearchParams(searchParams);
+    if (nextSize === DEFAULT_PAGE_SIZE) next.delete("size");
+    else next.set("size", String(nextSize));
     next.set("page", "1");
     setSearchParams(next);
   };
@@ -292,7 +305,7 @@ export function GeneSearchPage() {
           <div>
             <h3>Gene Summary Table</h3>
             <p>
-              Showing {totalElements === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + PAGE_SIZE, totalElements)} of{" "}
+              Showing {totalElements === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + pageSize, totalElements)} of{" "}
               {formatNumber(totalElements)} genes
             </p>
           </div>
@@ -399,6 +412,14 @@ export function GeneSearchPage() {
                 <button className="button-secondary" type="button" disabled={currentPage >= totalPages} onClick={() => goToPage(currentPage + 1)}>
                   Next
                 </button>
+                <label className="maf-page-size">
+                  Rows per page
+                  <select value={pageSize} onChange={(event) => changePageSize(Number(event.target.value))}>
+                    {PAGE_SIZE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
             </>
           )
@@ -522,22 +543,19 @@ function looksLikeNotation(value: string) {
   return /(^[A-Z-]+>[A-Z-]+$)|(^[A-Z]{2,}_[A-Za-z_]+$)|([pcgrmn]\.)|(\d)/.test(value);
 }
 
-function extractCommonPrefix(groups: string[][]) {
-  if (groups.length < 2) return [];
+function extractSharedChips(groups: string[][]) {
+  if (groups.length < 2 || groups[0].length === 0) return [] as string[];
 
-  const shortest = Math.min(...groups.map((group) => group.length));
-  const prefix: string[] = [];
-
-  for (let index = 0; index < shortest; index += 1) {
-    const candidate = groups[0][index];
-    if (groups.every((group) => group[index] === candidate)) {
-      prefix.push(candidate);
-      continue;
+  const shared: string[] = [];
+  const seen = new Set<string>();
+  for (const part of groups[0]) {
+    if (seen.has(part)) continue;
+    if (groups.every((group) => group.includes(part))) {
+      shared.push(part);
+      seen.add(part);
     }
-    break;
   }
-
-  return prefix;
+  return shared;
 }
 
 function PreviewValue({
@@ -570,19 +588,24 @@ function PreviewValue({
   if (variant === "annotation") {
     const groups = entries
       .map((entry) =>
-        entry
-          .split(/\s*\|\s*/)
-          .map((item) => item.trim())
-          .filter(Boolean)
+        Array.from(
+          new Set(
+            entry
+              .split(/\s*\|\s*/)
+              .map((item) => item.trim())
+              .filter(Boolean)
+          )
+        )
       )
       .filter((group) => group.length > 0);
-    const sharedPrefix = extractCommonPrefix(groups);
+    const sharedChips = extractSharedChips(groups);
+    const sharedSet = new Set(sharedChips);
 
     return (
       <div className="maf-preview-annotation">
-        {sharedPrefix.length > 0 ? (
+        {sharedChips.length > 0 ? (
           <div className="maf-preview-chip-row maf-preview-chip-row--annotation-shared">
-            {sharedPrefix.map((part) => (
+            {sharedChips.map((part) => (
               <span key={part} className={`maf-preview-chip maf-preview-chip--annotation${looksLikeNotation(part) ? " maf-mono-cell" : ""}`}>
                 {part}
               </span>
@@ -592,7 +615,7 @@ function PreviewValue({
 
         <div className="maf-preview-list maf-preview-list--annotation">
           {groups.map((parts) => {
-            const uniqueParts = sharedPrefix.length > 0 ? parts.slice(sharedPrefix.length) : parts;
+            const uniqueParts = parts.filter((part) => !sharedSet.has(part));
             const visibleParts = uniqueParts.length > 0 ? uniqueParts : parts;
             const entryKey = parts.join("|");
 
