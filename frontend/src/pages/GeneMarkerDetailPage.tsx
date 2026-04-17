@@ -1,35 +1,38 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { getMafGeneDetail, queryMafGeneMutations } from "../api/client";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Link, useParams } from "react-router-dom";
+import { getMafGeneDetail, getMafSampleSuggestions, queryMafGeneMutations } from "../api/client";
 import { IgvBrowser } from "../components/IgvBrowser";
 import { formatNumber } from "../utils/format";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
 const DEFAULT_PAGE_SIZE = 5;
 
-type SourceKey = "cfDNA" | "private" | "GEO" | "TCGA";
+type SourceKey = "cfDNA" | "TCGA";
 
 const SOURCE_LABELS: Record<SourceKey, string> = {
   cfDNA: "cfDNA All",
-  private: "cfDNA Private",
-  GEO: "cfDNA GEO",
   TCGA: "TCGA",
+};
+
+interface AppliedFilters {
+  sample: string;
+  cancerType: string[];
+  chromosome: string[];
+  variantClass: string[];
+  variantType: string[];
+}
+
+const EMPTY_FILTERS: AppliedFilters = {
+  sample: "",
+  cancerType: [],
+  chromosome: [],
+  variantClass: [],
+  variantType: [],
 };
 
 export function GeneMarkerDetailPage() {
   const { geneSymbol = "" } = useParams();
-  const [searchParams] = useSearchParams();
-  const urlSource = searchParams.get("source");
-  const detailSource: SourceKey = (urlSource === "TCGA" || urlSource === "GEO" || urlSource === "private") ? urlSource : "cfDNA";
-
-  const buildBackLink = () => {
-    const params = new URLSearchParams();
-    params.set("gene", geneSymbol);
-    const urlSource = searchParams.get("source");
-    if (urlSource) params.set("source", urlSource);
-    return `/gene-search?${params.toString()}`;
-  };
 
   return (
     <div className="page-stack maf-page maf-detail-page">
@@ -38,15 +41,18 @@ export function GeneMarkerDetailPage() {
           <span className="maf-eyebrow">Gene Detail</span>
           <h2>{geneSymbol}</h2>
           <p>
-            Sample-level mutation records for <strong>{geneSymbol}</strong> from {SOURCE_LABELS[detailSource] ?? detailSource}.
+            Sample-level mutation records for <strong>{geneSymbol}</strong> across cfDNA and TCGA sources.
           </p>
         </div>
         <div className="maf-detail-actions">
-          <Link className="button-secondary" to={buildBackLink()}>Back to Gene Search</Link>
+          <Link className="button-secondary" to={`/gene-search?gene=${encodeURIComponent(geneSymbol)}`}>
+            Back to Gene Search
+          </Link>
         </div>
       </section>
 
-      <SourceDetailPanel source={detailSource} geneSymbol={geneSymbol} />
+      <SourceDetailPanel source="cfDNA" geneSymbol={geneSymbol} />
+      <SourceDetailPanel source="TCGA" geneSymbol={geneSymbol} />
     </div>
   );
 }
@@ -55,17 +61,63 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
   const isCfDNA = source !== "TCGA";
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [applied, setApplied] = useState<AppliedFilters>(EMPTY_FILTERS);
+
+  const [sampleInput, setSampleInput] = useState("");
+  const [selectedCancer, setSelectedCancer] = useState("");
+  const [selectedChromosome, setSelectedChromosome] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+  const deferredSampleInput = useDeferredValue(sampleInput.trim());
+  const sampleAutocompleteRef = useRef<HTMLLabelElement>(null);
+  const [showSampleSuggestions, setShowSampleSuggestions] = useState(false);
+
+  const sampleSuggestionsQ = useQuery({
+    queryKey: ["maf-sample-suggestions", source, deferredSampleInput],
+    queryFn: () => getMafSampleSuggestions(source, deferredSampleInput, 10),
+    enabled: deferredSampleInput.length >= 2,
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+  });
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (sampleAutocompleteRef.current && !sampleAutocompleteRef.current.contains(event.target as Node)) {
+        setShowSampleSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
 
   const summaryQ = useQuery({
-    queryKey: ["maf-gene-detail", source, geneSymbol],
-    queryFn: () => getMafGeneDetail(geneSymbol, { source }),
+    queryKey: ["maf-gene-detail", source, geneSymbol, applied],
+    queryFn: () =>
+      getMafGeneDetail(geneSymbol, {
+        source,
+        sample: applied.sample || undefined,
+        cancerType: applied.cancerType,
+        chromosome: applied.chromosome,
+        variantClass: applied.variantClass,
+        variantType: applied.variantType,
+      }),
     placeholderData: keepPreviousData,
     enabled: geneSymbol.length > 0,
   });
 
   const dataQ = useQuery({
-    queryKey: ["maf-gene-mutations", source, geneSymbol, page, pageSize],
-    queryFn: () => queryMafGeneMutations(geneSymbol, { source, page, size: pageSize }),
+    queryKey: ["maf-gene-mutations", source, geneSymbol, applied, page, pageSize],
+    queryFn: () =>
+      queryMafGeneMutations(geneSymbol, {
+        source,
+        sample: applied.sample || undefined,
+        cancerType: applied.cancerType,
+        chromosome: applied.chromosome,
+        variantClass: applied.variantClass,
+        variantType: applied.variantType,
+        page,
+        size: pageSize,
+      }),
     placeholderData: keepPreviousData,
     enabled: geneSymbol.length > 0,
   });
@@ -83,11 +135,67 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
   const currentPage = Math.min(page, totalPages || 1);
   const startIndex = totalElements === 0 ? 0 : (currentPage - 1) * pageSize;
   const summary = summaryQ.data;
-  const igvMutations = useMemo(() => igvMutationsQ.data?.content ?? [], [igvMutationsQ.data]);
+
+  const allIgvMutations = useMemo(() => igvMutationsQ.data?.content ?? [], [igvMutationsQ.data]);
+
+  const derivedCancerTypes = useMemo(
+    () => [...new Set(allIgvMutations.map((m) => m.cancerType).filter(Boolean))].sort(),
+    [allIgvMutations],
+  );
+  const derivedChromosomes = useMemo(
+    () =>
+      [...new Set(allIgvMutations.map((m) => m.chromosome).filter(Boolean))].sort((a, b) => {
+        const n = (s: string) => parseInt(s.replace(/^chr/i, ""), 10);
+        return isNaN(n(a)) || isNaN(n(b)) ? a.localeCompare(b) : n(a) - n(b);
+      }),
+    [allIgvMutations],
+  );
+  const derivedVariantClasses = useMemo(
+    () => [...new Set(allIgvMutations.map((m) => m.variantClassification).filter(Boolean))].sort(),
+    [allIgvMutations],
+  );
+  const derivedVariantTypes = useMemo(
+    () => [...new Set(allIgvMutations.map((m) => m.variantType).filter(Boolean))].sort(),
+    [allIgvMutations],
+  );
+
+  const igvMutations = useMemo(
+    () =>
+      allIgvMutations.filter((m) => {
+        if (applied.cancerType.length > 0 && !applied.cancerType.includes(m.cancerType)) return false;
+        if (applied.chromosome.length > 0 && !applied.chromosome.includes(m.chromosome)) return false;
+        if (applied.variantClass.length > 0 && !applied.variantClass.includes(m.variantClassification)) return false;
+        if (applied.variantType.length > 0 && !applied.variantType.includes(m.variantType)) return false;
+        return true;
+      }),
+    [allIgvMutations, applied],
+  );
 
   const goToPage = (nextPage: number) => setPage(Math.max(1, nextPage));
   const changePageSize = (nextSize: number) => {
     setPageSize(nextSize);
+    setPage(1);
+  };
+
+  const submitTableFilter = (event?: FormEvent) => {
+    event?.preventDefault();
+    setApplied({
+      sample: sampleInput.trim(),
+      cancerType: selectedCancer ? [selectedCancer] : [],
+      chromosome: selectedChromosome ? [selectedChromosome] : [],
+      variantClass: selectedClass ? [selectedClass] : [],
+      variantType: selectedType ? [selectedType] : [],
+    });
+    setPage(1);
+  };
+
+  const clearTableFilter = () => {
+    setApplied(EMPTY_FILTERS);
+    setSampleInput("");
+    setSelectedCancer("");
+    setSelectedChromosome("");
+    setSelectedClass("");
+    setSelectedType("");
     setPage(1);
   };
 
@@ -103,11 +211,112 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
         ) : null}
       </div>
 
+      <form className="maf-detail-filterbar" onSubmit={submitTableFilter}>
+        <label
+          className="maf-detail-filter-field maf-detail-filter-grow maf-detail-filter-autocomplete"
+          ref={sampleAutocompleteRef}
+        >
+          <span>Sample Barcode</span>
+          <input
+            value={sampleInput}
+            onChange={(event) => {
+              setSampleInput(event.target.value);
+              setShowSampleSuggestions(true);
+            }}
+            onFocus={() => {
+              if (sampleInput.trim().length >= 2) setShowSampleSuggestions(true);
+            }}
+            placeholder="Filter by sample barcode"
+          />
+          {showSampleSuggestions &&
+          sampleInput.trim().length >= 2 &&
+          (sampleSuggestionsQ.isFetching || (sampleSuggestionsQ.data?.length ?? 0) > 0) ? (
+            <div className="maf-autocomplete-dropdown">
+              {sampleSuggestionsQ.isFetching ? <div className="maf-autocomplete-item muted">Loading...</div> : null}
+              {!sampleSuggestionsQ.isFetching &&
+                (sampleSuggestionsQ.data ?? []).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className="maf-autocomplete-item"
+                    onClick={() => {
+                      setSampleInput(item);
+                      setShowSampleSuggestions(false);
+                    }}
+                  >
+                    {item}
+                  </button>
+                ))}
+            </div>
+          ) : null}
+        </label>
+
+        <label className="maf-detail-filter-field">
+          <span>Cancer</span>
+          <select value={selectedCancer} onChange={(event) => setSelectedCancer(event.target.value)}>
+            <option value="">All</option>
+            {derivedCancerTypes.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="maf-detail-filter-field">
+          <span>Chromosome</span>
+          <select value={selectedChromosome} onChange={(event) => setSelectedChromosome(event.target.value)}>
+            <option value="">All</option>
+            {derivedChromosomes.map((option) => (
+              <option key={option} value={option}>
+                {formatChromosome(option)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="maf-detail-filter-field">
+          <span>Class</span>
+          <select value={selectedClass} onChange={(event) => setSelectedClass(event.target.value)}>
+            <option value="">All</option>
+            {derivedVariantClasses.map((option) => (
+              <option key={option} value={option}>
+                {option.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="maf-detail-filter-field">
+          <span>Type</span>
+          <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+            <option value="">All</option>
+            {derivedVariantTypes.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="maf-detail-filter-actions">
+          <button className="button-primary" type="submit">
+            Apply
+          </button>
+          <button className="button-secondary" type="button" onClick={clearTableFilter}>
+            Reset
+          </button>
+        </div>
+      </form>
+
       <div className="maf-results-panel">
         <div className="maf-results-header">
           <div>
             <h3>Genome Browser</h3>
-            <p>Interactive mutation map for <strong>{geneSymbol}</strong> on hg38.</p>
+            <p>
+              Interactive mutation map for <strong>{geneSymbol}</strong> on hg38.
+              {applied.cancerType.length > 0 ? ` Filtered to ${applied.cancerType.join(", ")}.` : ""}
+            </p>
           </div>
           <div className="maf-results-hint">
             {isCfDNA ? "Each track is a cancer cohort." : "Each track is a cancer type."} Hover mutations for details.
@@ -117,7 +326,7 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
         {igvMutationsQ.isLoading ? (
           <p className="panel-note">Loading mutation map...</p>
         ) : (
-          <IgvBrowser gene={geneSymbol} mutations={igvMutations} cancerTypes={[]} />
+          <IgvBrowser gene={geneSymbol} mutations={igvMutations} cancerTypes={applied.cancerType} />
         )}
       </div>
 
@@ -134,7 +343,9 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
             <span>Rows per page</span>
             <select value={pageSize} onChange={(event) => changePageSize(Number(event.target.value))}>
               {PAGE_SIZE_OPTIONS.map((option) => (
-                <option key={option} value={option}>{option}</option>
+                <option key={option} value={option}>
+                  {option}
+                </option>
               ))}
             </select>
           </label>
@@ -142,7 +353,9 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
 
         {dataQ.isLoading ? <p className="panel-note">Loading mutation records...</p> : null}
         {dataQ.isError ? (
-          <p className="panel-note" style={{ color: "#c0392b" }}>Failed to load mutation detail.</p>
+          <p className="panel-note" style={{ color: "#c0392b" }}>
+            Failed to load mutation detail.
+          </p>
         ) : null}
 
         {!dataQ.isLoading && !dataQ.isError ? (
@@ -158,7 +371,7 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
                   <thead>
                     <tr>
                       <th>Gene</th>
-                      {isCfDNA ? <th>Cancer</th> : <th>Cancer</th>}
+                      <th>Cancer</th>
                       <th>Sample Barcode</th>
                       <th>Coordinate</th>
                       <th>Alleles</th>
@@ -210,7 +423,9 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
                 >
                   Previous
                 </button>
-                <span>Page {currentPage} / {totalPages || 1}</span>
+                <span>
+                  Page {currentPage} / {totalPages || 1}
+                </span>
                 <button
                   className="button-secondary"
                   type="button"

@@ -52,18 +52,18 @@ const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] 
 
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 15, anchorPct: 46, browseKey: "HeadAndNeck", alwaysShow: false },
-  { id: "Lung", label: "Lung", side: "left", topPct: 30, anchorPct: 39, browseKey: "Lung", alwaysShow: true },
-  { id: "Liver", label: "Liver", side: "left", topPct: 40, anchorPct: 38, browseKey: "Liver", alwaysShow: true },
-  { id: "Kidney", label: "Kidney", side: "left", topPct: 48, anchorPct: 41, browseKey: "Kidney", alwaysShow: false },
-  { id: "Endometrial", label: "Endometrial", side: "left", topPct: 59, anchorPct: 47, browseKey: "Endometrial", alwaysShow: false },
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 13, anchorPct: 48, browseKey: "HeadAndNeck", alwaysShow: false },
+  { id: "Lung", label: "Lung", side: "left", topPct: 28, anchorPct: 42, browseKey: "Lung", alwaysShow: true },
+  { id: "Liver", label: "Liver", side: "left", topPct: 38, anchorPct: 43, browseKey: "Liver", alwaysShow: true },
+  { id: "Kidney", label: "Kidney", side: "left", topPct: 43, anchorPct: 41, browseKey: "Kidney", alwaysShow: false },
+  { id: "Endometrial", label: "Endometrial", side: "left", topPct: 55, anchorPct: 48, browseKey: "Endometrial", alwaysShow: false },
   /* ── right side (top → bottom) ── */
-  { id: "Breast", label: "Breast", side: "right", topPct: 33, anchorPct: 57, browseKey: "Breast", alwaysShow: true },
-  { id: "Gastric", label: "Gastric", side: "right", topPct: 42, anchorPct: 52, browseKey: "Gastric", alwaysShow: false },
-  { id: "Pancreatic", label: "Pancreas", side: "right", topPct: 49, anchorPct: 53, browseKey: "Pancreatic", alwaysShow: true },
-  { id: "Ovarian", label: "Ovarian", side: "right", topPct: 56, anchorPct: 50, browseKey: "Ovarian", alwaysShow: false },
-  { id: "Colorectal", label: "Colorectal", side: "right", topPct: 62, anchorPct: 51, browseKey: "Colorectal", alwaysShow: true },
-  { id: "Bladder", label: "Bladder", side: "right", topPct: 68, anchorPct: 49, browseKey: "Bladder", alwaysShow: false },
+  { id: "Breast", label: "Breast", side: "right", topPct: 31, anchorPct: 58, browseKey: "Breast", alwaysShow: true },
+  { id: "Gastric", label: "Gastric", side: "right", topPct: 39, anchorPct: 54, browseKey: "Gastric", alwaysShow: false },
+  { id: "Pancreatic", label: "Pancreas", side: "right", topPct: 43, anchorPct: 52, browseKey: "Pancreatic", alwaysShow: true },
+  { id: "Ovarian", label: "Ovarian", side: "right", topPct: 51, anchorPct: 53, browseKey: "Ovarian", alwaysShow: false },
+  { id: "Colorectal", label: "Colorectal", side: "right", topPct: 56, anchorPct: 55, browseKey: "Colorectal", alwaysShow: true },
+  { id: "Bladder", label: "Bladder", side: "right", topPct: 60, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
 ] as const;
 
 type HeroRingEntry = {
