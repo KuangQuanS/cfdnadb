@@ -1,23 +1,30 @@
-name: Build WAR
+name: Build and Deploy WAR
 
 on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
+      - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+env:
+  APP_WAR_FILE: cfdnadb.war
+  TOMCAT_WEBAPPS_DIR: /webapps/apache-tomcat-9.0.96/webapps
+  DEPLOY_TMP_DIR: /webapps/tmp/github-deploy
+  BACKUP_DIR: /webapps/tomcat-war-backup
+
 jobs:
-  build-war:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java 11
+      - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -31,13 +38,67 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Build WAR package
+      - name: Build WAR
         working-directory: backend
-        run: mvn -B -DskipTests package
+        run: mvn -B clean package -DskipTests
+
+      - name: Prepare WAR artifact
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cp backend/target/*.war "out/${APP_WAR_FILE}"
+          ls -lh out
 
       - name: Upload WAR artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cfdnadb-war
-          path: backend/target/cfdnadb.war
+          name: app-war
+          path: out/${{ env.APP_WAR_FILE }}
+          retention-days: 7
           if-no-files-found: error
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, linux]
+
+    steps:
+      - name: Show current user
+        run: |
+          set -euo pipefail
+          whoami
+          pwd
+          ls -ld "${TOMCAT_WEBAPPS_DIR}"
+          mkdir -p "${DEPLOY_TMP_DIR}"
+          ls -ld "${DEPLOY_TMP_DIR}"
+
+      - name: Download WAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-war
+          path: ${{ env.DEPLOY_TMP_DIR }}
+
+      - name: Check downloaded files
+        run: |
+          set -euo pipefail
+          ls -lh "${DEPLOY_TMP_DIR}"
+          test -f "${DEPLOY_TMP_DIR}/${APP_WAR_FILE}"
+
+      - name: Backup old WAR
+        run: |
+          set -euo pipefail
+          mkdir -p "${BACKUP_DIR}"
+          if [ -f "${TOMCAT_WEBAPPS_DIR}/${APP_WAR_FILE}" ]; then
+            cp "${TOMCAT_WEBAPPS_DIR}/${APP_WAR_FILE}" \
+               "${BACKUP_DIR}/${APP_WAR_FILE%.war}-$(date +%F_%H-%M-%S).war"
+          fi
+
+      - name: Replace WAR only
+        run: |
+          set -euo pipefail
+          mv -f "${DEPLOY_TMP_DIR}/${APP_WAR_FILE}" "${TOMCAT_WEBAPPS_DIR}/${APP_WAR_FILE}"
+          touch "${TOMCAT_WEBAPPS_DIR}/${APP_WAR_FILE}"
+
+      - name: Verify deployed WAR
+        run: |
+          set -euo pipefail
+          ls -lh "${TOMCAT_WEBAPPS_DIR}/${APP_WAR_FILE}"
