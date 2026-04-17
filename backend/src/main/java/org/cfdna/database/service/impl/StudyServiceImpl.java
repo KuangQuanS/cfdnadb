@@ -64,7 +64,7 @@ public class StudyServiceImpl implements StudyService {
         Page<Study> page = studyRepository.findAll(StudySpecification.withFilters(request), pageable);
 
         return new PagedResponse<>(
-                page.getContent().stream().map(this::toSummaryDto).toList(),
+                page.getContent().stream().map(this::toSummaryDto).collect(java.util.stream.Collectors.toList()),
                 page.getNumber(),
                 page.getSize(),
                 page.getTotalElements(),
@@ -78,16 +78,16 @@ public class StudyServiceImpl implements StudyService {
     public StudyDetailDto getStudy(Long id) {
         Study study = studyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Study not found: " + id));
-        List<DatasetDto> datasets = datasetRepository.findByStudyIdOrderByIdAsc(id).stream().map(this::toDatasetDto).toList();
+        List<DatasetDto> datasets = datasetRepository.findByStudyIdOrderByIdAsc(id).stream().map(this::toDatasetDto).collect(java.util.stream.Collectors.toList());
         List<SampleGroupDto> sampleGroups = sampleGroupRepository.findByDatasetStudyIdOrderByDatasetIdAscIdAsc(id).stream()
                 .map(this::toSampleGroupDto)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         List<BiomarkerRecordDto> biomarkers = biomarkerRecordRepository.findTop10ByStudyIdOrderByIdAsc(id).stream()
                 .map(this::toBiomarkerDto)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         List<DownloadAssetDto> downloads = downloadAssetRepository.findByStudyIdOrderByNameAsc(id).stream()
                 .map(this::toDownloadDto)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
 
         return new StudyDetailDto(
                 study.getId(),

@@ -112,7 +112,7 @@ public class MafDuckDbImportService {
             throw new IllegalStateException("Failed to create tables in " + dbPath, e);
         }
 
-        // Phase 2: import MAF data — each source in its own connection
+        // Phase 2: import MAF data - each source in its own connection
         try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
             conn.setAutoCommit(false);
             cfdnaRows = importCfDna(conn, cfDnaPath);
@@ -633,14 +633,14 @@ public class MafDuckDbImportService {
                 List<Path> dseDirs = datasets.filter(Files::isDirectory)
                         .filter(p -> p.getFileName().toString().startsWith("GSE"))
                         .sorted()
-                        .collect(Collectors.toList());
+                        .collect(java.util.stream.Collectors.toList());
                 for (Path dseDir : dseDirs) {
                     String accession = dseDir.getFileName().toString();
                     try (Stream<Path> files = Files.list(dseDir)) {
                         List<Path> annoFiles = files.filter(Files::isRegularFile)
                                 .filter(p -> p.getFileName().toString().endsWith("_anno.txt"))
                                 .sorted()
-                                .collect(Collectors.toList());
+                                .collect(java.util.stream.Collectors.toList());
                         for (Path annoFile : annoFiles) {
                             importGeoAnnoFile(connection, cancer, accession, annoFile);
                             log.info("[QUERY-IMPORT] imported GEO file cancer={}, accession={}, file={}",
@@ -744,7 +744,7 @@ public class MafDuckDbImportService {
                     .sorted(Comparator.comparing((SampleRow row) -> row.cancerType)
                             .thenComparing(row -> row.source)
                             .thenComparing(row -> row.sampleId))
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             int batchCount = 0;
             for (SampleRow row : rows) {
                 statement.setString(1, row.cancerType);

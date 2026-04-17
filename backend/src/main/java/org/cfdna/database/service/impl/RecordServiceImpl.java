@@ -38,7 +38,7 @@ public class RecordServiceImpl implements RecordService {
         );
 
         return new PagedResponse<>(
-                page.getContent().stream().map(this::toDto).toList(),
+                page.getContent().stream().map(this::toDto).collect(java.util.stream.Collectors.toList()),
                 page.getNumber(),
                 page.getSize(),
                 page.getTotalElements(),

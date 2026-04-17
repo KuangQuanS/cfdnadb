@@ -130,7 +130,7 @@ public class DuckDbService {
     public List<CancerSummaryDto> getCancerSummary() {
         return CANCERS.stream()
                 .map(this::buildCancerSummary)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     public List<TopGeneDto> getTopGenes(String cancer, int limit) {
@@ -152,7 +152,7 @@ public class DuckDbService {
         List<TopGeneDto> results = new ArrayList<>();
         try (Connection connection = openMafConnection();
              Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql.formatted(readExpr, limit))) {
+             ResultSet resultSet = statement.executeQuery(String.format(sql, readExpr, limit))) {
             while (resultSet.next()) {
                 results.add(new TopGeneDto(resultSet.getString("gene"), resultSet.getLong("occurrence_count")));
             }
@@ -192,7 +192,7 @@ public class DuckDbService {
 
         long totalRows;
         try (Connection connection = openMafConnection();
-             PreparedStatement countStatement = connection.prepareStatement(countSql.formatted(readExpr))) {
+             PreparedStatement countStatement = connection.prepareStatement(String.format(countSql, readExpr))) {
             countStatement.setString(1, normalizedGene);
             try (ResultSet resultSet = countStatement.executeQuery()) {
                 resultSet.next();
@@ -204,7 +204,7 @@ public class DuckDbService {
             }
 
             List<GeneVariantDto> content = new ArrayList<>();
-            try (PreparedStatement dataStatement = connection.prepareStatement(dataSql.formatted(readExpr))) {
+            try (PreparedStatement dataStatement = connection.prepareStatement(String.format(dataSql, readExpr))) {
                 dataStatement.setString(1, normalizedGene);
                 dataStatement.setInt(2, pageSize);
                 dataStatement.setInt(3, Math.max(page - 1, 0) * pageSize);
@@ -320,7 +320,7 @@ public class DuckDbService {
         }
 
         String normalizedGene = gene.trim().toLowerCase(Locale.ROOT);
-        String geneFilter = "POSITION('%s' IN LOWER(COALESCE(\"Gene.refGene\", ''))) > 0".formatted(normalizedGene.replace("'", "''"));
+        String geneFilter = String.format("POSITION('%s' IN LOWER(COALESCE(\"Gene.refGene\", ''))) > 0", normalizedGene.replace("'", "''"));
 
         String statsSql = "SELECT COUNT(*) AS total_vars, COUNT(DISTINCT Tumor_Sample_Barcode) AS unique_samples " +
                 "FROM %s WHERE %s";
@@ -340,7 +340,7 @@ public class DuckDbService {
 
             long totalVars = 0;
             long uniqueSamples = 0;
-            try (ResultSet rs = stmt.executeQuery(statsSql.formatted(readExpr, geneFilter))) {
+            try (ResultSet rs = stmt.executeQuery(String.format(statsSql, readExpr, geneFilter))) {
                 if (rs.next()) {
                     totalVars = rs.getLong("total_vars");
                     uniqueSamples = rs.getLong("unique_samples");
@@ -348,17 +348,17 @@ public class DuckDbService {
             }
 
             List<LabelCountDto> funcBreakdown = new ArrayList<>();
-            try (ResultSet rs = stmt.executeQuery(funcSql.formatted(readExpr, geneFilter))) {
+            try (ResultSet rs = stmt.executeQuery(String.format(funcSql, readExpr, geneFilter))) {
                 while (rs.next()) funcBreakdown.add(new LabelCountDto(rs.getString("label"), rs.getLong("cnt")));
             }
 
             List<LabelCountDto> exonicBreakdown = new ArrayList<>();
-            try (ResultSet rs = stmt.executeQuery(exonicSql.formatted(readExpr, geneFilter))) {
+            try (ResultSet rs = stmt.executeQuery(String.format(exonicSql, readExpr, geneFilter))) {
                 while (rs.next()) exonicBreakdown.add(new LabelCountDto(rs.getString("label"), rs.getLong("cnt")));
             }
 
             List<LabelCountDto> chromBreakdown = new ArrayList<>();
-            try (ResultSet rs = stmt.executeQuery(chromSql.formatted(readExpr, geneFilter))) {
+            try (ResultSet rs = stmt.executeQuery(String.format(chromSql, readExpr, geneFilter))) {
                 while (rs.next()) chromBreakdown.add(new LabelCountDto(rs.getString("label"), rs.getLong("cnt")));
             }
 
@@ -570,7 +570,7 @@ public class DuckDbService {
     private List<LabelCountDto> queryLabelCounts(String cancer, String sqlTemplate) {
         String readExpr = resolveMultiCancerReadExpr(cancer);
         if (readExpr == null) return List.of();
-        String sql = sqlTemplate.formatted(readExpr);
+        String sql = String.format(sqlTemplate, readExpr);
         List<LabelCountDto> results = new ArrayList<>();
         try (Connection connection = openMafConnection();
              Statement statement = connection.createStatement();
@@ -651,7 +651,7 @@ public class DuckDbService {
                 })
                 .filter(Objects::nonNull)
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         String inClause = targets.stream().map(value -> "?").collect(Collectors.joining(","));
         String sql = "SELECT cancer_type, file_name, gene_name, chromosome, start_position, end_position " +
                 "FROM statistics_asset_index WHERE asset_type = 'gene_plot' AND source = 'Overview' " +
@@ -897,7 +897,7 @@ public class DuckDbService {
                     return normalized;
                 })
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private String normalizeTcgaCancerDisplay(String cancerType) {
@@ -931,7 +931,7 @@ public class DuckDbService {
         if (isTcga(source)) return TCGA_MAF_TABLE;
         if (isGeo(source)) return GEO_MAF_TABLE;
         if (isPrivate(source)) return CFDNA_MAF_TABLE;
-        // "cfDNA" default → union view if available, else fall back to private table
+        // "cfDNA" default -> union view if available, else fall back to private table
         return allCfdnaViewAvailable() ? ALL_CFDNA_MAF_VIEW : CFDNA_MAF_TABLE;
     }
 
@@ -1644,7 +1644,7 @@ public class DuckDbService {
     }
 
     /**
-     * Returns a gene×sample mutation matrix for the oncoplot (waterfall chart).
+     * Returns a gene-sample mutation matrix for the oncoplot (waterfall chart).
      * For each (gene, sample) pair the most severe variant classification is returned.
      * Genes are ordered by the number of distinct samples mutated (descending).
      * Samples are ordered by total mutation count (descending).
@@ -1670,7 +1670,7 @@ public class DuckDbService {
         List<String> panTypes = requested.stream()
                 .flatMap(c -> CANCER_TO_PAN_CANCER_TYPES.getOrDefault(c, List.of(c)).stream())
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
 
         String cancerFilter = panTypes.isEmpty() ? "" :
                 "WHERE c.CancerType IN (" +
@@ -1769,13 +1769,13 @@ public class DuckDbService {
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
                         .thenComparing(Map.Entry.comparingByKey()))
                 .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
 
         List<String> samples = sampleCounts.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
                         .thenComparing(Map.Entry.comparingByKey()))
                 .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
 
         return new OncoplottDto(genes, samples, cells, geneCounts, sampleCounts);
     }
@@ -1895,13 +1895,13 @@ public class DuckDbService {
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
                         .thenComparing(Map.Entry.comparingByKey()))
                 .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
 
         List<String> samples = sampleCounts.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
                         .thenComparing(Map.Entry.comparingByKey()))
                 .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
 
         return new OncoplottDto(genes, samples, cells, geneCounts, sampleCounts);
     }
@@ -2237,7 +2237,7 @@ public class DuckDbService {
                     return normalized.startsWith("chr") ? normalized : "chr" + normalized;
                 })
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private String buildNormalizedMafChromosomeExpression() {
@@ -2289,7 +2289,7 @@ public class DuckDbService {
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private CancerSummaryDto buildCancerSummary(String cancer) {
@@ -2374,7 +2374,7 @@ public class DuckDbService {
                             throw new IllegalStateException("Failed to inspect asset file " + path, exception);
                         }
                     })
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
         } catch (IOException exception) {
             log.warn("Failed to scan {} assets for {}", category, cancer, exception);
             return List.of();
@@ -2699,7 +2699,7 @@ public class DuckDbService {
         List<SampleSelectionDto> selections = request.getSamples().stream()
                 .filter(Objects::nonNull)
                 .filter(item -> item.getCancer() != null && item.getSource() != null && item.getSampleId() != null)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (selections.isEmpty()) {
             throw new IllegalArgumentException("Selected samples are invalid.");
         }
@@ -2785,7 +2785,7 @@ public class DuckDbService {
                 item.key.cancer,
                 item.key.source,
                 item.variantCount,
-                item.geneCounts.keySet().stream().limit(3).toList(),
+                item.geneCounts.keySet().stream().limit(3).collect(java.util.stream.Collectors.toList()),
                 buildAvailableFileTypes(item),
                 item.annoPath != null,
                 item.vcfPath != null
@@ -2881,7 +2881,7 @@ public class DuckDbService {
                 .filter(Objects::nonNull)
                 .map(Path::toAbsolutePath)
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (files.isEmpty()) {
             return;
         }
@@ -2933,7 +2933,7 @@ public class DuckDbService {
     private void enrichTcgaSamples(Map<SampleKey, SampleInventory> inventory, boolean includeTopGenes) {
         List<SampleInventory> tcgaSamples = inventory.values().stream()
                 .filter(item -> "tcga".equals(item.key.source))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (tcgaSamples.isEmpty() || !mafDatabaseAvailable()) {
             return;
         }
@@ -2941,7 +2941,7 @@ public class DuckDbService {
         List<String> sampleIds = tcgaSamples.stream()
                 .map(item -> item.key.sampleId)
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         String placeholders = String.join(", ", Collections.nCopies(sampleIds.size(), "?"));
         String countSql = "SELECT tumor_sample_barcode AS sample_id, COUNT(*) AS variant_count " +
                 "FROM " + TCGA_MAF_TABLE + " WHERE tumor_sample_barcode IN (" + placeholders + ") " +
@@ -3044,7 +3044,7 @@ public class DuckDbService {
         List<String> normalizedPaths = paths.stream()
                 .map(Path::toAbsolutePath)
                 .map(this::toDuckDbPath)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         String options = "delim='\\t', header=true, ignore_errors=true, union_by_name=true" +
                 (includeFileName ? ", filename=true" : "");
         if (normalizedPaths.size() == 1) {
@@ -3187,13 +3187,13 @@ public class DuckDbService {
 
     private String extractSampleId(String fileName, String category) {
         if ("multianno".equals(category)) {
-            // e.g. "BR_RTCG0P0003-1-TWN1.hg38_multianno.txt" → "BR_RTCG0P0003-1-TWN1"
+            // e.g. "BR_RTCG0P0003-1-TWN1.hg38_multianno.txt" -> "BR_RTCG0P0003-1-TWN1"
             int idx = fileName.indexOf(".hg38_multianno");
             if (idx > 0) return fileName.substring(0, idx);
             idx = fileName.indexOf("_multianno");
             if (idx > 0) return fileName.substring(0, idx);
         } else if ("filtered_vcf".equals(category) || "vcf".equals(category)) {
-            // e.g. "BR_RTCG0P0003-1-TWN1.filtered.vcf.gz" → "BR_RTCG0P0003-1-TWN1"
+            // e.g. "BR_RTCG0P0003-1-TWN1.filtered.vcf.gz" -> "BR_RTCG0P0003-1-TWN1"
             int idx = fileName.indexOf(".filtered");
             if (idx > 0) return fileName.substring(0, idx);
             idx = fileName.indexOf(".vcf");
@@ -3267,10 +3267,10 @@ public class DuckDbService {
 
     /**
      * Resolve the plot directory for a given cancer + source.
-     * private   → {cancer}/private/stats/
-     * public    → {cancer}/public/stats/
-     * tcga      → {cancer}/tcga/stats/
-     * Overview  → {cancer}/stats/
+      * private   -> {cancer}/private/stats/
+      * public    -> {cancer}/public/stats/
+      * tcga      -> {cancer}/tcga/stats/
+      * Overview  -> {cancer}/stats/
      */
     private Path resolveStatisticsPlotDir(String cancer, String source) {
         Path cancerDir = resolveCancerDir(cancer);
@@ -3486,7 +3486,7 @@ public class DuckDbService {
                         return !name.startsWith("GEO_") && !name.startsWith("Experiment_");
                     })
                     .sorted()
-                    .collect(Collectors.toList());
+                    .collect(java.util.stream.Collectors.toList());
 
             for (Path vafFile : vafFiles) {
                 String fileName = vafFile.getFileName().toString();

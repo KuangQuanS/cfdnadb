@@ -40,7 +40,7 @@ public class StatisticsController {
             entry.put("source", src);
             entry.put("hasGenePlots", duckDbService.hasGenePlots(cancer, src));
             return entry;
-        }).toList();
+        }).collect(java.util.stream.Collectors.toList());
         return ApiResponse.success(result);
     }
 

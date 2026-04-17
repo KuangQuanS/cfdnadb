@@ -39,10 +39,10 @@ public class OverviewServiceImpl implements OverviewService {
                 downloadAssetRepository.count(),
                 studyRepository.countByDiseaseType(PageRequest.of(0, 5)).stream()
                         .map(item -> new LabelCountDto(item.getLabel(), item.getCount()))
-                        .toList(),
+                        .collect(java.util.stream.Collectors.toList()),
                 studyRepository.countByTechnology(PageRequest.of(0, 5)).stream()
                         .map(item -> new LabelCountDto(item.getLabel(), item.getCount()))
-                        .toList()
+                        .collect(java.util.stream.Collectors.toList())
         );
     }
 }

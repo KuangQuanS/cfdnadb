@@ -27,7 +27,7 @@ public class DownloadServiceImpl implements DownloadService {
     public List<DownloadAssetDto> listDownloads() {
         return downloadAssetRepository.findAllByOrderByCategoryAscNameAsc().stream()
                 .map(this::toDto)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override

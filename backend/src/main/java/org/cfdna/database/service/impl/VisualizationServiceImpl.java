@@ -25,20 +25,20 @@ public class VisualizationServiceImpl implements VisualizationService {
         return new VisualizationSummaryDto(
                 studyRepository.countByDiseaseType(PageRequest.of(0, 10)).stream()
                         .map(item -> new LabelCountDto(item.getLabel(), item.getCount()))
-                        .toList(),
+                        .collect(java.util.stream.Collectors.toList()),
                 studyRepository.countByTechnology(PageRequest.of(0, 10)).stream()
                         .map(item -> new LabelCountDto(item.getLabel(), item.getCount()))
-                        .toList(),
+                        .collect(java.util.stream.Collectors.toList()),
                 biomarkerRecordRepository.countByMarkerType(PageRequest.of(0, 10)).stream()
                         .map(item -> new LabelCountDto(item.getLabel(), item.getCount()))
-                        .toList(),
+                        .collect(java.util.stream.Collectors.toList()),
                 studyRepository.countBySampleSource(PageRequest.of(0, 10)).stream()
                         .map(item -> new LabelCountDto(item.getLabel(), item.getCount()))
-                        .toList(),
+                        .collect(java.util.stream.Collectors.toList()),
                 studyRepository.countByPublicationYear().stream()
                         .filter(item -> item.getYear() != null)
                         .map(item -> new YearCountDto(item.getYear(), item.getCount()))
-                        .toList()
+                        .collect(java.util.stream.Collectors.toList())
         );
     }
 }
