@@ -56,7 +56,7 @@ const ALL_CALLOUTS = [
   { id: "Lung", label: "Lung", side: "left", topPct: 28, anchorPct: 42, browseKey: "Lung", alwaysShow: true },
   { id: "Liver", label: "Liver", side: "left", topPct: 38, anchorPct: 43, browseKey: "Liver", alwaysShow: true },
   { id: "Kidney", label: "Kidney", side: "left", topPct: 43, anchorPct: 41, browseKey: "Kidney", alwaysShow: false },
-  { id: "Endometrial", label: "Endometrial", side: "left", topPct: 55, anchorPct: 48, browseKey: "Endometrial", alwaysShow: false },
+  { id: "Endometrial", label: "Endometrial", side: "left", topPct: 52, anchorPct: 48, browseKey: "Endometrial", alwaysShow: false },
   { id: "Bladder", label: "Bladder", side: "left", topPct: 58, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
   /* ── right side (top → bottom) ── */
   { id: "Breast", label: "Breast", side: "right", topPct: 31, anchorPct: 58, browseKey: "Breast", alwaysShow: true },
