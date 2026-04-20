@@ -2297,8 +2297,7 @@ public class DuckDbService {
         if (!mafDatabaseAvailable()) {
             return Map.of();
         }
-        String tableName = allCfdnaViewAvailable() ? ALL_CFDNA_MAF_VIEW : CFDNA_MAF_TABLE;
-        String sql = "SELECT cancer_type, COUNT(*) AS mutation_count FROM " + tableName + " GROUP BY cancer_type";
+        String sql = "SELECT cancer_type, COUNT(*) AS mutation_count FROM aggregate_multianno GROUP BY cancer_type";
         Map<String, Long> result = new HashMap<>();
         try (Connection connection = openMafConnection();
              PreparedStatement statement = connection.prepareStatement(sql);
@@ -2317,8 +2316,7 @@ public class DuckDbService {
     }
 
     private CancerSummaryDto buildCancerSummary(String cancer, Map<String, Long> mutationCounts) {
-        String mafCancerType = CANCER_TO_CFDNA_TYPE.getOrDefault(cancer, cancer);
-        long mutationCount = mutationCounts.getOrDefault(mafCancerType, 0L);
+        long mutationCount = mutationCounts.getOrDefault(cancer, 0L);
         String sql =
                 "WITH cohort AS (" +
                         "  SELECT " +
