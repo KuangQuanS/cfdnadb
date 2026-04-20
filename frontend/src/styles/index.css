@@ -165,26 +165,15 @@ button, input, select { font: inherit; }
 .site-logo-link {
   display: flex;
   align-items: center;
+  width: clamp(160px, 20vw, 320px);
   text-decoration: none;
 }
 
-.site-logo-frame {
-  width: 114px;
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-  border-radius: 0;
-  background: transparent;
-}
-
 .site-logo-img {
-  width: 114px;
+  width: 100%;
   height: auto;
   display: block;
-  transform: none;
-  filter: saturate(1.02) contrast(1.04);
+  filter: saturate(1.02) contrast(1.03);
 }
 
 .site-kicker, .section-eyebrow, .hero-kicker {
