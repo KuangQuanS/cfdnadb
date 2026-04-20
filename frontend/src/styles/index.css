@@ -129,7 +129,6 @@ button, input, select { font: inherit; }
 
 /* Header */
 .site-header {
-  background-color: rgb(75, 53, 154);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

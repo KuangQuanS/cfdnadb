@@ -107,7 +107,7 @@ export function AppShell({ children }: PropsWithChildren) {
       <header
         className="site-header"
         style={{
-          backgroundImage: `linear-gradient(90deg, rgba(75, 53, 154, 0.94), rgba(75, 53, 154, 0.9)), url(${headerBgPng})`
+          backgroundImage: `url(${headerBgPng})`
         }}
       >
         <div className="header-container">
