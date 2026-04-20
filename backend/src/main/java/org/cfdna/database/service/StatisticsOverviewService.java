@@ -22,7 +22,7 @@ public class StatisticsOverviewService {
     private static final String ALL_COHORTS = String.join(",",
             List.of("Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
                     "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
-                    "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "NGY"));
+                    "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor"));
 
     private final DuckDbService duckDbService;
     private final long refreshMs;

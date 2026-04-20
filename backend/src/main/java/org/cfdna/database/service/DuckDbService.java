@@ -71,7 +71,7 @@ public class DuckDbService {
     private static final List<String> CANCERS = List.of(
             "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
             "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
-            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "NGY");
+            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor");
     private static final List<String> REQUIRED_MULTIANNO_COLUMNS = List.of(
             "Chr",
             "Start",
@@ -765,7 +765,7 @@ public class DuckDbService {
             Map.entry("Ovarian",     "Ovarian"),
             Map.entry("Thyroid",     "Thyriod"),  // typo preserved from source data
             Map.entry("Brain",       "Brain"),
-            Map.entry("NGY",         "NGY")
+            Map.entry("Benign_Tumor", "Benign_Tumor")
     );
 
     /**
@@ -828,7 +828,7 @@ public class DuckDbService {
             Map.entry("Ovarian",     List.of("CFDNA_Ovarian")),
             Map.entry("Thyroid",     List.of("CFDNA_Thyriod")),
             Map.entry("Brain",       List.of("CFDNA_Brain")),
-            Map.entry("NGY",         List.of("CFDNA_NGY"))
+            Map.entry("Benign_Tumor", List.of("CFDNA_Benign_Tumor"))
     );
 
     private static final String PAN_CANCER_CLINICAL_FILE = "clinical_data.txt";
@@ -3495,7 +3495,7 @@ public class DuckDbService {
 
     /**
      * Reads all *_VAF_statistics.txt files from the vafDataDir and returns
-     * per-cancer-type lists of Average VAF values. Excludes GEO_ and Experiment_ prefixed files.
+     * per-cancer-type lists of Average VAF values. Excludes GEO_ and Cell_Line_ prefixed files.
      */
     public List<VafDistributionDto> getVafDistribution() {
         List<VafDistributionDto> result = new ArrayList<>();
@@ -3508,7 +3508,7 @@ public class DuckDbService {
                     .filter(p -> p.getFileName().toString().endsWith("_VAF_statistics.txt"))
                     .filter(p -> {
                         String name = p.getFileName().toString();
-                        return !name.startsWith("GEO_") && !name.startsWith("Experiment_");
+                        return !name.startsWith("GEO_") && !name.startsWith("Cell_Line_");
                     })
                     .sorted()
                     .collect(java.util.stream.Collectors.toList());

@@ -176,7 +176,7 @@ class CfDnaEndpointsIntegrationTest {
             for (String cancer : new String[]{
                     "Colorectal", "Liver", "Pancreatic", "Bladder", "Cervical",
                     "Endometrial", "Esophageal", "Gastric", "HeadAndNeck",
-                    "Kidney", "Ovarian", "Thyroid", "NGY"}) {
+                    "Kidney", "Ovarian", "Thyroid", "Benign_Tumor"}) {
                 createEmptyCancer(root.resolve(cancer));
             }
             return root;
