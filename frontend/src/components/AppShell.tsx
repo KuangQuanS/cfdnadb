@@ -8,8 +8,7 @@ const navItems = [
   { to: "/browse", label: "Browse" },
   { to: "/statistics", label: "Statistics" },
   { to: "/downloads", label: "Downloads" },
-  { to: "/help", label: "Help" },
-  { to: "/about", label: "About" }
+  { to: "/help", label: "Help" }
 ];
 
 function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
@@ -51,7 +50,7 @@ function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
           onClick={dismiss}
           className={({ isActive }) => `site-nav-dropdown-link${isActive ? " active" : ""}`}
         >
-          Survival
+          Survival Analysis
         </NavLink>
       </div>
     </div>
@@ -152,8 +151,35 @@ export function AppShell({ children }: PropsWithChildren) {
           <div className="footer-brand">
             <p className="footer-logo">cfdnadb</p>
             <p>
-              Plasma cfDNA somatic mutation database spanning cohort browse, gene search, and downloadable analysis outputs.
+              A curated academic database of somatic mutations identified from plasma cell-free DNA across multiple cancer cohorts. Built to support liquid biopsy research, biomarker discovery, and cross-cohort comparative genomics.
             </p>
+            <p className="footer-badges">
+              <span className="footer-badge">hg38</span>
+              <span className="footer-badge">MuTect2</span>
+              <span className="footer-badge">ANNOVAR</span>
+              <span className="footer-badge">Liquid biopsy</span>
+              <span className="footer-badge">Open access</span>
+            </p>
+          </div>
+
+          <div className="footer-col">
+            <h4>Data</h4>
+            <ul>
+              <li>Plasma cfDNA, hg38 reference</li>
+              <li>Targeted panel &amp; whole-exome sequencing</li>
+              <li>Somatic SNVs and small indels</li>
+              <li>Per-cohort aggregate files available for download</li>
+            </ul>
+          </div>
+
+          <div className="footer-col">
+            <h4>Methods</h4>
+            <ul>
+              <li>Alignment: BWA-MEM + GATK4 BQSR</li>
+              <li>Calling: MuTect2 tumor-only + PoN + FilterMutectCalls</li>
+              <li>Annotation: ANNOVAR (refGene, gnomAD, ClinVar)</li>
+              <li>Query: embedded DuckDB JDBC over cohort aggregates</li>
+            </ul>
           </div>
 
           <div className="footer-col">
@@ -170,15 +196,25 @@ export function AppShell({ children }: PropsWithChildren) {
           </div>
         </div>
 
+        <div className="footer-citation">
+          <div className="footer-citation-inner">
+            <h4>Citation</h4>
+            <p>
+              Lee Lab. cfdnadb: a multi-cohort somatic variant database for circulating cell-free DNA research.
+              Kunming Medical University. 2025. <a href="https://leelab.kmmu.edu.cn/cfdnadb/">https://leelab.kmmu.edu.cn/cfdnadb/</a>
+            </p>
+            <p className="footer-terms">
+              Academic and non-commercial research use only. Variant calls are computational predictions and have not been individually validated — perform appropriate validation before reporting findings in a clinical context.
+            </p>
+          </div>
+        </div>
+
         <div className="footer-bottom">
           <div className="footer-bottom-inner">
             <span>
               &copy; {new Date().getFullYear()} cfdnadb &mdash; Lee Laboratory, Kunming Medical University.
-              Data is provided for academic research use only.
             </span>
             <span>
-              <Link to="/about">Citation</Link>
-              &nbsp;&middot;&nbsp;
               <Link to="/downloads">Data access</Link>
               &nbsp;&middot;&nbsp;
               <Link to="/help">Help</Link>

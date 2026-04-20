@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getMafGeneDetail, getMafSampleSuggestions, queryMafGeneMutations } from "../api/client";
+import { getGeneNcbiSummary, getMafGeneDetail, getMafSampleSuggestions, queryMafGeneMutations } from "../api/client";
 import { IgvBrowser } from "../components/IgvBrowser";
 import { formatNumber } from "../utils/format";
 
@@ -64,9 +64,51 @@ export function GeneMarkerDetailPage() {
         </div>
       </section>
 
+      <GeneNcbiPanel geneSymbol={geneSymbol} />
+
       <SourceDetailPanel source="cfDNA" geneSymbol={geneSymbol} />
       <SourceDetailPanel source="TCGA" geneSymbol={geneSymbol} />
     </div>
+  );
+}
+
+function GeneNcbiPanel({ geneSymbol }: { geneSymbol: string }) {
+  const { data } = useQuery({
+    queryKey: ["gene-ncbi-summary", geneSymbol],
+    queryFn: () => getGeneNcbiSummary(geneSymbol),
+    enabled: Boolean(geneSymbol),
+    staleTime: 60 * 60_000,
+    retry: 1,
+  });
+
+  if (!data) {
+    return null;
+  }
+
+  return (
+    <section className="gene-ncbi-panel" aria-label={`NCBI summary for ${data.symbol}`}>
+      <div className="gene-ncbi-panel-head">
+        <span className="gene-ncbi-panel-title">About {data.symbol}</span>
+        <a className="gene-ncbi-panel-link" href={data.ncbiUrl} target="_blank" rel="noopener noreferrer">
+          View full record on NCBI ↗
+        </a>
+      </div>
+      <dl className="gene-ncbi-panel-meta">
+        {data.name ? (
+          <>
+            <dt>Official full name</dt>
+            <dd>{data.name}</dd>
+          </>
+        ) : null}
+        {data.aliases.length > 0 ? (
+          <>
+            <dt>Also known as</dt>
+            <dd>{data.aliases.join("; ")}</dd>
+          </>
+        ) : null}
+      </dl>
+      {data.summary ? <p className="gene-ncbi-panel-summary">{data.summary}</p> : null}
+    </section>
   );
 }
 

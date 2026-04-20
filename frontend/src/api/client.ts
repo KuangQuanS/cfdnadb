@@ -26,6 +26,7 @@ import type {
   CancerSummary,
   GeneVariant,
   GeneSummary,
+  GeneNcbiSummary,
   TopGene,
   StatisticsSource,
   GenePlot
@@ -307,6 +308,10 @@ export function getMafGeneDetail(gene: string, filters: Omit<MafQueryFilters, "g
   for (const value of filters.variantClass ?? []) params.append("variantClass", value);
   for (const value of filters.variantType ?? []) params.append("variantType", value);
   return requestLive<MafGeneSummary>(`/api/v1/maf-mutations/genes/${encodeURIComponent(gene)}?${params.toString()}`);
+}
+
+export function getGeneNcbiSummary(symbol: string) {
+  return requestLive<GeneNcbiSummary | null>(`/api/v1/genes/${encodeURIComponent(symbol)}/ncbi-summary`);
 }
 
 export function queryMafGeneMutations(gene: string, filters: Omit<MafQueryFilters, "gene">) {

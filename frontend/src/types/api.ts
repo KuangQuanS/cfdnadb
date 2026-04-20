@@ -203,6 +203,15 @@ export interface TopGene {
   count: number;
 }
 
+export interface GeneNcbiSummary {
+  symbol: string;
+  geneId: string;
+  name: string | null;
+  summary: string | null;
+  aliases: string[];
+  ncbiUrl: string;
+}
+
 export interface GeneVariant {
   chr: string;
   start: string;

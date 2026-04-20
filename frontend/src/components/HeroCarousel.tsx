@@ -57,7 +57,7 @@ const ALL_CALLOUTS = [
   { id: "Liver", label: "Liver", side: "left", topPct: 38, anchorPct: 43, browseKey: "Liver", alwaysShow: true },
   { id: "Kidney", label: "Kidney", side: "left", topPct: 43, anchorPct: 41, browseKey: "Kidney", alwaysShow: false },
   { id: "Endometrial", label: "Endometrial", side: "left", topPct: 55, anchorPct: 48, browseKey: "Endometrial", alwaysShow: false },
-  { id: "Bladder", label: "Bladder", side: "left", topPct: 62, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
+  { id: "Bladder", label: "Bladder", side: "left", topPct: 58, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
   /* ── right side (top → bottom) ── */
   { id: "Breast", label: "Breast", side: "right", topPct: 31, anchorPct: 58, browseKey: "Breast", alwaysShow: true },
   { id: "Gastric", label: "Gastric", side: "right", topPct: 39, anchorPct: 54, browseKey: "Gastric", alwaysShow: false },
@@ -355,7 +355,6 @@ export function HeroCarousel() {
           <h1 className="gdc-title">
             Welcome to <span>cfDNAdb</span>
           </h1>
-          <p className="gdc-hero-tagline">A cell-free DNA mutation atlas across the indexed cancer cohorts</p>
           <p className="gdc-subtitle">
             cfDNAdb centralizes cohort-level somatic mutation profiles, sample browse, gene-oriented querying,
             and downloadable analysis resources across the full imported cancer collection, with anatomical browse highlights for breast, colorectal, liver, lung, and pancreatic cohorts.

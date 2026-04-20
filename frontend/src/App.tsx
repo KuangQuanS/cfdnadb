@@ -9,7 +9,6 @@ const GeneSearchPage = lazy(() => import("./pages/GeneSearchPage").then((module)
 const GeneMarkerDetailPage = lazy(() => import("./pages/GeneMarkerDetailPage").then((module) => ({ default: module.GeneMarkerDetailPage })));
 const StudyDetailPage = lazy(() => import("./pages/StudyDetailPage").then((module) => ({ default: module.StudyDetailPage })));
 const DownloadsPage = lazy(() => import("./pages/DownloadsPage").then((module) => ({ default: module.DownloadsPage })));
-const AboutPage = lazy(() => import("./pages/AboutPage").then((module) => ({ default: module.AboutPage })));
 const StatisticsPage = lazy(() => import("./pages/StatisticsPage").then((module) => ({ default: module.StatisticsPage })));
 const HelpPage = lazy(() => import("./pages/HelpPage").then((module) => ({ default: module.HelpPage })));
 const SurvivalAnalysisPage = lazy(() => import("./pages/SurvivalAnalysisPage").then((module) => ({ default: module.SurvivalAnalysisPage })));
@@ -28,7 +27,6 @@ export default function App() {
           <Route path="/studies/:id" element={<StudyDetailPage />} />
           <Route path="/downloads" element={<DownloadsPage />} />
           <Route path="/help" element={<HelpPage />} />
-          <Route path="/about" element={<AboutPage />} />
         </Routes>
       </Suspense>
     </AppShell>
