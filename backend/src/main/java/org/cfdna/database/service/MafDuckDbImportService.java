@@ -683,6 +683,10 @@ public class MafDuckDbImportService {
     }
 
     private long importAggregateFiles(Connection connection, List<AggregateFile> aggregateFiles) throws SQLException {
+        try (Statement pragma = connection.createStatement()) {
+            pragma.execute("PRAGMA threads=8");
+        }
+
         String sql =
                 "INSERT INTO aggregate_multianno " +
                         "SELECT ?, '', COALESCE(CAST(\"Tumor_Sample_Barcode\" AS VARCHAR), ''), ?, ?, " +
@@ -696,17 +700,21 @@ public class MafDuckDbImportService {
                         "COALESCE(CAST(\"ExonicFunc.refGene\" AS VARCHAR), ''), " +
                         "COALESCE(CAST(\"AAChange.refGene\" AS VARCHAR), ''), " +
                         "COALESCE(CAST(\"Tumor_Sample_Barcode\" AS VARCHAR), '') " +
-                        "FROM read_csv_auto(?, delim='\\t', header=true, ignore_errors=true)";
+                        "FROM read_csv_auto(?, delim='\\t', header=true, all_varchar=true, ignore_errors=true)";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            int idx = 0;
             for (AggregateFile aggregateFile : aggregateFiles) {
+                idx++;
+                log.info("[QUERY-IMPORT] aggregate {}/{}: cancer={}, file={}",
+                        idx, aggregateFiles.size(), aggregateFile.cancer,
+                        aggregateFile.path.toAbsolutePath());
                 statement.setString(1, aggregateFile.cancer);
                 statement.setString(2, aggregateFile.path.getFileName().toString());
                 statement.setString(3, aggregateFile.path.toAbsolutePath().toString());
                 statement.setString(4, aggregateFile.path.toAbsolutePath().toString());
-                statement.addBatch();
+                statement.executeUpdate();
             }
-            statement.executeBatch();
         }
         return tableCount(connection, "aggregate_multianno");
     }
