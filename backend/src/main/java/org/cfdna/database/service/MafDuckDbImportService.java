@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -138,31 +139,73 @@ public class MafDuckDbImportService {
             throw new IllegalStateException("Failed to import GEO MAF into " + dbPath, e);
         }
 
-        // Phase 3: aggregates, pan-cancer, sample inventory
+        // Phase 3: aggregates, pan-cancer, sample inventory — each sub-step in its own connection
         long aggregateRows, panClinicalRows, panMutationRows;
         try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
             conn.setAutoCommit(false);
             aggregateRows = importAggregateFiles(conn, plan.aggregateFiles);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 3a/5: aggregates done, rows={}", aggregateRows);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to import aggregates into " + dbPath, e);
+        }
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
             panClinicalRows = importPanCancerFile(conn, panClinical, "pan_cancer_clinical");
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 3b/5: pan_clinical done, rows={}", panClinicalRows);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to import pan_cancer_clinical into " + dbPath, e);
+        }
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
             panMutationRows = importPanCancerFile(conn, panMutations, "pan_cancer_mutations");
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 3c/5: pan_mutations done, rows={}", panMutationRows);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to import pan_cancer_mutations into " + dbPath, e);
+        }
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
             insertSampleInventory(conn, plan.sampleRows);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 3d/5: sample_inventory inserted ({} rows)", plan.sampleRows.size());
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to insert sample_inventory into " + dbPath, e);
+        }
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
             insertSampleTopGenes(conn, plan.sampleTopGeneRows);
             conn.commit();
-            log.info("[QUERY-IMPORT] phase 3/5: aggregates={}, pan_clinical={}, pan_mutations={}", aggregateRows, panClinicalRows, panMutationRows);
+            log.info("[QUERY-IMPORT] phase 3e/5: sample_top_genes inserted ({} rows)", plan.sampleTopGeneRows.size());
         } catch (SQLException e) {
-            throw new IllegalStateException("Failed to import aggregates/samples into " + dbPath, e);
+            throw new IllegalStateException("Failed to insert sample_top_genes into " + dbPath, e);
         }
 
-        // Phase 4: enrich TCGA, cohort files, statistics assets
+        // Phase 4: enrich TCGA, cohort files, statistics assets — each sub-step in its own connection
         try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
             conn.setAutoCommit(false);
             enrichTcgaSamples(conn);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 4a/5: tcga enrichment done");
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to enrich TCGA samples in " + dbPath, e);
+        }
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
             insertCohortFileIndex(conn, plan.cohortFileRows);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 4b/5: cohort_file_index inserted ({} rows)", plan.cohortFileRows.size());
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to insert cohort_file_index in " + dbPath, e);
+        }
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
             insertStatisticsAssetIndex(conn, plan.assetRows);
             conn.commit();
-            log.info("[QUERY-IMPORT] phase 4/5: enrichment & file indexes done");
+            log.info("[QUERY-IMPORT] phase 4c/5: statistics_asset_index inserted ({} rows)", plan.assetRows.size());
         } catch (SQLException e) {
-            throw new IllegalStateException("Failed to enrich/index data in " + dbPath, e);
+            throw new IllegalStateException("Failed to insert statistics_asset_index in " + dbPath, e);
         }
 
         // Phase 5: indexes & ANALYZE
@@ -761,12 +804,12 @@ public class MafDuckDbImportService {
                 statement.setLong(4, row.variantCount);
                 statement.setBoolean(5, row.hasAnnotated);
                 statement.setBoolean(6, row.hasSomatic);
-                statement.setString(7, row.annoFileName);
-                statement.setString(8, pathValue(row.annoFilePath));
-                statement.setString(9, row.vcfFileName);
-                statement.setString(10, pathValue(row.vcfFilePath));
-                statement.setString(11, row.avinputFileName);
-                statement.setString(12, pathValue(row.avinputFilePath));
+                setStringSafe(statement, 7, row.annoFileName);
+                setStringSafe(statement, 8, pathValue(row.annoFilePath));
+                setStringSafe(statement, 9, row.vcfFileName);
+                setStringSafe(statement, 10, pathValue(row.vcfFilePath));
+                setStringSafe(statement, 11, row.avinputFileName);
+                setStringSafe(statement, 12, pathValue(row.avinputFilePath));
                 statement.setTimestamp(13, Timestamp.from(Instant.now()));
                 statement.addBatch();
                 batchCount = flushBatchIfNeeded(connection, statement, batchCount + 1);
@@ -827,13 +870,13 @@ public class MafDuckDbImportService {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             int batchCount = 0;
             for (CohortFileRow row : rows) {
-                statement.setString(1, row.cancerType);
-                statement.setString(2, row.source);
-                statement.setString(3, row.category);
-                statement.setString(4, row.fileName);
-                statement.setString(5, row.displayName);
-                statement.setString(6, row.sampleId);
-                statement.setString(7, row.filePath.toAbsolutePath().toString());
+                setStringSafe(statement, 1, row.cancerType);
+                setStringSafe(statement, 2, row.source);
+                setStringSafe(statement, 3, row.category);
+                setStringSafe(statement, 4, row.fileName);
+                setStringSafe(statement, 5, row.displayName);
+                setStringSafe(statement, 6, row.sampleId);
+                setStringSafe(statement, 7, row.filePath.toAbsolutePath().toString());
                 statement.setLong(8, row.sizeBytes);
                 statement.addBatch();
                 batchCount = flushBatchIfNeeded(connection, statement, batchCount + 1);
@@ -849,18 +892,18 @@ public class MafDuckDbImportService {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             int batchCount = 0;
             for (AssetRow row : rows) {
-                statement.setString(1, row.cancerType);
-                statement.setString(2, row.source);
-                statement.setString(3, row.assetType);
-                statement.setString(4, row.category);
-                statement.setString(5, row.title);
-                statement.setString(6, row.fileName);
-                statement.setString(7, row.filePath.toAbsolutePath().toString());
+                setStringSafe(statement, 1, row.cancerType);
+                setStringSafe(statement, 2, row.source);
+                setStringSafe(statement, 3, row.assetType);
+                setStringSafe(statement, 4, row.category);
+                setStringSafe(statement, 5, row.title);
+                setStringSafe(statement, 6, row.fileName);
+                setStringSafe(statement, 7, row.filePath.toAbsolutePath().toString());
                 statement.setLong(8, row.sizeBytes);
-                statement.setString(9, row.geneName);
-                statement.setString(10, row.chromosome);
-                statement.setString(11, row.startPosition);
-                statement.setString(12, row.endPosition);
+                setStringSafe(statement, 9, row.geneName);
+                setStringSafe(statement, 10, row.chromosome);
+                setStringSafe(statement, 11, row.startPosition);
+                setStringSafe(statement, 12, row.endPosition);
                 statement.addBatch();
                 batchCount = flushBatchIfNeeded(connection, statement, batchCount + 1);
             }
@@ -1090,6 +1133,14 @@ public class MafDuckDbImportService {
 
     private String pathValue(Path path) {
         return path == null ? null : path.toAbsolutePath().toString();
+    }
+
+    private static void setStringSafe(PreparedStatement statement, int index, String value) throws SQLException {
+        if (value == null) {
+            statement.setNull(index, Types.VARCHAR);
+        } else {
+            statement.setString(index, value);
+        }
     }
 
     private String duckPath(Path path) {

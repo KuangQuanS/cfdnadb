@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -952,7 +953,9 @@ public class DuckDbService {
         if (!Files.isRegularFile(mafDb)) {
             throw new IllegalStateException("Query database file not found: " + mafDb);
         }
-        return DriverManager.getConnection("jdbc:duckdb:" + mafDb.toString());
+        Properties properties = new Properties();
+        properties.setProperty("duckdb.read_only", "true");
+        return DriverManager.getConnection("jdbc:duckdb:" + mafDb.toString(), properties);
     }
 
     private boolean mafDatabaseAvailable() {
