@@ -97,7 +97,6 @@ export function DownloadsPage() {
                     <thead>
                       <tr>
                         <th>Cohort</th>
-                        <th>Name</th>
                         <th>Type</th>
                         <th>File</th>
                         <th>Size</th>
@@ -108,7 +107,6 @@ export function DownloadsPage() {
                       {tableRows.map((file) => (
                         <tr key={`${file.cancer}-${file.fileName}`}>
                           <td>{file.cancer}</td>
-                          <td>{file.name}</td>
                           <td>{file.fileType}</td>
                           <td className="browse-mono">{file.fileName}</td>
                           <td>{formatFileSize(file.sizeBytes)}</td>
