@@ -154,37 +154,22 @@ button, input, select { font: inherit; }
 .title-area {
   display: flex;
   align-items: center;
-  gap: 14px;
-}
-
-.title-stack {
-  display: flex;
-  flex-direction: column;
 }
 
 .site-logo-link {
   display: flex;
   align-items: center;
+  width: clamp(200px, 23vw, 420px);
   text-decoration: none;
 }
 
-.site-logo-frame {
-  width: 114px;
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-  border-radius: 0;
-  background: transparent;
-}
-
 .site-logo-img {
-  width: 114px;
+  width: 100%;
+  max-height: 96px;
   height: auto;
   display: block;
-  transform: none;
-  filter: saturate(1.02) contrast(1.04);
+  object-fit: contain;
+  filter: saturate(1.02) contrast(1.03);
 }
 
 .site-kicker, .section-eyebrow, .hero-kicker {
