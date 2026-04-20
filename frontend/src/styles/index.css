@@ -216,6 +216,7 @@ button, input, select { font: inherit; }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  transform: translateX(18px);
 }
 
 .site-nav-dropdown {
@@ -227,7 +228,7 @@ button, input, select { font: inherit; }
   border-radius: var(--radius-pill);
   color: rgba(255, 255, 255, 0.84);
   font-weight: 700;
-  font-size: 0.92rem;
+  font-size: 1.02rem;
   transition: all 0.2s ease;
 }
 
