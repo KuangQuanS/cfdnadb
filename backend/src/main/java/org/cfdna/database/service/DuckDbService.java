@@ -71,7 +71,7 @@ public class DuckDbService {
     private static final List<String> CANCERS = List.of(
             "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
             "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
-            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor");
+            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor", "Cell_Line");
     private static final List<String> REQUIRED_MULTIANNO_COLUMNS = List.of(
             "Chr",
             "Start",
@@ -765,7 +765,8 @@ public class DuckDbService {
             Map.entry("Ovarian",     "Ovarian"),
             Map.entry("Thyroid",     "Thyriod"),  // typo preserved from source data
             Map.entry("Brain",       "Brain"),
-            Map.entry("Benign_Tumor", "Benign_Tumor")
+            Map.entry("Benign_Tumor", "Benign_Tumor"),
+            Map.entry("Cell_Line",    "Cell_Line")
     );
 
     /**
@@ -828,7 +829,8 @@ public class DuckDbService {
             Map.entry("Ovarian",     List.of("CFDNA_Ovarian")),
             Map.entry("Thyroid",     List.of("CFDNA_Thyriod")),
             Map.entry("Brain",       List.of("CFDNA_Brain")),
-            Map.entry("Benign_Tumor", List.of("CFDNA_Benign_Tumor"))
+            Map.entry("Benign_Tumor", List.of("CFDNA_Benign_Tumor")),
+            Map.entry("Cell_Line",    List.of("CFDNA_Cell_Line"))
     );
 
     private static final String PAN_CANCER_CLINICAL_FILE = "clinical_data.txt";
