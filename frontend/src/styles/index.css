@@ -154,7 +154,6 @@ button, input, select { font: inherit; }
 .title-area {
   display: flex;
   align-items: center;
-  gap: 14px;
 }
 
 .title-stack {
@@ -165,26 +164,17 @@ button, input, select { font: inherit; }
 .site-logo-link {
   display: flex;
   align-items: center;
+  width: clamp(200px, 23vw, 420px);
   text-decoration: none;
 }
 
-.site-logo-frame {
-  width: 114px;
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-  border-radius: 0;
-  background: transparent;
-}
-
 .site-logo-img {
-  width: 114px;
+  width: 100%;
+  max-height: 96px;
   height: auto;
   display: block;
-  transform: none;
-  filter: saturate(1.02) contrast(1.04);
+  object-fit: contain;
+  filter: saturate(1.02) contrast(1.03);
 }
 
 .site-kicker, .section-eyebrow, .hero-kicker {
@@ -226,6 +216,7 @@ button, input, select { font: inherit; }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  transform: translateX(18px);
 }
 
 .site-nav-dropdown {
@@ -237,7 +228,7 @@ button, input, select { font: inherit; }
   border-radius: var(--radius-pill);
   color: rgba(255, 255, 255, 0.84);
   font-weight: 700;
-  font-size: 0.92rem;
+  font-size: 1.02rem;
   transition: all 0.2s ease;
 }
 
@@ -349,13 +340,13 @@ button, input, select { font: inherit; }
     gap: 10px;
   }
 
-  .site-logo-frame {
-    width: 88px;
-    height: 42px;
+  .site-logo-link {
+    width: clamp(150px, 42vw, 220px);
   }
 
   .site-logo-img {
-    width: 88px;
+    width: 100%;
+    max-height: 72px;
   }
 }
 
