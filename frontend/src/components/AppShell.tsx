@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { PageLoader } from "./PageLoader";
 import headerBgPng from "../assets/background_original.png";
+import siteLogoPng from "../assets/cfDNAlogo.png";
 
 const navItems = [
   { to: "/", label: "Home" },
@@ -114,7 +115,9 @@ export function AppShell({ children }: PropsWithChildren) {
           <div className="title-area">
             <div className="title-stack">
               <p className="site-kicker">Plasma somatic mutation database</p>
-              <Link to="/" className="site-title">cfDNAdb</Link>
+              <Link to="/" className="site-logo-link" aria-label="cfDNAdb Home">
+                <img src={siteLogoPng} alt="cfDNAdb" className="site-logo-img" />
+              </Link>
             </div>
           </div>
           <nav className="site-nav">
