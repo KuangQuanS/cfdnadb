@@ -189,6 +189,7 @@ export interface CancerSummary {
   somaticCount: number;
   plotAssetCount: number;
   externalAssetCount: number;
+  mutationCount: number;
   rawImportStatus: string;
   filteredStatus: string;
   annotatedStatus: string;

@@ -128,8 +128,9 @@ public class DuckDbService {
     }
 
     public List<CancerSummaryDto> getCancerSummary() {
+        Map<String, Long> mutationCounts = loadMutationCountsByMafCancerType();
         return CANCERS.stream()
-                .map(this::buildCancerSummary)
+                .map(cancer -> buildCancerSummary(cancer, mutationCounts))
                 .collect(java.util.stream.Collectors.toList());
     }
 
@@ -2292,7 +2293,32 @@ public class DuckDbService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
-    private CancerSummaryDto buildCancerSummary(String cancer) {
+    private Map<String, Long> loadMutationCountsByMafCancerType() {
+        if (!mafDatabaseAvailable()) {
+            return Map.of();
+        }
+        String tableName = allCfdnaViewAvailable() ? ALL_CFDNA_MAF_VIEW : CFDNA_MAF_TABLE;
+        String sql = "SELECT cancer_type, COUNT(*) AS mutation_count FROM " + tableName + " GROUP BY cancer_type";
+        Map<String, Long> result = new HashMap<>();
+        try (Connection connection = openMafConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet rs = statement.executeQuery()) {
+            while (rs.next()) {
+                String cancerType = rs.getString("cancer_type");
+                if (cancerType != null) {
+                    result.put(cancerType, rs.getLong("mutation_count"));
+                }
+            }
+        } catch (SQLException exception) {
+            log.warn("Failed to load mutation counts by cancer_type", exception);
+            return Map.of();
+        }
+        return result;
+    }
+
+    private CancerSummaryDto buildCancerSummary(String cancer, Map<String, Long> mutationCounts) {
+        String mafCancerType = CANCER_TO_CFDNA_TYPE.getOrDefault(cancer, cancer);
+        long mutationCount = mutationCounts.getOrDefault(mafCancerType, 0L);
         String sql =
                 "WITH cohort AS (" +
                         "  SELECT " +
@@ -2320,7 +2346,7 @@ public class DuckDbService {
             statement.setString(3, cancer);
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) {
-                    return new CancerSummaryDto(cancer, 0, 0, 0, 0, 0, 0, 0, 0,
+                    return new CancerSummaryDto(cancer, 0, 0, 0, 0, 0, 0, 0, 0, mutationCount,
                             statusLabel(false), statusLabel(false), statusLabel(false),
                             statusLabel(false), statusLabel(false), statusLabel(false));
                 }
@@ -2340,6 +2366,7 @@ public class DuckDbService {
                         0,
                         plotAssetCount,
                         externalAssetCount,
+                        mutationCount,
                         statusLabel(avinputCount > 0),
                         statusLabel(filteredVcfCount > 0),
                         statusLabel(multiannoCount > 0),

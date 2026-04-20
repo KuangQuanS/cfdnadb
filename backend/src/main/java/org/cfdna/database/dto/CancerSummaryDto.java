@@ -11,6 +11,7 @@ public class CancerSummaryDto {
     private final long somaticCount;
     private final long plotAssetCount;
     private final long externalAssetCount;
+    private final long mutationCount;
     private final String rawImportStatus;
     private final String filteredStatus;
     private final String annotatedStatus;
@@ -28,6 +29,7 @@ public class CancerSummaryDto {
             long somaticCount,
             long plotAssetCount,
             long externalAssetCount,
+            long mutationCount,
             String rawImportStatus,
             String filteredStatus,
             String annotatedStatus,
@@ -44,6 +46,7 @@ public class CancerSummaryDto {
         this.somaticCount = somaticCount;
         this.plotAssetCount = plotAssetCount;
         this.externalAssetCount = externalAssetCount;
+        this.mutationCount = mutationCount;
         this.rawImportStatus = rawImportStatus;
         this.filteredStatus = filteredStatus;
         this.annotatedStatus = annotatedStatus;
@@ -61,6 +64,7 @@ public class CancerSummaryDto {
     public long somaticCount() { return somaticCount; }
     public long plotAssetCount() { return plotAssetCount; }
     public long externalAssetCount() { return externalAssetCount; }
+    public long mutationCount() { return mutationCount; }
     public String rawImportStatus() { return rawImportStatus; }
     public String filteredStatus() { return filteredStatus; }
     public String annotatedStatus() { return annotatedStatus; }
@@ -77,6 +81,7 @@ public class CancerSummaryDto {
     public long getSomaticCount() { return somaticCount; }
     public long getPlotAssetCount() { return plotAssetCount; }
     public long getExternalAssetCount() { return externalAssetCount; }
+    public long getMutationCount() { return mutationCount; }
     public String getRawImportStatus() { return rawImportStatus; }
     public String getFilteredStatus() { return filteredStatus; }
     public String getAnnotatedStatus() { return annotatedStatus; }

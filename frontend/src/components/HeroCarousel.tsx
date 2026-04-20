@@ -11,15 +11,15 @@ import humanBodyImg from "../assets/human_body_new.png";
 import "../styles/home.css";
 
 const MOCK_COHORTS: CancerSummary[] = [
-  { cancer: "Breast", sampleCount: 486, totalDataFiles: 972, avinputCount: 486, filteredCount: 486, annotatedCount: 486, somaticCount: 0, plotAssetCount: 12, externalAssetCount: 8, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
-  { cancer: "Colorectal", sampleCount: 352, totalDataFiles: 704, avinputCount: 352, filteredCount: 352, annotatedCount: 352, somaticCount: 0, plotAssetCount: 10, externalAssetCount: 6, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
-  { cancer: "Liver", sampleCount: 278, totalDataFiles: 556, avinputCount: 278, filteredCount: 278, annotatedCount: 278, somaticCount: 0, plotAssetCount: 8, externalAssetCount: 4, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
-  { cancer: "Lung", sampleCount: 312, totalDataFiles: 624, avinputCount: 312, filteredCount: 312, annotatedCount: 312, somaticCount: 0, plotAssetCount: 9, externalAssetCount: 5, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
-  { cancer: "Pancreatic", sampleCount: 99, totalDataFiles: 198, avinputCount: 99, filteredCount: 99, annotatedCount: 99, somaticCount: 0, plotAssetCount: 5, externalAssetCount: 3, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
-  { cancer: "HeadAndNeck", sampleCount: 118, totalDataFiles: 236, avinputCount: 118, filteredCount: 118, annotatedCount: 118, somaticCount: 0, plotAssetCount: 4, externalAssetCount: 2, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
-  { cancer: "Gastric", sampleCount: 144, totalDataFiles: 288, avinputCount: 144, filteredCount: 144, annotatedCount: 144, somaticCount: 0, plotAssetCount: 4, externalAssetCount: 3, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
-  { cancer: "Kidney", sampleCount: 76, totalDataFiles: 152, avinputCount: 76, filteredCount: 76, annotatedCount: 76, somaticCount: 0, plotAssetCount: 3, externalAssetCount: 2, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
-  { cancer: "Ovarian", sampleCount: 92, totalDataFiles: 184, avinputCount: 92, filteredCount: 92, annotatedCount: 92, somaticCount: 0, plotAssetCount: 3, externalAssetCount: 2, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Breast", sampleCount: 486, totalDataFiles: 972, avinputCount: 486, filteredCount: 486, annotatedCount: 486, somaticCount: 0, plotAssetCount: 12, externalAssetCount: 8, mutationCount: 1944000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Colorectal", sampleCount: 352, totalDataFiles: 704, avinputCount: 352, filteredCount: 352, annotatedCount: 352, somaticCount: 0, plotAssetCount: 10, externalAssetCount: 6, mutationCount: 1408000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Liver", sampleCount: 278, totalDataFiles: 556, avinputCount: 278, filteredCount: 278, annotatedCount: 278, somaticCount: 0, plotAssetCount: 8, externalAssetCount: 4, mutationCount: 1112000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Lung", sampleCount: 312, totalDataFiles: 624, avinputCount: 312, filteredCount: 312, annotatedCount: 312, somaticCount: 0, plotAssetCount: 9, externalAssetCount: 5, mutationCount: 1248000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Pancreatic", sampleCount: 99, totalDataFiles: 198, avinputCount: 99, filteredCount: 99, annotatedCount: 99, somaticCount: 0, plotAssetCount: 5, externalAssetCount: 3, mutationCount: 396000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "HeadAndNeck", sampleCount: 118, totalDataFiles: 236, avinputCount: 118, filteredCount: 118, annotatedCount: 118, somaticCount: 0, plotAssetCount: 4, externalAssetCount: 2, mutationCount: 472000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Gastric", sampleCount: 144, totalDataFiles: 288, avinputCount: 144, filteredCount: 144, annotatedCount: 144, somaticCount: 0, plotAssetCount: 4, externalAssetCount: 3, mutationCount: 576000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Kidney", sampleCount: 76, totalDataFiles: 152, avinputCount: 76, filteredCount: 76, annotatedCount: 76, somaticCount: 0, plotAssetCount: 3, externalAssetCount: 2, mutationCount: 304000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
+  { cancer: "Ovarian", sampleCount: 92, totalDataFiles: 184, avinputCount: 92, filteredCount: 92, annotatedCount: 92, somaticCount: 0, plotAssetCount: 3, externalAssetCount: 2, mutationCount: 368000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
 ];
 
 const CORE_COHORT_COLORS: Record<string, string> = {
@@ -57,13 +57,13 @@ const ALL_CALLOUTS = [
   { id: "Liver", label: "Liver", side: "left", topPct: 38, anchorPct: 43, browseKey: "Liver", alwaysShow: true },
   { id: "Kidney", label: "Kidney", side: "left", topPct: 43, anchorPct: 41, browseKey: "Kidney", alwaysShow: false },
   { id: "Endometrial", label: "Endometrial", side: "left", topPct: 55, anchorPct: 48, browseKey: "Endometrial", alwaysShow: false },
+  { id: "Bladder", label: "Bladder", side: "left", topPct: 62, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
   /* ── right side (top → bottom) ── */
   { id: "Breast", label: "Breast", side: "right", topPct: 31, anchorPct: 58, browseKey: "Breast", alwaysShow: true },
   { id: "Gastric", label: "Gastric", side: "right", topPct: 39, anchorPct: 54, browseKey: "Gastric", alwaysShow: false },
   { id: "Pancreatic", label: "Pancreas", side: "right", topPct: 43, anchorPct: 52, browseKey: "Pancreatic", alwaysShow: true },
-  { id: "Ovarian", label: "Ovarian", side: "right", topPct: 51, anchorPct: 53, browseKey: "Ovarian", alwaysShow: false },
-  { id: "Colorectal", label: "Colorectal", side: "right", topPct: 56, anchorPct: 55, browseKey: "Colorectal", alwaysShow: true },
-  { id: "Bladder", label: "Bladder", side: "right", topPct: 60, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
+  { id: "Colorectal", label: "Colorectal", side: "right", topPct: 51, anchorPct: 55, browseKey: "Colorectal", alwaysShow: true },
+  { id: "Ovarian", label: "Ovarian", side: "right", topPct: 56, anchorPct: 53, browseKey: "Ovarian", alwaysShow: false },
 ] as const;
 
 type HeroRingEntry = {
@@ -257,7 +257,7 @@ export function HeroCarousel() {
         sampleCount: cohort.sampleCount,
         fileCount: cohort.totalDataFiles,
         annotatedCount: cohort.annotatedCount,
-        assetCount: cohort.plotAssetCount + cohort.externalAssetCount,
+        mutationCount: cohort.mutationCount,
       }));
     },
     [cohorts],
@@ -282,8 +282,8 @@ export function HeroCarousel() {
     () => ringEntries.reduce((sum, entry) => sum + entry.annotatedCount, 0),
     [ringEntries],
   );
-  const totalAssets = useMemo(
-    () => ringEntries.reduce((sum, entry) => sum + entry.assetCount, 0),
+  const totalMutations = useMemo(
+    () => ringEntries.reduce((sum, entry) => sum + entry.mutationCount, 0),
     [ringEntries],
   );
   const visibleCallouts = useMemo(
@@ -297,8 +297,8 @@ export function HeroCarousel() {
     () => ringEntries.map(({ id, label, color, annotatedCount }) => ({ id, label, color, value: annotatedCount, browseKey: label })),
     [ringEntries],
   );
-  const assetRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, assetCount }) => ({ id, label, color, value: assetCount, browseKey: label })),
+  const mutationRingEntries = useMemo(
+    () => ringEntries.map(({ id, label, color, mutationCount }) => ({ id, label, color, value: mutationCount, browseKey: label })),
     [ringEntries],
   );
   const overviewCards = useMemo(
@@ -325,14 +325,14 @@ export function HeroCarousel() {
         caption: "Variants with functional annotations per cohort.",
       },
       {
-        id: "assets",
-        title: "Assets",
-        total: totalAssets,
-        entries: assetRingEntries,
-        caption: "Plots and external downloadable resources.",
+        id: "mutations",
+        title: "Mutations",
+        total: totalMutations,
+        entries: mutationRingEntries,
+        caption: "Somatic mutation records per cohort.",
       },
     ],
-    [annotatedRingEntries, assetRingEntries, fileRingEntries, sampleRingEntries, totalAnnotated, totalAssets, totalFiles, totalSamples],
+    [annotatedRingEntries, mutationRingEntries, fileRingEntries, sampleRingEntries, totalAnnotated, totalMutations, totalFiles, totalSamples],
   );
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
