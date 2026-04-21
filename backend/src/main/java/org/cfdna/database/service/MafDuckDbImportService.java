@@ -15,6 +15,7 @@ import java.io.InputStreamReader;
 import java.io.PushbackInputStream;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -75,6 +76,7 @@ public class MafDuckDbImportService {
 
     public Path rebuildDatabase() {
         Path dbPath = dataDir.resolve(queryDbFileName).toAbsolutePath();
+        Path buildDbPath = createBuildDbPath(dbPath);
         Path cfDnaPath = requireFile(dataDir.resolve(CFDNA_TSV).toAbsolutePath(), "cfDNA MAF TSV");
         Path tcgaPath = requireFile(dataDir.resolve(TCGA_TSV).toAbsolutePath(), "TCGA MAF TSV");
         Path panClinical = panCancerDir.resolve(PAN_CANCER_CLINICAL_FILE).toAbsolutePath();
@@ -88,19 +90,21 @@ public class MafDuckDbImportService {
 
         ImportPlan plan = inspectFilesystem(panClinical, panMutations);
         try {
-            Files.deleteIfExists(dbPath);
+            cleanDuckDbArtifacts(buildDbPath);
         } catch (IOException exception) {
-            throw new IllegalStateException("Failed to clean old query database files near " + dbPath, exception);
+            throw new IllegalStateException("Failed to clean temporary query database files near " + buildDbPath, exception);
         }
 
-        log.info("[QUERY-IMPORT] building {} with aggregates={}, samples={}, cohortFiles={}, assets={}",
+        log.info("[QUERY-IMPORT] building temporary db={} target={} with aggregates={}, samples={}, cohortFiles={}, assets={}",
+                buildDbPath,
                 dbPath,
                 plan.aggregateFiles.size(),
                 plan.sampleRows.size(),
                 plan.cohortFileRows.size(),
                 plan.assetRows.size());
 
-        String jdbcUrl = "jdbc:duckdb:" + dbPath;
+        String jdbcUrl = "jdbc:duckdb:" + buildDbPath;
+        try {
 
         // Phase 1: create tables & import MAF data (separate connections to avoid DuckDB JNI SIGSEGV in long transactions)
         long cfdnaRows, tcgaRows, geoRows;
@@ -216,8 +220,68 @@ public class MafDuckDbImportService {
             throw new IllegalStateException("Failed to create indexes in " + dbPath, e);
         }
 
+        try (Connection conn = DriverManager.getConnection(jdbcUrl);
+             Statement statement = conn.createStatement()) {
+            statement.execute("CHECKPOINT");
+            log.info("[QUERY-IMPORT] checkpointed temporary db={}", buildDbPath);
+        } catch (SQLException e) {
+            cleanupFailedBuild(buildDbPath);
+            throw new IllegalStateException("Failed to checkpoint temporary query database " + buildDbPath, e);
+        }
+
+        try {
+            publishBuiltDatabase(buildDbPath, dbPath);
+        } catch (IOException exception) {
+            cleanupFailedBuild(buildDbPath);
+            throw new IllegalStateException("Failed to publish query database from " + buildDbPath + " to " + dbPath, exception);
+        }
+
         log.info("[QUERY-IMPORT] finished db={}, cfdna_maf={}, tcga_maf={}, geo_maf={}", dbPath, cfdnaRows, tcgaRows, geoRows);
         return dbPath;
+        } catch (RuntimeException exception) {
+            cleanupFailedBuild(buildDbPath);
+            throw exception;
+        }
+    }
+
+    private Path createBuildDbPath(Path dbPath) {
+        String fileName = dbPath.getFileName().toString();
+        long pid = ProcessHandle.current().pid();
+        long timestamp = Instant.now().toEpochMilli();
+        return dbPath.resolveSibling(fileName + ".importing-" + pid + "-" + timestamp);
+    }
+
+    private void publishBuiltDatabase(Path buildDbPath, Path dbPath) throws IOException {
+        if (!Files.isRegularFile(buildDbPath)) {
+            throw new IOException("Temporary query database was not created: " + buildDbPath);
+        }
+
+        try {
+            Files.move(buildDbPath, dbPath,
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException exception) {
+            Files.move(buildDbPath, dbPath, StandardCopyOption.REPLACE_EXISTING);
+        }
+        Files.deleteIfExists(duckWalPath(buildDbPath));
+        log.info("[QUERY-IMPORT] published temporary db={} to target={}", buildDbPath, dbPath);
+    }
+
+    private void cleanDuckDbArtifacts(Path dbPath) throws IOException {
+        Files.deleteIfExists(dbPath);
+        Files.deleteIfExists(duckWalPath(dbPath));
+    }
+
+    private void cleanupFailedBuild(Path buildDbPath) {
+        try {
+            cleanDuckDbArtifacts(buildDbPath);
+        } catch (IOException cleanupException) {
+            log.warn("[QUERY-IMPORT] failed to clean temporary db artifacts near {}", buildDbPath, cleanupException);
+        }
+    }
+
+    private Path duckWalPath(Path dbPath) {
+        return dbPath.resolveSibling(dbPath.getFileName().toString() + ".wal");
     }
 
     private ImportPlan inspectFilesystem(Path panClinical, Path panMutations) {

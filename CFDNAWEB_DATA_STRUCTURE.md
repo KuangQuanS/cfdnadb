@@ -205,6 +205,11 @@ Backend operational note:
   DuckDB JDBC native crashes during large transaction commits.
 - DuckDB query connections are opened read-only to avoid web-server write
   permission failures on the generated database file.
+- Query database rebuilds write to a same-directory temporary file named like
+  `cfdnadb.duckdb.importing-{pid}-{timestamp}` first. After all import phases
+  and `CHECKPOINT` succeed, the temporary database is moved over
+  `cfdnadb.duckdb`. This avoids rebuilding directly against a database file
+  that may still be held open by the running web service.
 
 ## Files Indexed Into DuckDB
 
