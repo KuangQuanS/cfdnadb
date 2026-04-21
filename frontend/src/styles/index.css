@@ -139,6 +139,11 @@ button, input, select { font: inherit; }
   position: sticky;
   top: 0;
   z-index: 10;
+  transition: transform 0.26s ease;
+}
+
+.site-header.site-header-collapsed {
+  transform: translateY(-100%);
 }
 
 .site-header::before {

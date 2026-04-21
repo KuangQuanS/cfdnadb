@@ -63,6 +63,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const geneMenuActive = location.pathname.startsWith("/gene-search") || location.pathname.startsWith("/survival");
   const [routeLoading, setRouteLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
   const firstRenderRef = useRef(true);
   const shownAtRef = useRef(0);
 
@@ -101,12 +102,44 @@ export function AppShell({ children }: PropsWithChildren) {
     };
   }, [busy, showLoader]);
 
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+
+    const updateHeaderState = () => {
+      const currentY = window.scrollY;
+      const scrollingDown = currentY > lastY;
+      const hasEnoughScroll = currentY > 120;
+      const delta = Math.abs(currentY - lastY);
+
+      if (delta > 8) {
+        if (scrollingDown && hasEnoughScroll) {
+          setHeaderCollapsed(true);
+        } else {
+          setHeaderCollapsed(false);
+        }
+        lastY = currentY;
+      }
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateHeaderState);
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <div className="app-shell">
       {showLoader ? <PageLoader overlay message="Loading page..." /> : null}
 
       <header
-        className="site-header"
+        className={`site-header${headerCollapsed ? " site-header-collapsed" : ""}`}
         style={{
           backgroundImage: `url(${headerBgPng})`
         }}
