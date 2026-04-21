@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const basePath = process.env.VITE_APP_BASE_PATH || env.VITE_APP_BASE_PATH || "/";
+  const basePath = process.env.VITE_APP_BASE_PATH || env.VITE_APP_BASE_PATH || "/cfdnadb/";
 
   return {
     base: basePath,
