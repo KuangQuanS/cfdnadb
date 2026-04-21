@@ -21,6 +21,7 @@ app.maf-db-file: maf.duckdb
 app.tcga-igv-file: /400T/cfdnaweb/tcga_maf.txt
 app.pan-cancer-dir: /400T/cfdnaweb/statistics/oncoplot/pan_cancer
 app.vaf-data-dir: /400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF
+app.healthy-vcf-dir: /400T/cfdnadb/Healthy/Vcf
 ```
 
 The web app is deployed under `/cfdnadb/`, so frontend bundles must be built
@@ -109,6 +110,26 @@ cfDNA_MAF_Mutations.xlsx -> /400T/cfdnadb/cfDNA_MAF_Mutations.xlsx
 maf.duckdb               -> /400T/cfdnadb/maf.duckdb
 TCGA_maf_mutation.tsv    -> /400T/cfdnadb/TCGA_maf_mutation.tsv
 TCGA_maf_mutation.xlsx   -> /400T/cfdnadb/TCGA_maf_mutation.xlsx
+```
+
+## Healthy Controls
+
+Healthy VCFs are intentionally not copied into `/400T/cfdnaweb` because the
+directory is large:
+
+```text
+/400T/cfdnadb/Healthy/Vcf  1.6T  1428 .vcf.gz files
+```
+
+The backend reads this directory directly through `app.healthy-vcf-dir`.
+Healthy contributes only to sample count, data-file count, and Downloads single
+file entries. It does not contribute to mutation count, annotated count,
+oncoplot, VAF, functional, exonic, or chromosome mutation statistics.
+
+The smaller panel-of-normal support files were copied under the web data root:
+
+```text
+/400T/cfdnaweb/Healthy/Pon  848M  4 files
 ```
 
 ## Cohort Directories
