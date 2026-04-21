@@ -833,6 +833,15 @@ public class DuckDbService {
             Map.entry("Benign_Tumor", List.of("CFDNA_Benign_Tumor")),
             Map.entry("Cell_Line",    List.of("CFDNA_Cell_Line"))
     );
+    private static final Map<String, String> VAF_CANCER_TYPE_ALIASES = Map.ofEntries(
+            Map.entry("Colonrector", "Colorectal"),
+            Map.entry("Endometrium", "Endometrial"),
+            Map.entry("Experiment", "Cell_Line"),
+            Map.entry("Head_and_Neck", "HeadAndNeck"),
+            Map.entry("NGY", "Benign_Tumor"),
+            Map.entry("Pdac", "Pancreatic"),
+            Map.entry("Thyriod", "Thyroid")
+    );
 
     private static final String PAN_CANCER_CLINICAL_FILE = "clinical_data.txt";
     private static final String PAN_CANCER_MUTATIONS_FILE = "mutations_data.txt";
@@ -3500,7 +3509,8 @@ public class DuckDbService {
 
     /**
      * Reads all *_VAF_statistics.txt files from the vafDataDir and returns
-     * per-cancer-type lists of Average VAF values. Excludes GEO_ and Cell_Line_ prefixed files.
+     * per-cancer-type lists of Average VAF values. Excludes GEO-prefixed files and
+     * normalizes legacy VAF file prefixes to current cohort names.
      */
     public List<VafDistributionDto> getVafDistribution() {
         List<VafDistributionDto> result = new ArrayList<>();
@@ -3513,14 +3523,14 @@ public class DuckDbService {
                     .filter(p -> p.getFileName().toString().endsWith("_VAF_statistics.txt"))
                     .filter(p -> {
                         String name = p.getFileName().toString();
-                        return !name.startsWith("GEO_") && !name.startsWith("Cell_Line_");
+                        return !name.startsWith("GEO_");
                     })
                     .sorted()
                     .collect(java.util.stream.Collectors.toList());
 
             for (Path vafFile : vafFiles) {
                 String fileName = vafFile.getFileName().toString();
-                String cancerType = fileName.replace("_VAF_statistics.txt", "");
+                String cancerType = normalizeVafCancerType(fileName.replace("_VAF_statistics.txt", ""));
                 List<Double> values = readVafValues(vafFile);
                 if (!values.isEmpty()) {
                     result.add(new VafDistributionDto(cancerType, values));
@@ -3536,6 +3546,10 @@ public class DuckDbService {
             return Double.compare(medB, medA);
         });
         return result;
+    }
+
+    private String normalizeVafCancerType(String cancerType) {
+        return VAF_CANCER_TYPE_ALIASES.getOrDefault(cancerType, cancerType);
     }
 
     private List<Double> readVafValues(Path file) {
