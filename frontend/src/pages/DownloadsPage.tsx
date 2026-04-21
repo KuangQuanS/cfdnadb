@@ -90,7 +90,7 @@ export function DownloadsPage() {
       </section>
 
       {mode === "all" ? (
-        <section className={`downloads-grid${selectedHealthy ? " downloads-grid--with-detail" : ""}`}>
+        <section className="downloads-grid">
           <article className="stat-pdf-card downloads-table-card">
             <div className="statistics-panel-header">
               <h3 className="stat-pdf-title">Whole-cohort file table</h3>
@@ -126,14 +126,18 @@ export function DownloadsPage() {
                     </thead>
                     <tbody>
                       {tableRows.map((file) => (
-                        <tr key={`${file.cancer}-${file.fileName}`}>
+                        <tr
+                          key={`${file.cancer}-${file.fileName}`}
+                          className={file.cancer === "Healthy" && file.fileType === "Healthy VCF" ? "browse-samples-row" : undefined}
+                          onClick={file.cancer === "Healthy" && file.fileType === "Healthy VCF" ? () => setSelectedHealthy(true) : undefined}
+                        >
                           <td>{file.cancer}</td>
                           <td>{file.fileType}</td>
                           <td className="browse-mono">{file.fileName}</td>
                           <td>{formatFileSize(file.sizeBytes)}</td>
                           <td>
                             {file.cancer === "Healthy" && file.fileType === "Healthy VCF" ? (
-                              <button className="button-secondary" type="button" onClick={() => setSelectedHealthy(true)}>
+                              <button className="button-secondary" type="button" onClick={(event) => { event.stopPropagation(); setSelectedHealthy(true); }}>
                                 View files
                               </button>
                             ) : (
@@ -150,16 +154,17 @@ export function DownloadsPage() {
               ) : null}
             </div>
           </article>
-          {selectedHealthy ? (
-            <HealthyVcfDetailPanel
-              summary={selectedHealthySummary}
-              files={healthyFilesQuery.data ?? []}
-              loading={healthyFilesQuery.isLoading}
-              error={healthyFilesQuery.isError}
-              onClose={() => setSelectedHealthy(false)}
-            />
-          ) : null}
         </section>
+      ) : null}
+
+      {selectedHealthy ? (
+        <HealthyVcfDetailDrawer
+          summary={selectedHealthySummary}
+          files={healthyFilesQuery.data ?? []}
+          loading={healthyFilesQuery.isLoading}
+          error={healthyFilesQuery.isError}
+          onClose={() => setSelectedHealthy(false)}
+        />
       ) : null}
 
       {mode === "filtered" ? (
@@ -177,7 +182,7 @@ export function DownloadsPage() {
   );
 }
 
-function HealthyVcfDetailPanel({
+function HealthyVcfDetailDrawer({
   summary,
   files,
   loading,
@@ -191,17 +196,18 @@ function HealthyVcfDetailPanel({
   onClose: () => void;
 }) {
   return (
-    <aside className="stat-pdf-card downloads-healthy-detail-card">
-      <div className="statistics-panel-header downloads-healthy-detail-header">
-        <div>
-          <h3 className="stat-pdf-title">Healthy VCF files</h3>
-          <p className="statistics-panel-note">
-            {summary ? `${summary.name} - ${formatFileSize(summary.sizeBytes)} total` : "Individual Healthy control VCF downloads."}
-          </p>
+    <div className="browse-sample-drawer-overlay" onClick={onClose}>
+      <aside className="browse-sample-drawer downloads-healthy-drawer" onClick={(event) => event.stopPropagation()}>
+        <div className="browse-sample-drawer-header">
+          <div>
+            <p className="section-eyebrow">Healthy VCF Drawer</p>
+            <h3>Healthy VCF files</h3>
+            <p className="browse-summary-line">
+              {summary ? `${summary.name} - ${formatFileSize(summary.sizeBytes)} total` : "Individual Healthy control VCF downloads."}
+            </p>
+          </div>
+          <button type="button" className="browse-files-close" onClick={onClose}>&times;</button>
         </div>
-        <button type="button" className="browse-files-close" onClick={onClose}>&times;</button>
-      </div>
-      <div className="statistics-pdf-shell downloads-healthy-detail-shell">
         {loading ? <p className="panel-note">Loading Healthy VCF list...</p> : null}
         {error ? (
           <section className="detail-card empty-card">
@@ -216,32 +222,51 @@ function HealthyVcfDetailPanel({
           </section>
         ) : null}
         {files.length > 0 ? (
-          <div className="downloads-table-wrap downloads-healthy-file-wrap">
-            <table className="data-table downloads-table downloads-healthy-file-table">
-              <thead>
-                <tr>
-                  <th>Sample file</th>
-                  <th>Size</th>
-                  <th>Download</th>
-                </tr>
-              </thead>
-              <tbody>
-                {files.map((file) => (
-                  <tr key={file.fileName}>
-                    <td className="browse-mono">{file.fileName}</td>
-                    <td>{formatFileSize(file.sizeBytes)}</td>
-                    <td>
-                      <a className="button-secondary" href={toApiUrl(file.downloadUrl)} download={file.fileName}>
-                        Download
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="browse-sample-drawer-body">
+            <div className="browse-sample-summary-grid">
+              <DownloadMetricTile label="Files" value={String(files.length)} />
+              <DownloadMetricTile label="Total Size" value={summary ? formatFileSize(summary.sizeBytes) : "-"} />
+            </div>
+
+            <div className="browse-sample-section">
+              <strong>Mounted Files</strong>
+              <div className="browse-sample-file-table-wrap downloads-healthy-file-wrap">
+                <table className="data-table browse-sample-file-table downloads-healthy-file-table">
+                  <thead>
+                    <tr>
+                      <th>File</th>
+                      <th>Size</th>
+                      <th>Download</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {files.map((file) => (
+                      <tr key={file.fileName}>
+                        <td className="browse-mono">{file.fileName}</td>
+                        <td>{formatFileSize(file.sizeBytes)}</td>
+                        <td>
+                          <a className="button-secondary browse-download-btn" href={toApiUrl(file.downloadUrl)} download={file.fileName}>
+                            Download
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         ) : null}
-      </div>
-    </aside>
+      </aside>
+    </div>
+  );
+}
+
+function DownloadMetricTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="browse-samples-metric-tile">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }

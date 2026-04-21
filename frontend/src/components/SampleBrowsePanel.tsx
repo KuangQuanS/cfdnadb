@@ -9,7 +9,7 @@ import {
 } from "../api/client";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
 import type { LabelCount, SampleBrowseItem, SampleSelection } from "../types/api";
-import { formatNumber } from "../utils/format";
+import { formatFileSize, formatNumber } from "../utils/format";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const PRESETS_KEY = "cfdnadb-browse-sample-presets";
@@ -64,6 +64,15 @@ function defaultDraft(mode: "browse" | "downloads"): BrowseDraft {
     minVariants: "",
     hasAnnotated: false,
     hasSomatic: false
+  };
+}
+
+function normalizeDraftForMode(draft: BrowseDraft, mode: "browse" | "downloads"): BrowseDraft {
+  const defaults = defaultDraft(mode);
+  return {
+    ...draft,
+    cancers: draft.cancers.length > 0 ? draft.cancers : defaults.cancers,
+    sources: draft.sources.length > 0 ? draft.sources : defaults.sources,
   };
 }
 
@@ -186,12 +195,12 @@ export function SampleBrowsePanel({
     ...(showSomaticFilter && submitted.hasSomatic ? [{ key: "hasSomatic", label: "Files", value: "Has somatic", rawValue: "true" }] : []),
   ];
 
-  const applyFilters = () => {
+  const updateFilters = (updater: (previous: BrowseDraft) => BrowseDraft) => {
     setPage(1);
-    setSubmitted({
-      ...draft,
-      cancers: draft.cancers.length > 0 ? draft.cancers : [DEFAULT_CANCER],
-      sources: draft.sources.length > 0 ? draft.sources : ["private", "geo"]
+    setDraft((previous) => {
+      const next = normalizeDraftForMode(updater(previous), mode);
+      setSubmitted(next);
+      return next;
     });
   };
 
@@ -294,26 +303,19 @@ export function SampleBrowsePanel({
 
   const removeTag = (key: string, value: string) => {
     if (key.startsWith("cancer:")) {
-      setDraft((previous) => ({ ...previous, cancers: previous.cancers.filter((item) => item !== value) }));
-      setSubmitted((previous) => ({ ...previous, cancers: previous.cancers.filter((item) => item !== value) }));
+      updateFilters((previous) => ({ ...previous, cancers: previous.cancers.filter((item) => item !== value) }));
     } else if (key.startsWith("source:")) {
-      setDraft((previous) => ({ ...previous, sources: previous.sources.filter((item) => item !== value) }));
-      setSubmitted((previous) => ({ ...previous, sources: previous.sources.filter((item) => item !== value) }));
+      updateFilters((previous) => ({ ...previous, sources: previous.sources.filter((item) => item !== value) }));
     } else if (key === "gene") {
-      setDraft((previous) => ({ ...previous, gene: "" }));
-      setSubmitted((previous) => ({ ...previous, gene: "" }));
+      updateFilters((previous) => ({ ...previous, gene: "" }));
     } else if (key === "sample") {
-      setDraft((previous) => ({ ...previous, sample: "" }));
-      setSubmitted((previous) => ({ ...previous, sample: "" }));
+      updateFilters((previous) => ({ ...previous, sample: "" }));
     } else if (key === "minVariants") {
-      setDraft((previous) => ({ ...previous, minVariants: "" }));
-      setSubmitted((previous) => ({ ...previous, minVariants: "" }));
+      updateFilters((previous) => ({ ...previous, minVariants: "" }));
     } else if (key === "hasAnnotated") {
-      setDraft((previous) => ({ ...previous, hasAnnotated: false }));
-      setSubmitted((previous) => ({ ...previous, hasAnnotated: false }));
+      updateFilters((previous) => ({ ...previous, hasAnnotated: false }));
     } else if (key === "hasSomatic") {
-      setDraft((previous) => ({ ...previous, hasSomatic: false }));
-      setSubmitted((previous) => ({ ...previous, hasSomatic: false }));
+      updateFilters((previous) => ({ ...previous, hasSomatic: false }));
     }
   };
 
@@ -328,7 +330,7 @@ export function SampleBrowsePanel({
               key={cancer}
               type="button"
               className={`browse-samples-chip${draft.cancers.includes(cancer) ? " active" : ""}`}
-              onClick={() => setDraft((previous) => ({ ...previous, cancers: toggleValue(previous.cancers, cancer) }))}
+              onClick={() => updateFilters((previous) => ({ ...previous, cancers: toggleValue(previous.cancers, cancer) }))}
             >
               {cancer}
             </button>
@@ -343,7 +345,7 @@ export function SampleBrowsePanel({
               key={option.value}
               type="button"
               className={`browse-samples-chip${draft.sources.includes(option.value) ? " active" : ""}`}
-              onClick={() => setDraft((previous) => ({ ...previous, sources: toggleValue(previous.sources, option.value) }))}
+              onClick={() => updateFilters((previous) => ({ ...previous, sources: toggleValue(previous.sources, option.value) }))}
             >
               {option.label}
             </button>
@@ -356,7 +358,7 @@ export function SampleBrowsePanel({
           <span>Carrier Gene</span>
           <input
             value={draft.gene}
-            onChange={(event) => setDraft((previous) => ({ ...previous, gene: event.target.value.toUpperCase() }))}
+            onChange={(event) => updateFilters((previous) => ({ ...previous, gene: event.target.value.toUpperCase() }))}
             placeholder="e.g. TP53"
           />
         </label>
@@ -366,7 +368,7 @@ export function SampleBrowsePanel({
             type="number"
             min={0}
             value={draft.minVariants}
-            onChange={(event) => setDraft((previous) => ({ ...previous, minVariants: event.target.value }))}
+            onChange={(event) => updateFilters((previous) => ({ ...previous, minVariants: event.target.value }))}
             placeholder="0"
           />
         </label>
@@ -377,7 +379,7 @@ export function SampleBrowsePanel({
           <input
             type="checkbox"
             checked={draft.hasAnnotated}
-            onChange={(event) => setDraft((previous) => ({ ...previous, hasAnnotated: event.target.checked }))}
+            onChange={(event) => updateFilters((previous) => ({ ...previous, hasAnnotated: event.target.checked }))}
           />
           <span>Has multianno file</span>
         </label>
@@ -386,7 +388,7 @@ export function SampleBrowsePanel({
             <input
               type="checkbox"
               checked={draft.hasSomatic}
-              onChange={(event) => setDraft((previous) => ({ ...previous, hasSomatic: event.target.checked }))}
+              onChange={(event) => updateFilters((previous) => ({ ...previous, hasSomatic: event.target.checked }))}
             />
             <span>Has somatic file</span>
           </label>
@@ -415,12 +417,11 @@ export function SampleBrowsePanel({
                   <span>Sample ID Search</span>
                   <input
                     value={draft.sample}
-                    onChange={(event) => setDraft((previous) => ({ ...previous, sample: event.target.value }))}
+                    onChange={(event) => updateFilters((previous) => ({ ...previous, sample: event.target.value }))}
                     placeholder="Filter sample barcode"
                     autoComplete="off"
                   />
                 </label>
-                <button className="button-primary" type="button" onClick={applyFilters}>Apply</button>
               </div>
 
               <div className="downloads-filtered-control-actions">
@@ -503,12 +504,11 @@ export function SampleBrowsePanel({
                 <span>Sample ID Search</span>
                 <input
                   value={draft.sample}
-                  onChange={(event) => setDraft((previous) => ({ ...previous, sample: event.target.value }))}
+                  onChange={(event) => updateFilters((previous) => ({ ...previous, sample: event.target.value }))}
                   placeholder="Filter sample barcode"
                   autoComplete="off"
                 />
               </label>
-              <button className="button-primary" type="button" onClick={applyFilters}>Apply</button>
             </div>
 
             <div className="browse-samples-toolbar-actions">
@@ -592,12 +592,11 @@ export function SampleBrowsePanel({
                 <span>Sample ID Search</span>
                 <input
                   value={draft.sample}
-                  onChange={(event) => setDraft((previous) => ({ ...previous, sample: event.target.value }))}
+                  onChange={(event) => updateFilters((previous) => ({ ...previous, sample: event.target.value }))}
                   placeholder="Filter sample barcode"
                   autoComplete="off"
                 />
               </label>
-              <button className="button-primary" type="button" onClick={applyFilters}>Apply</button>
             </div>
 
             <div className="browse-samples-toolbar-actions">
@@ -711,7 +710,6 @@ export function SampleBrowsePanel({
                 {filterSections}
               </div>
               <div className="browse-samples-sidebar-actions">
-                <button className="button-primary" type="button" onClick={applyFilters}>Apply Filters</button>
                 <button className="button-secondary" type="button" onClick={resetFilters}>Reset</button>
               </div>
             </section>
@@ -845,7 +843,6 @@ export function SampleBrowsePanel({
             </div>
             {filterSections}
             <div className="browse-samples-sidebar-actions">
-              <button className="button-primary" type="button" onClick={applyFilters}>Apply Filters</button>
               <button className="button-secondary" type="button" onClick={resetFilters}>Reset</button>
             </div>
           </aside>
@@ -1036,7 +1033,7 @@ export function SampleBrowsePanel({
                             <tr key={`${file.type}-${file.fileName}`}>
                               <td>{file.type}</td>
                               <td className="browse-mono">{file.fileName}</td>
-                              <td>{formatNumber(file.sizeBytes)}</td>
+                              <td>{formatFileSize(file.sizeBytes)}</td>
                               <td>{formatTimestamp(file.lastModified)}</td>
                               <td>
                                 {file.downloadUrl ? (
