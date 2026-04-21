@@ -114,7 +114,6 @@ export function AppShell({ children }: PropsWithChildren) {
         <div className="header-container">
           <div className="title-area">
             <div className="title-stack">
-              <p className="site-kicker">Plasma somatic mutation database</p>
               <Link to="/" className="site-logo-link" aria-label="cfDNAdb Home">
                 <img src={siteLogoPng} alt="cfDNAdb" className="site-logo-img" />
               </Link>
