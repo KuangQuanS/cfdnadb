@@ -7668,6 +7668,12 @@ button:disabled:hover {
   padding: 20px 22px;
 }
 
+.downloads-filtered-table-tools {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
 .downloads-filtered-control-summary {
   display: block;
 }
@@ -7695,6 +7701,11 @@ button:disabled:hover {
   align-items: end;
   padding-top: 18px;
   border-top: 1px solid #e3eaf4;
+}
+
+.downloads-filtered-control-bar--inline {
+  padding-top: 0;
+  border-top: none;
 }
 
 .downloads-filtered-control-search,

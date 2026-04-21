@@ -57,8 +57,8 @@ interface SampleBrowsePanelProps {
 
 function defaultDraft(mode: "browse" | "downloads"): BrowseDraft {
   return {
-    cancers: mode === "downloads" ? [DEFAULT_CANCER, "Healthy"] : [DEFAULT_CANCER],
-    sources: mode === "downloads" ? ["private", "geo", "healthy"] : ["private", "geo"],
+    cancers: [DEFAULT_CANCER],
+    sources: ["private", "geo"],
     gene: "",
     sample: "",
     minVariants: "",
@@ -184,10 +184,12 @@ export function SampleBrowsePanel({
 
   const totalVariantsOnPage = rows.reduce((sum, item) => sum + item.variantCount, 0);
   const totalVisibleFiles = rows.reduce((sum, item) => sum + item.availableFiles.length, 0);
+  const defaultFilters = defaultDraft(mode);
+  const showSourceTags = mode !== "downloads" || submitted.sources.join("|") !== defaultFilters.sources.join("|");
 
   const activeTags = [
       ...submitted.cancers.map((cancer) => ({ key: `cancer:${cancer}`, label: "Cancer", value: cancer, rawValue: cancer })),
-      ...submitted.sources.map((source) => ({ key: `source:${source}`, label: "Source", value: sourceLabel(source), rawValue: source })),
+      ...(showSourceTags ? submitted.sources.map((source) => ({ key: `source:${source}`, label: "Source", value: sourceLabel(source), rawValue: source })) : []),
       ...(submitted.gene ? [{ key: "gene", label: "Gene", value: submitted.gene, rawValue: submitted.gene }] : []),
       ...(submitted.sample ? [{ key: "sample", label: "Sample", value: submitted.sample, rawValue: submitted.sample }] : []),
       ...(submitted.minVariants ? [{ key: "minVariants", label: "Min variants", value: submitted.minVariants, rawValue: submitted.minVariants }] : []),
@@ -401,87 +403,7 @@ export function SampleBrowsePanel({
     <div className={wrapperClass}>
       {compact ? (
         isDownloadsCompact ? (
-          <section className="detail-card downloads-filtered-control-card">
-            <div className="downloads-filtered-control-summary">
-              <div className="downloads-filtered-control-metrics">
-                <MetricTile label="Matching Samples" value={formatNumber(samplesQuery.data?.totalElements ?? 0)} />
-                <MetricTile label="Page Variants" value={formatNumber(totalVariantsOnPage)} />
-                <MetricTile label="Visible Files" value={formatNumber(totalVisibleFiles)} />
-                <MetricTile label="Selected" value={formatNumber(selectedCount)} />
-              </div>
-            </div>
-
-            <div className="downloads-filtered-control-bar">
-              <div className="downloads-filtered-control-search">
-                <label className="browse-field browse-samples-toolbar-search">
-                  <span>Sample ID Search</span>
-                  <input
-                    value={draft.sample}
-                    onChange={(event) => updateFilters((previous) => ({ ...previous, sample: event.target.value }))}
-                    placeholder="Filter sample barcode"
-                    autoComplete="off"
-                  />
-                </label>
-              </div>
-
-              <div className="downloads-filtered-control-actions">
-                <label className="browse-field-inline">
-                  <span>Rows</span>
-                  <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
-                    {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
-                  </select>
-                </label>
-
-                <div className="browse-dropdown-wrap">
-                  <button className="button-secondary" type="button" onClick={() => { setShowColumnMenu((value) => !value); setShowPresetMenu(false); }}>
-                    Columns
-                  </button>
-                  {showColumnMenu && (
-                    <div className="browse-dropdown-menu">
-                      {availableColumns.map((column) => (
-                        <label key={column.key} className="browse-dropdown-item">
-                          <input
-                            type="checkbox"
-                            checked={visibleColumns.has(column.key)}
-                            onChange={() => toggleColumn(column.key)}
-                          />
-                          {column.label}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="browse-dropdown-wrap">
-                  <button className="button-secondary" type="button" onClick={() => { setShowPresetMenu((value) => !value); setShowColumnMenu(false); }}>
-                    Presets
-                  </button>
-                  {showPresetMenu && (
-                    <div className="browse-dropdown-menu browse-preset-menu">
-                      <div className="browse-preset-save">
-                        <input value={presetName} onChange={(event) => setPresetName(event.target.value)} placeholder="Preset name" />
-                        <button className="button-primary browse-preset-save-btn" type="button" onClick={saveCurrentPreset}>Save</button>
-                      </div>
-                      {presets.length === 0 && <p className="browse-preset-empty">No saved presets</p>}
-                      {presets.map((preset) => (
-                        <div key={preset.name} className="browse-preset-row">
-                          <button type="button" className="browse-preset-load" onClick={() => loadPreset(preset)}>
-                            <strong>{preset.name}</strong>
-                            <span>
-                              {preset.cancers.join(", ")}
-                              {preset.gene ? ` / ${preset.gene}` : ""}
-                              {preset.minVariants ? ` / >= ${preset.minVariants}` : ""}
-                            </span>
-                          </button>
-                          <button type="button" className="browse-preset-delete" onClick={() => deletePreset(preset.name)}>&times;</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
+          null
         ) : (
         <section className={`detail-card downloads-filtered-hero-card${mode === "downloads" ? " downloads-filtered-hero-card--downloads" : ""}`}>
           <section className="browse-samples-hero browse-samples-hero--embedded">
@@ -723,6 +645,88 @@ export function SampleBrowsePanel({
                   </p>
                 </div>
               </div>
+
+              {isDownloadsCompact ? (
+                <div className="downloads-filtered-table-tools">
+                  <div className="downloads-filtered-control-metrics">
+                    <MetricTile label="Matching Samples" value={formatNumber(samplesQuery.data?.totalElements ?? 0)} />
+                    <MetricTile label="Page Variants" value={formatNumber(totalVariantsOnPage)} />
+                    <MetricTile label="Visible Files" value={formatNumber(totalVisibleFiles)} />
+                    <MetricTile label="Selected" value={formatNumber(selectedCount)} />
+                  </div>
+
+                  <div className="downloads-filtered-control-bar downloads-filtered-control-bar--inline">
+                    <div className="downloads-filtered-control-search">
+                      <label className="browse-field browse-samples-toolbar-search">
+                        <span>Sample ID Search</span>
+                        <input
+                          value={draft.sample}
+                          onChange={(event) => updateFilters((previous) => ({ ...previous, sample: event.target.value }))}
+                          placeholder="Filter sample barcode"
+                          autoComplete="off"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="downloads-filtered-control-actions">
+                      <label className="browse-field-inline">
+                        <span>Rows</span>
+                        <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
+                          {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
+                        </select>
+                      </label>
+
+                      <div className="browse-dropdown-wrap">
+                        <button className="button-secondary" type="button" onClick={() => { setShowColumnMenu((value) => !value); setShowPresetMenu(false); }}>
+                          Columns
+                        </button>
+                        {showColumnMenu && (
+                          <div className="browse-dropdown-menu">
+                            {availableColumns.map((column) => (
+                              <label key={column.key} className="browse-dropdown-item">
+                                <input
+                                  type="checkbox"
+                                  checked={visibleColumns.has(column.key)}
+                                  onChange={() => toggleColumn(column.key)}
+                                />
+                                {column.label}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="browse-dropdown-wrap">
+                        <button className="button-secondary" type="button" onClick={() => { setShowPresetMenu((value) => !value); setShowColumnMenu(false); }}>
+                          Presets
+                        </button>
+                        {showPresetMenu && (
+                          <div className="browse-dropdown-menu browse-preset-menu">
+                            <div className="browse-preset-save">
+                              <input value={presetName} onChange={(event) => setPresetName(event.target.value)} placeholder="Preset name" />
+                              <button className="button-primary browse-preset-save-btn" type="button" onClick={saveCurrentPreset}>Save</button>
+                            </div>
+                            {presets.length === 0 && <p className="browse-preset-empty">No saved presets</p>}
+                            {presets.map((preset) => (
+                              <div key={preset.name} className="browse-preset-row">
+                                <button type="button" className="browse-preset-load" onClick={() => loadPreset(preset)}>
+                                  <strong>{preset.name}</strong>
+                                  <span>
+                                    {preset.cancers.join(", ")}
+                                    {preset.gene ? ` / ${preset.gene}` : ""}
+                                    {preset.minVariants ? ` / >= ${preset.minVariants}` : ""}
+                                  </span>
+                                </button>
+                                <button type="button" className="browse-preset-delete" onClick={() => deletePreset(preset.name)}>&times;</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               {selectedCount > 0 && (
                 <div className="browse-samples-selection-bar">
