@@ -52,7 +52,7 @@ const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] 
 
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 13, anchorPct: 48, browseKey: "HeadAndNeck", alwaysShow: false },
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 17, anchorPct: 49, browseKey: "HeadAndNeck", alwaysShow: false },
   { id: "Lung", label: "Lung", side: "left", topPct: 28, anchorPct: 42, browseKey: "Lung", alwaysShow: true },
   { id: "Liver", label: "Liver", side: "left", topPct: 38, anchorPct: 43, browseKey: "Liver", alwaysShow: true },
   { id: "Kidney", label: "Kidney", side: "left", topPct: 43, anchorPct: 41, browseKey: "Kidney", alwaysShow: false },

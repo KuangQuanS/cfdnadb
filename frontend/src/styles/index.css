@@ -147,9 +147,9 @@ button, input, select { font: inherit; }
   inset: 0;
   background: linear-gradient(
     90deg,
-    rgba(6, 14, 28, 0.32) 0%,
-    rgba(6, 14, 28, 0.20) 42%,
-    rgba(6, 14, 28, 0.28) 100%
+    rgba(6, 14, 28, 0.26) 0%,
+    rgba(6, 14, 28, 0.14) 42%,
+    rgba(6, 14, 28, 0.22) 100%
   );
   pointer-events: none;
 }
@@ -180,13 +180,13 @@ button, input, select { font: inherit; }
 .site-logo-link {
   display: flex;
   align-items: center;
-  width: clamp(260px, 26vw, 440px);
+  width: clamp(290px, 30vw, 520px);
   text-decoration: none;
 }
 
 .site-logo-img {
   width: 100%;
-  max-height: 104px;
+  max-height: 126px;
   height: auto;
   display: block;
   object-fit: contain;
@@ -240,23 +240,23 @@ button, input, select { font: inherit; }
 }
 
 .nav-link {
-  padding: 8px 16px;
+  padding: 9px 18px;
   border-radius: var(--radius-pill);
   color: rgba(255, 255, 255, 0.84);
   font-weight: 700;
-  font-size: 1.02rem;
+  font-size: 1.14rem;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
   transition: all 0.2s ease;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
   text-decoration: none;
 }
 
 .nav-link.active {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
@@ -358,12 +358,12 @@ button, input, select { font: inherit; }
   }
 
   .site-logo-link {
-    width: clamp(190px, 52vw, 280px);
+    width: clamp(220px, 58vw, 340px);
   }
 
   .site-logo-img {
     width: 100%;
-    max-height: 78px;
+    max-height: 96px;
   }
 }
 
