@@ -5,7 +5,21 @@ import { SampleBrowsePanel } from "../components/SampleBrowsePanel";
 import { SectionHeader } from "../components/SectionHeader";
 import { formatFileSize } from "../utils/format";
 
-const FILE_TYPE_ORDER = ["Variant Data", "MAF Summary", "Pan-Cancer Variants"];
+const FILE_TYPE_ORDER = ["Healthy VCF", "Variant Data", "MAF Summary", "Pan-Cancer Variants"];
+const COHORT_ORDER = [
+  "Healthy",
+  "Breast",
+  "Colorectal",
+  "Liver",
+  "Lung",
+  "Pancreatic",
+  "Pan-Cancer",
+];
+
+function rankByOrder(value: string, order: string[]) {
+  const index = order.indexOf(value);
+  return index >= 0 ? index : order.length;
+}
 
 export function DownloadsPage() {
   const [mode, setMode] = useState<"all" | "filtered">("all");
@@ -21,15 +35,14 @@ export function DownloadsPage() {
     }, {});
   }, [filesQuery.data]);
 
-  const cancerOrder = ["Breast", "Colonrector", "Liver", "Lung", "Pdac", "Pan-Cancer"];
   const sortedGroups = Object.entries(grouped).sort(
-    ([a], [b]) => (cancerOrder.indexOf(a) ?? 99) - (cancerOrder.indexOf(b) ?? 99)
+    ([a], [b]) => rankByOrder(a, COHORT_ORDER) - rankByOrder(b, COHORT_ORDER) || a.localeCompare(b)
   );
   const tableRows = useMemo(
     () =>
       sortedGroups.flatMap(([cancer, files]) =>
         [...files]
-          .sort((a, b) => (FILE_TYPE_ORDER.indexOf(a.fileType) ?? 99) - (FILE_TYPE_ORDER.indexOf(b.fileType) ?? 99))
+          .sort((a, b) => rankByOrder(a.fileType, FILE_TYPE_ORDER) - rankByOrder(b.fileType, FILE_TYPE_ORDER) || a.fileName.localeCompare(b.fileName))
           .map((file) => ({ ...file, cancer }))
       ),
     [sortedGroups]
@@ -39,8 +52,8 @@ export function DownloadsPage() {
     <div className="page-stack downloads-page">
       <SectionHeader
         eyebrow="Downloads"
-        title="Aggregate and filtered multianno downloads"
-        description="Choose between full cohort-level output tables and filtered multianno export from selected samples."
+        title="Aggregate, Healthy VCF, and filtered downloads"
+        description="Choose between mounted cohort-level outputs, individual Healthy VCF files, and filtered multianno export from selected samples."
       />
 
       <section className="detail-card downloads-mode-card">
@@ -74,7 +87,7 @@ export function DownloadsPage() {
             <div className="statistics-panel-header">
               <h3 className="stat-pdf-title">Whole-cohort file table</h3>
               <p className="statistics-panel-note">
-                Download the mounted cohort-level outputs already present on disk, including multianno summaries and pan-cancer aggregates.
+                Download the mounted cohort-level outputs already present on disk, including multianno summaries, pan-cancer aggregates, and individual Healthy VCF files.
               </p>
             </div>
             <div className="statistics-pdf-shell downloads-table-shell">

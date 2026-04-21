@@ -697,6 +697,10 @@ export function StatisticsPage() {
     () => cancerSummary.filter((item) => item.sampleCount > 0),
     [cancerSummary]
   );
+  const cancerCohorts = useMemo(
+    () => activeCohorts.filter((item) => item.cancer !== "Healthy"),
+    [activeCohorts]
+  );
   const sampleSum = activeCohorts.reduce(
     (sum, item) => sum + item.sampleCount,
     0
@@ -730,7 +734,7 @@ export function StatisticsPage() {
           </div>
           <div className="statistics-private-toolbar-badge">
             <span>Cohorts</span>
-            <strong>{formatNumber(activeCohorts.length)}</strong>
+            <strong>{formatNumber(cancerCohorts.length)}</strong>
           </div>
         </div>
       </section>
@@ -749,7 +753,7 @@ export function StatisticsPage() {
         />
         <KpiTile
           label="Cancer Cohorts"
-          value={activeCohorts.length}
+          value={cancerCohorts.length}
           hint="With somatic data"
         />
       </section>
@@ -765,7 +769,7 @@ export function StatisticsPage() {
               <p className="section-eyebrow">Cohort Composition</p>
               <StatScope>sample-level</StatScope>
             </div>
-            <h3>Sample Distribution Across Cancer Cohorts</h3>
+            <h3>Sample Distribution Across Cohorts</h3>
           </header>
           <div className="statistics-private-card-body">
             <ReactECharts

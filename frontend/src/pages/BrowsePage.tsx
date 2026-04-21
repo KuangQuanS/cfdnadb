@@ -23,6 +23,10 @@ const SOURCE_LABELS: Record<string, string> = Object.fromEntries(
   BROWSE_SOURCES.map((item) => [item.source, item.label])
 );
 
+function toBrowsePlotSource(source: string) {
+  return source === "tcga" ? "tcga" : "Overview";
+}
+
 function normalizeCancerLabel(value: string) {
   if (value === "HeadAndNeck") return "Head & Neck";
   return value;
@@ -104,8 +108,7 @@ export function BrowsePage() {
     [searchParams, setSearchParams]
   );
 
-  // "cfDNA" (All) maps to "private" for plots/oncoplot since the backend indexes use "private"
-  const plotSource = activeSource === "cfDNA" ? "private" : activeSource;
+  const plotSource = toBrowsePlotSource(activeSource);
 
   const plotsQ = useQuery({
     queryKey: ["browse-plots", cancer, plotSource],
@@ -139,8 +142,10 @@ export function BrowsePage() {
   );
 
   const sourceSummary = useMemo(() => {
-    if (!activeSource) return "Choose a cohort and source to inspect summary PDFs and the interactive oncoplot.";
-    return "Browse is cohort-centric: inspect global mutation patterns, summary PDFs, and sample-by-gene alteration structure for the selected cohort.";
+    if (activeSource === "tcga") {
+      return "TCGA uses its independent oncoplot and cohort summary plots for the selected cancer type.";
+    }
+    return "cfDNA, Private, and GEO use the same cfDNA cohort-level summary plots and pan-cancer oncoplot in this Browse view.";
   }, [activeSource]);
 
   return (

@@ -23,6 +23,7 @@ const MOCK_COHORTS: CancerSummary[] = [
 ];
 
 const CORE_COHORT_COLORS: Record<string, string> = {
+  Healthy: "#7d8da6",
   Breast: "#eb6a7f",
   Colorectal: "#5a49b7",
   Liver: "#28a07f",
@@ -271,11 +272,11 @@ export function HeroCarousel() {
     [ringEntries],
   );
   const sampleRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, sampleCount }) => ({ id, label, color, value: sampleCount, browseKey: label })),
+    () => ringEntries.map(({ id, label, color, sampleCount }) => ({ id, label, color, value: sampleCount, browseKey: label === "Healthy" ? "" : label })),
     [ringEntries],
   );
   const fileRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, fileCount }) => ({ id, label, color, value: fileCount, browseKey: label })),
+    () => ringEntries.map(({ id, label, color, fileCount }) => ({ id, label, color, value: fileCount, browseKey: label === "Healthy" ? "" : label })),
     [ringEntries],
   );
   const totalAnnotated = useMemo(

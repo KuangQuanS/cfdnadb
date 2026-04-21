@@ -69,6 +69,9 @@ public class DuckDbService {
 
     private static final Logger log = LoggerFactory.getLogger(DuckDbService.class);
     private static final Path DEFAULT_DATA_DIR = Path.of("/400T/cfdnaweb");
+    private static final Path DEFAULT_HEALTHY_VCF_DIR = Path.of("/400T/cfdnadb/Healthy/Vcf");
+    private static final String HEALTHY_COHORT = "Healthy";
+    private static final String HEALTHY_VCF_CATEGORY = "healthy-vcf";
     private static final List<String> CANCERS = List.of(
             "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
             "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
@@ -89,34 +92,41 @@ public class DuckDbService {
     private final Path tcgaIgvFile;
     private final Path panCancerDir;
     private final Path vafDataDir;
+    private final Path healthyVcfDir;
 
     @Autowired
     public DuckDbService(@Value("${app.data-dir:/400T/cfdnaweb}") String dataDir,
                          @Value("${app.query-db-file:${app.maf-db-file:cfdnadb.duckdb}}") String queryDbFileName,
                          @Value("${app.tcga-igv-file:/400T/cfdnaweb/tcga_maf.txt}") String tcgaIgvFile,
                          @Value("${app.pan-cancer-dir:/400T/cfdnaweb/statistics/oncoplot/pan_cancer}") String panCancerDir,
-                         @Value("${app.vaf-data-dir:/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF}") String vafDataDir) {
-        this(Path.of(dataDir), queryDbFileName, Path.of(tcgaIgvFile), Path.of(panCancerDir), Path.of(vafDataDir));
+                         @Value("${app.vaf-data-dir:/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF}") String vafDataDir,
+                         @Value("${app.healthy-vcf-dir:/400T/cfdnadb/Healthy/Vcf}") String healthyVcfDir) {
+        this(Path.of(dataDir), queryDbFileName, Path.of(tcgaIgvFile), Path.of(panCancerDir), Path.of(vafDataDir), Path.of(healthyVcfDir));
     }
 
     public DuckDbService(Path dataDir) {
-        this(dataDir, "cfdnadb.duckdb", dataDir.resolve("tcga_maf.txt"), Path.of("/400T/cfdnaweb/statistics/oncoplot/pan_cancer"), Path.of("/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF"));
+        this(dataDir, "cfdnadb.duckdb", dataDir.resolve("tcga_maf.txt"), Path.of("/400T/cfdnaweb/statistics/oncoplot/pan_cancer"), Path.of("/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF"), DEFAULT_HEALTHY_VCF_DIR);
     }
 
     public DuckDbService(Path dataDir, String queryDbFileName) {
-        this(dataDir, queryDbFileName, dataDir.resolve("tcga_maf.txt"), Path.of("/400T/cfdnaweb/statistics/oncoplot/pan_cancer"), Path.of("/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF"));
+        this(dataDir, queryDbFileName, dataDir.resolve("tcga_maf.txt"), Path.of("/400T/cfdnaweb/statistics/oncoplot/pan_cancer"), Path.of("/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF"), DEFAULT_HEALTHY_VCF_DIR);
     }
 
     public DuckDbService(Path dataDir, String queryDbFileName, Path tcgaIgvFile, Path panCancerDir) {
-        this(dataDir, queryDbFileName, tcgaIgvFile, panCancerDir, Path.of("/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF"));
+        this(dataDir, queryDbFileName, tcgaIgvFile, panCancerDir, Path.of("/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF"), DEFAULT_HEALTHY_VCF_DIR);
     }
 
     public DuckDbService(Path dataDir, String queryDbFileName, Path tcgaIgvFile, Path panCancerDir, Path vafDataDir) {
+        this(dataDir, queryDbFileName, tcgaIgvFile, panCancerDir, vafDataDir, DEFAULT_HEALTHY_VCF_DIR);
+    }
+
+    public DuckDbService(Path dataDir, String queryDbFileName, Path tcgaIgvFile, Path panCancerDir, Path vafDataDir, Path healthyVcfDir) {
         this.dataDir = dataDir;
         this.queryDbFileName = queryDbFileName;
         this.tcgaIgvFile = tcgaIgvFile;
         this.panCancerDir = panCancerDir;
         this.vafDataDir = vafDataDir;
+        this.healthyVcfDir = healthyVcfDir;
         ensureDuckDbDriverLoaded();
     }
 
@@ -130,9 +140,14 @@ public class DuckDbService {
 
     public List<CancerSummaryDto> getCancerSummary() {
         Map<String, Long> mutationCounts = loadMutationCountsByMafCancerType();
-        return CANCERS.stream()
+        List<CancerSummaryDto> summaries = CANCERS.stream()
                 .map(cancer -> buildCancerSummary(cancer, mutationCounts))
                 .collect(java.util.stream.Collectors.toList());
+        long healthyVcfCount = countHealthyVcfFiles();
+        if (healthyVcfCount > 0) {
+            summaries.add(buildHealthySummary(healthyVcfCount));
+        }
+        return summaries;
     }
 
     public List<TopGeneDto> getTopGenes(String cancer, int limit) {
@@ -432,6 +447,7 @@ public class DuckDbService {
                         "/api/v1/data-files/pan/" + p.getFileName()));
             }
         }
+        files.addAll(listHealthyVcfDataFiles());
         return files;
     }
 
@@ -439,6 +455,8 @@ public class DuckDbService {
         Path filePath;
         if ("pan".equalsIgnoreCase(category)) {
             filePath = dataDir.resolve(subPath);
+        } else if (HEALTHY_VCF_CATEGORY.equalsIgnoreCase(category)) {
+            filePath = resolveHealthyVcfFile(subPath);
         } else {
             String cancer = validateCancer(category);
             filePath = resolveCancerDir(cancer).resolve(subPath);
@@ -454,6 +472,49 @@ public class DuckDbService {
         try { size = Files.size(path); } catch (IOException ignored) {}
         String name = humanizeFileName(path.getFileName().toString());
         return new DataFileDto(cancer, fileType, name, path.getFileName().toString(), size, downloadUrl);
+    }
+
+    private List<DataFileDto> listHealthyVcfDataFiles() {
+        if (!Files.isDirectory(healthyVcfDir)) {
+            return List.of();
+        }
+
+        try (Stream<Path> stream = Files.list(healthyVcfDir)) {
+            return stream
+                    .filter(this::isHealthyVcfFile)
+                    .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                    .map(path -> buildDataFileDto(
+                            HEALTHY_COHORT,
+                            "Healthy VCF",
+                            path,
+                            "/api/v1/data-files/" + HEALTHY_VCF_CATEGORY + "/" +
+                                    UriUtils.encodePathSegment(path.getFileName().toString(), StandardCharsets.UTF_8)))
+                    .collect(Collectors.toList());
+        } catch (IOException exception) {
+            log.warn("Failed to list healthy VCF files from {}", healthyVcfDir, exception);
+            return List.of();
+        }
+    }
+
+    private Path resolveHealthyVcfFile(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            throw new ResourceNotFoundException("Healthy VCF file not found: " + fileName);
+        }
+        Path requested = Path.of(fileName);
+        if (requested.getNameCount() != 1 || !requested.getFileName().toString().equals(fileName)) {
+            throw new ResourceNotFoundException("Healthy VCF file not found: " + fileName);
+        }
+        Path root = healthyVcfDir.toAbsolutePath().normalize();
+        Path candidate = root.resolve(fileName).normalize();
+        if (!candidate.startsWith(root) || !isHealthyVcfFile(candidate)) {
+            throw new ResourceNotFoundException("Healthy VCF file not found: " + fileName);
+        }
+        return candidate;
+    }
+
+    private boolean isHealthyVcfFile(Path path) {
+        String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        return Files.isRegularFile(path) && fileName.endsWith(".vcf.gz");
     }
 
     public DatabaseStatsDto getDatabaseStats() {
@@ -2388,6 +2449,38 @@ public class DuckDbService {
             }
         } catch (SQLException exception) {
             throw new IllegalStateException("Failed to build cancer summary for " + cancer, exception);
+        }
+    }
+
+    private CancerSummaryDto buildHealthySummary(long vcfCount) {
+        return new CancerSummaryDto(
+                HEALTHY_COHORT,
+                vcfCount,
+                vcfCount,
+                0,
+                vcfCount,
+                0,
+                0,
+                0,
+                0,
+                0,
+                statusLabel(false),
+                statusLabel(vcfCount > 0),
+                statusLabel(false),
+                statusLabel(false),
+                statusLabel(false),
+                statusLabel(false));
+    }
+
+    private long countHealthyVcfFiles() {
+        if (!Files.isDirectory(healthyVcfDir)) {
+            return 0;
+        }
+        try (Stream<Path> stream = Files.list(healthyVcfDir)) {
+            return stream.filter(this::isHealthyVcfFile).count();
+        } catch (IOException exception) {
+            log.warn("Failed to count healthy VCF files in {}", healthyVcfDir, exception);
+            return 0;
         }
     }
 

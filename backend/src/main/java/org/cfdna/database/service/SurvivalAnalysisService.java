@@ -224,8 +224,8 @@ public class SurvivalAnalysisService {
             result.groups.put("Wildtype", buildGroup("Wildtype", wildtype));
             result.pairwiseP = new LinkedHashMap<>();
             result.pairwiseHr = new LinkedHashMap<>();
-            result.pairwiseP.put("Mutant_vs_Wildtype", logRankP(mutant, wildtype));
-            result.pairwiseHr.put("Mutant_vs_Wildtype", hazardRatio(mutant, wildtype));
+            result.pairwiseP.put("Mutant_vs_Wildtype", finiteOrNull(logRankP(mutant, wildtype)));
+            result.pairwiseHr.put("Mutant_vs_Wildtype", finiteOrNull(hazardRatio(mutant, wildtype)));
             result.overallP = result.pairwiseP.get("Mutant_vs_Wildtype");
             return result;
         } catch (Exception ex) {
@@ -268,8 +268,8 @@ public class SurvivalAnalysisService {
             result.pairwiseHr = new LinkedHashMap<>();
             for (Map.Entry<String, List<Sample>> b : bucketed.entrySet()) {
                 if (b.getValue().size() < 2) continue;
-                result.pairwiseP.put(b.getKey() + "_vs_Wildtype", logRankP(b.getValue(), wildtype));
-                result.pairwiseHr.put(b.getKey() + "_vs_Wildtype", hazardRatio(b.getValue(), wildtype));
+                result.pairwiseP.put(b.getKey() + "_vs_Wildtype", finiteOrNull(logRankP(b.getValue(), wildtype)));
+                result.pairwiseHr.put(b.getKey() + "_vs_Wildtype", finiteOrNull(hazardRatio(b.getValue(), wildtype)));
             }
             return result;
         } catch (Exception ex) {
@@ -306,7 +306,7 @@ public class SurvivalAnalysisService {
                 for (int j = i + 1; j < keys.size(); j++) {
                     String ki = keys.get(i), kj = keys.get(j);
                     double p = wilcoxonP(bucketed.get(ki), bucketed.get(kj));
-                    res.pairwiseP.put(ki + "_vs_" + kj, p);
+                    res.pairwiseP.put(ki + "_vs_" + kj, finiteOrNull(p));
                 }
             }
             return res;
@@ -337,7 +337,7 @@ public class SurvivalAnalysisService {
                     nonEmpty.add(b.getValue());
                 }
             }
-            res.overallP = nonEmpty.size() >= 2 ? kruskalWallisP(nonEmpty) : Double.NaN;
+            res.overallP = nonEmpty.size() >= 2 ? finiteOrNull(kruskalWallisP(nonEmpty)) : null;
             return res;
         } catch (Exception ex) {
             throw new RuntimeException("vafByMutationType failed: " + ex.getMessage(), ex);
@@ -463,13 +463,17 @@ public class SurvivalAnalysisService {
                 nonEmpty.add(entry.getValue());
             }
         }
-        res.overallP = nonEmpty.size() >= 2 ? kruskalWallisP(nonEmpty) : Double.NaN;
+        res.overallP = nonEmpty.size() >= 2 ? finiteOrNull(kruskalWallisP(nonEmpty)) : null;
         return res;
     }
 
     // =============================================================
     // Statistics helpers (KM, log-rank, Wilcoxon, Kruskal-Wallis)
     // =============================================================
+
+    private static Double finiteOrNull(double value) {
+        return Double.isFinite(value) ? value : null;
+    }
 
     private static double convertTime(double days, String unit) {
         if ("days".equalsIgnoreCase(unit)) return days;

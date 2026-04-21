@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/v1/data-files")
@@ -35,7 +36,7 @@ public class DataFileController {
         Resource resource = duckDbService.loadDataFile(category, fileName);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-                .header(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .header(HttpHeaders.CONTENT_TYPE, contentTypeFor(fileName))
                 .body(resource);
     }
 
@@ -46,7 +47,12 @@ public class DataFileController {
         Resource resource = duckDbService.loadDataFile(category, "maf/" + fileName);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-                .header(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .header(HttpHeaders.CONTENT_TYPE, contentTypeFor(fileName))
                 .body(resource);
+    }
+
+    private String contentTypeFor(String fileName) {
+        String lowerName = fileName.toLowerCase(Locale.ROOT);
+        return lowerName.endsWith(".gz") ? "application/gzip" : "text/plain";
     }
 }
