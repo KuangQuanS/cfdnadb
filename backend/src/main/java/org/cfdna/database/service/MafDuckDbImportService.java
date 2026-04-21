@@ -141,11 +141,9 @@ public class MafDuckDbImportService {
 
         // Phase 3: aggregates, pan-cancer, sample inventory — each sub-step in its own connection
         long aggregateRows, panClinicalRows, panMutationRows;
-        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
-            conn.setAutoCommit(false);
-            aggregateRows = importAggregateFiles(conn, plan.aggregateFiles);
-            conn.commit();
-            log.info("[QUERY-IMPORT] phase 3a/5: aggregates done, rows={}", aggregateRows);
+        try {
+            aggregateRows = importAggregateFiles(jdbcUrl, plan.aggregateFiles);
+            log.info("[QUERY-IMPORT] phase 3a/5: aggregates done, insertedRows={}", aggregateRows);
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to import aggregates into " + dbPath, e);
         }
@@ -725,9 +723,25 @@ public class MafDuckDbImportService {
         }
     }
 
-    private long importAggregateFiles(Connection connection, List<AggregateFile> aggregateFiles) throws SQLException {
+    private long importAggregateFiles(String jdbcUrl, List<AggregateFile> aggregateFiles) throws SQLException {
+        long insertedRows = 0;
+        int idx = 0;
+        for (AggregateFile aggregateFile : aggregateFiles) {
+            idx++;
+            log.info("[QUERY-IMPORT] aggregate {}/{}: cancer={}, file={}",
+                    idx, aggregateFiles.size(), aggregateFile.cancer,
+                    aggregateFile.path.toAbsolutePath());
+            try (Connection connection = DriverManager.getConnection(jdbcUrl)) {
+                connection.setAutoCommit(true);
+                insertedRows += importAggregateFile(connection, aggregateFile);
+            }
+        }
+        return insertedRows;
+    }
+
+    private long importAggregateFile(Connection connection, AggregateFile aggregateFile) throws SQLException {
         try (Statement pragma = connection.createStatement()) {
-            pragma.execute("PRAGMA threads=8");
+            pragma.execute("PRAGMA threads=1");
         }
 
         String sql =
@@ -745,21 +759,16 @@ public class MafDuckDbImportService {
                         "COALESCE(CAST(\"Tumor_Sample_Barcode\" AS VARCHAR), '') " +
                         "FROM read_csv_auto(?, delim='\\t', header=true, all_varchar=true, ignore_errors=true)";
 
+        long before = tableCount(connection, "aggregate_multianno");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            int idx = 0;
-            for (AggregateFile aggregateFile : aggregateFiles) {
-                idx++;
-                log.info("[QUERY-IMPORT] aggregate {}/{}: cancer={}, file={}",
-                        idx, aggregateFiles.size(), aggregateFile.cancer,
-                        aggregateFile.path.toAbsolutePath());
-                statement.setString(1, aggregateFile.cancer);
-                statement.setString(2, aggregateFile.path.getFileName().toString());
-                statement.setString(3, aggregateFile.path.toAbsolutePath().toString());
-                statement.setString(4, aggregateFile.path.toAbsolutePath().toString());
-                statement.executeUpdate();
-            }
+            statement.setString(1, aggregateFile.cancer);
+            statement.setString(2, aggregateFile.path.getFileName().toString());
+            statement.setString(3, aggregateFile.path.toAbsolutePath().toString());
+            statement.setString(4, aggregateFile.path.toAbsolutePath().toString());
+            statement.executeUpdate();
         }
-        return tableCount(connection, "aggregate_multianno");
+        long after = tableCount(connection, "aggregate_multianno");
+        return Math.max(0, after - before);
     }
 
     private long importPanCancerFile(Connection connection, Path filePath, String tableName) throws SQLException {
