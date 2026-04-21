@@ -8292,6 +8292,10 @@ button:disabled:hover {
   aspect-ratio: 1 / 1;
 }
 
+.survival-chart-frame--omics {
+  aspect-ratio: 1.08 / 1;
+}
+
 .survival-plot-actions {
   display: inline-flex;
   align-items: center;
@@ -8372,7 +8376,8 @@ button:disabled:hover {
 
   .survival-chart-frame,
   .survival-chart-frame--km,
-  .survival-chart-frame--vaf {
+  .survival-chart-frame--vaf,
+  .survival-chart-frame--omics {
     width: 100%;
     aspect-ratio: auto;
   }

@@ -36,6 +36,9 @@ public class SurvivalAnalysisService {
             "TCGA-GBM", "TCGA-HNSC", "TCGA-KIRC", "TCGA-LIHC", "TCGA-LUAD",
             "TCGA-OV", "TCGA-PAAD", "TCGA-STAD", "TCGA-THCA", "TCGA-UCEC"
     );
+    private static final String CFMETHDB_FILE = "cfMethDB.txt";
+    private static final String CFOMICS_METHYLATION_FILE = "cfOmics_methylation.txt";
+    private static final String CTC_RBASE_FILE = "ctcRbase_all_cancers_long.txt";
 
     /** Ordered mutation-type categories for plotting. */
     public static final List<String> MUTATION_TYPES = List.of(
@@ -43,9 +46,12 @@ public class SurvivalAnalysisService {
     );
 
     private final Path tcgaDir;
+    private final Path databaseDir;
 
-    public SurvivalAnalysisService(@Value("${app.tcga-dir:/400T/cfDNAweb/tcga}") String tcgaDir) {
+    public SurvivalAnalysisService(@Value("${app.tcga-dir:/400T/cfDNAweb/tcga}") String tcgaDir,
+                                   @Value("${app.data-dir:/400T/cfdnaweb}") String dataDir) {
         this.tcgaDir = Path.of(tcgaDir);
+        this.databaseDir = Path.of(dataDir).resolve("DataBase");
     }
 
     @PostConstruct
@@ -59,6 +65,11 @@ public class SurvivalAnalysisService {
             log.warn("TCGA data dir not found: {} — survival analysis endpoints will return empty results", tcgaDir);
         } else {
             log.info("Survival analysis TCGA dir = {}", tcgaDir);
+        }
+        if (!Files.isDirectory(databaseDir)) {
+            log.warn("Multi-omics database dir not found: {}", databaseDir);
+        } else {
+            log.info("Survival analysis multi-omics database dir = {}", databaseDir);
         }
     }
 
@@ -331,6 +342,129 @@ public class SurvivalAnalysisService {
         } catch (Exception ex) {
             throw new RuntimeException("vafByMutationType failed: " + ex.getMessage(), ex);
         }
+    }
+
+    public VafResult cfMethDbMethylation(String gene) {
+        Path file = databaseDir.resolve(CFMETHDB_FILE);
+        try (Connection con = DriverManager.getConnection("jdbc:duckdb:")) {
+            return loadOmicsBoxplot(
+                    con,
+                    file,
+                    "cfMethDB",
+                    gene,
+                    "GeneName",
+                    "CancerType",
+                    "MeDiff",
+                    "cfMethDB methylation by cancer type",
+                    "Cancer Type",
+                    "Methylation difference (MeDiff)",
+                    "value",
+                    false);
+        } catch (Exception ex) {
+            throw new RuntimeException("cfMethDbMethylation failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    public VafResult cfOmicsMethylation(String gene) {
+        Path file = databaseDir.resolve(CFOMICS_METHYLATION_FILE);
+        try (Connection con = DriverManager.getConnection("jdbc:duckdb:")) {
+            return loadOmicsBoxplot(
+                    con,
+                    file,
+                    "cfOmics methylation",
+                    gene,
+                    "hgnc_symbol",
+                    "cancer_name",
+                    "methylation_value",
+                    "cfOmics methylation by cancer type",
+                    "Cancer Type",
+                    "Methylation value",
+                    "value",
+                    false);
+        } catch (Exception ex) {
+            throw new RuntimeException("cfOmicsMethylation failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    public VafResult ctcExpression(String gene) {
+        Path file = databaseDir.resolve(CTC_RBASE_FILE);
+        try (Connection con = DriverManager.getConnection("jdbc:duckdb:")) {
+            return loadOmicsBoxplot(
+                    con,
+                    file,
+                    "ctcRbase",
+                    gene,
+                    "regexp_extract(Gene, '[^_]+$')",
+                    "Cancer_Type",
+                    "FPKM",
+                    "CTC expression by cancer type",
+                    "Cancer Type",
+                    "FPKM expression (log scale)",
+                    "log",
+                    true);
+        } catch (Exception ex) {
+            throw new RuntimeException("ctcExpression failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    private VafResult loadOmicsBoxplot(Connection con,
+                                      Path file,
+                                      String source,
+                                      String gene,
+                                      String geneExpression,
+                                      String groupColumn,
+                                      String valueColumn,
+                                      String title,
+                                      String xLabel,
+                                      String yLabel,
+                                      String yScale,
+                                      boolean floorForLogScale) throws Exception {
+        VafResult res = new VafResult();
+        res.cohort = source;
+        res.gene = gene;
+        res.xLabel = xLabel;
+        res.yLabel = yLabel;
+        res.yScale = yScale;
+        res.title = title;
+        res.groups = new LinkedHashMap<>();
+        res.pairwiseP = new LinkedHashMap<>();
+
+        if (!Files.isRegularFile(file)) {
+            log.warn("Multi-omics file missing: {}", file);
+            return res;
+        }
+
+        String escapedPath = file.toString().replace("\\", "/").replace("'", "''");
+        String valueExpr = "try_cast(\"" + valueColumn + "\" AS DOUBLE)";
+        String sql = "SELECT \"" + groupColumn + "\" AS cancer_type, " + valueExpr + " AS value " +
+                "FROM read_csv_auto('" + escapedPath + "', delim='\t', header=true, ignore_errors=true) " +
+                "WHERE upper(" + geneExpression + ") = upper(?) " +
+                "AND " + valueExpr + " IS NOT NULL " +
+                "AND \"" + groupColumn + "\" IS NOT NULL";
+
+        Map<String, List<Double>> bucketed = new LinkedHashMap<>();
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, gene);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String cancerType = rs.getString("cancer_type");
+                    double value = rs.getDouble("value");
+                    if (rs.wasNull() || cancerType == null || cancerType.isBlank()) continue;
+                    if (floorForLogScale && value <= 0.0) value = 0.01;
+                    bucketed.computeIfAbsent(cancerType, key -> new ArrayList<>()).add(value);
+                }
+            }
+        }
+
+        List<List<Double>> nonEmpty = new ArrayList<>();
+        for (Map.Entry<String, List<Double>> entry : bucketed.entrySet()) {
+            if (!entry.getValue().isEmpty()) {
+                res.groups.put(entry.getKey(), boxplotStats(entry.getValue()));
+                nonEmpty.add(entry.getValue());
+            }
+        }
+        res.overallP = nonEmpty.size() >= 2 ? kruskalWallisP(nonEmpty) : Double.NaN;
+        return res;
     }
 
     // =============================================================
@@ -696,7 +830,10 @@ public class SurvivalAnalysisService {
     public static class VafResult {
         public String cohort;
         public String gene;
+        public String title;
         public String xLabel;
+        public String yLabel;
+        public String yScale;
         public Map<String, BoxStats> groups;
         public Map<String, Double> pairwiseP;
         public Double overallP;

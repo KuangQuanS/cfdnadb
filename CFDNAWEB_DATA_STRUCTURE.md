@@ -65,6 +65,42 @@ migrate.log
 tcga_maf.txt
 ```
 
+`DataBase/` contains additional multi-omics database exports used by the
+Survival Analysis page for gene-level boxplots:
+
+```text
+DataBase/cfMethDB.txt                    143,675,089
+DataBase/cfOmics_methylation.txt          47,017,747
+DataBase/ctcRbase_all_cancers_long.txt 1,859,287,689
+```
+
+Observed columns:
+
+```text
+cfMethDB.txt
+  Chrom Start End MeNormal MeCancer pvalue GeneId GeneName Distance2TSS
+  Annotation MeDiff Type CancerType Project cancer_type chrom_num pos_mb
+
+cfOmics_methylation.txt
+  hgnc_symbol gene_biotype cancer_type methylation_value cancer_name
+
+ctcRbase_all_cancers_long.txt
+  Gene Dataset FPKM Cancer_Type
+```
+
+Survival Analysis multi-omics endpoints read these files on demand via DuckDB:
+
+```text
+/api/survival/multiomics/cfmethdb?gene=TP53
+/api/survival/multiomics/cfomics-methylation?gene=TP53
+/api/survival/multiomics/ctc-expression?gene=TP53
+```
+
+The first two endpoints group methylation values by cancer type. The CTC
+endpoint extracts the symbol after the final underscore in `Gene`
+(`ENSG..._TSPAN6 -> TSPAN6`), groups FPKM by `Cancer_Type`, and floors non-
+positive values to `0.01` for log-scale plotting.
+
 Top-level symlinks:
 
 ```text

@@ -41,7 +41,10 @@ interface BoxStats {
 interface VafResult {
   cohort: string;
   gene: string;
+  title?: string;
   xLabel: string;
+  yLabel?: string;
+  yScale?: "value" | "log";
   groups: Record<string, BoxStats>;
   pairwiseP?: Record<string, number> | null;
   overallP?: number | null;
@@ -69,6 +72,19 @@ const GROUP_COLORS: Record<string, string> = {
   III: "#E6C656",
   IV: "#E28960"
 };
+
+const BOX_PALETTE = [
+  "#8CCBC4",
+  "#F3E889",
+  "#B8B4D8",
+  "#EF8F85",
+  "#85B7D8",
+  "#F3B267",
+  "#A7CF63",
+  "#67B7DC",
+  "#E56B8A",
+  "#5DAF8B"
+];
 
 function formatP(p: number | null | undefined): string {
   if (p == null || Number.isNaN(p)) return "-";
@@ -270,7 +286,7 @@ function AtRiskTable({ result }: { result: KmResult }) {
 
 function boxOption(result: VafResult, title: string): EChartsOption {
   const names = Object.keys(result.groups);
-  const colors = names.map((n) => GROUP_COLORS[n] ?? "#9ec4e1");
+  const colors = names.map((n, i) => GROUP_COLORS[n] ?? BOX_PALETTE[i % BOX_PALETTE.length]);
   const boxData = names.map((n, i) => ({
     value: (() => {
       const b = result.groups[n];
@@ -318,8 +334,9 @@ function boxOption(result: VafResult, title: string): EChartsOption {
       axisTick: { show: true, lineStyle: { color: "#202020" } }
     },
     yAxis: {
-      type: "value",
-      name: "Variant Allele Frequency (VAF)",
+      type: result.yScale === "log" ? "log" : "value",
+      min: result.yScale === "log" ? 0.01 : undefined,
+      name: result.yLabel ?? "Variant Allele Frequency (VAF)",
       nameLocation: "middle",
       nameGap: 48,
       nameTextStyle: { fontSize: 13 },
@@ -521,7 +538,7 @@ async function createKmExportCanvas(chartDataUrl: string, result: KmResult): Pro
   return canvas;
 }
 
-type PlotKey = "mutStatus" | "mutType" | "vafStage" | "vafMut";
+type PlotKey = "mutStatus" | "mutType" | "vafStage" | "vafMut" | "cfMeth" | "cfOmicsMeth" | "ctcExpr";
 
 export function SurvivalAnalysisPage() {
   const [searchParams] = useSearchParams();
@@ -537,13 +554,19 @@ export function SurvivalAnalysisPage() {
     mutStatus: true,
     mutType: true,
     vafStage: true,
-    vafMut: true
+    vafMut: true,
+    cfMeth: true,
+    cfOmicsMeth: true,
+    ctcExpr: true
   });
 
   const [kmStatus, setKmStatus] = useState<KmResult | null>(null);
   const [kmType, setKmType] = useState<KmResult | null>(null);
   const [vafStage, setVafStage] = useState<VafResult | null>(null);
   const [vafMut, setVafMut] = useState<VafResult | null>(null);
+  const [cfMeth, setCfMeth] = useState<VafResult | null>(null);
+  const [cfOmicsMeth, setCfOmicsMeth] = useState<VafResult | null>(null);
+  const [ctcExpr, setCtcExpr] = useState<VafResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const chartRefs = useRef<Partial<Record<PlotKey, ReactECharts | null>>>({});
@@ -570,31 +593,49 @@ export function SurvivalAnalysisPage() {
     setLoading(true);
     setError(null);
     try {
+      const encodedGene = encodeURIComponent(gene);
+      const encodedCohort = encodeURIComponent(cohort);
+      const encodedTimeUnit = encodeURIComponent(timeUnit);
       const tasks: Promise<void>[] = [];
       if (enabledPlots.mutStatus) {
         tasks.push(
           apiGet<KmResult>(
-            `/api/survival/km?cohort=${cohort}&gene=${gene}&groupBy=mutation_status&timeUnit=${timeUnit}`
+            `/api/survival/km?cohort=${encodedCohort}&gene=${encodedGene}&groupBy=mutation_status&timeUnit=${encodedTimeUnit}`
           ).then(setKmStatus)
         );
       } else setKmStatus(null);
       if (enabledPlots.mutType) {
         tasks.push(
           apiGet<KmResult>(
-            `/api/survival/km?cohort=${cohort}&gene=${gene}&groupBy=mutation_type&timeUnit=${timeUnit}`
+            `/api/survival/km?cohort=${encodedCohort}&gene=${encodedGene}&groupBy=mutation_type&timeUnit=${encodedTimeUnit}`
           ).then(setKmType)
         );
       } else setKmType(null);
       if (enabledPlots.vafStage) {
         tasks.push(
-          apiGet<VafResult>(`/api/survival/vaf-stage?cohort=${cohort}&gene=${gene}`).then(setVafStage)
+          apiGet<VafResult>(`/api/survival/vaf-stage?cohort=${encodedCohort}&gene=${encodedGene}`).then(setVafStage)
         );
       } else setVafStage(null);
       if (enabledPlots.vafMut) {
         tasks.push(
-          apiGet<VafResult>(`/api/survival/vaf-mutation?cohort=${cohort}&gene=${gene}`).then(setVafMut)
+          apiGet<VafResult>(`/api/survival/vaf-mutation?cohort=${encodedCohort}&gene=${encodedGene}`).then(setVafMut)
         );
       } else setVafMut(null);
+      if (enabledPlots.cfMeth) {
+        tasks.push(
+          apiGet<VafResult>(`/api/survival/multiomics/cfmethdb?gene=${encodedGene}`).then(setCfMeth)
+        );
+      } else setCfMeth(null);
+      if (enabledPlots.cfOmicsMeth) {
+        tasks.push(
+          apiGet<VafResult>(`/api/survival/multiomics/cfomics-methylation?gene=${encodedGene}`).then(setCfOmicsMeth)
+        );
+      } else setCfOmicsMeth(null);
+      if (enabledPlots.ctcExpr) {
+        tasks.push(
+          apiGet<VafResult>(`/api/survival/multiomics/ctc-expression?gene=${encodedGene}`).then(setCtcExpr)
+        );
+      } else setCtcExpr(null);
       await Promise.all(tasks);
     } catch (e) {
       setError(String(e));
@@ -623,6 +664,18 @@ export function SurvivalAnalysisPage() {
   const vafMutOpt = useMemo(
     () => (vafMut ? boxOption(vafMut, `${vafMut.gene} VAF by Mutation Type - ${vafMut.cohort}`) : null),
     [vafMut]
+  );
+  const cfMethOpt = useMemo(
+    () => (cfMeth ? boxOption(cfMeth, `${cfMeth.gene} cfMethDB methylation across cancer types`) : null),
+    [cfMeth]
+  );
+  const cfOmicsMethOpt = useMemo(
+    () => (cfOmicsMeth ? boxOption(cfOmicsMeth, `${cfOmicsMeth.gene} cfOmics methylation across cancer types`) : null),
+    [cfOmicsMeth]
+  );
+  const ctcExprOpt = useMemo(
+    () => (ctcExpr ? boxOption(ctcExpr, `${ctcExpr.gene} CTC expression across cancer types`) : null),
+    [ctcExpr]
   );
 
   const togglePlot = (key: string) =>
@@ -725,7 +778,10 @@ export function SurvivalAnalysisPage() {
                     ["mutStatus", "Mutation Status (KM)"],
                     ["mutType", "Survival by Mutation Type"],
                     ["vafStage", "VAF by Stage"],
-                    ["vafMut", "VAF by Mutation Type"]
+                    ["vafMut", "VAF by Mutation Type"],
+                    ["cfMeth", "cfMethDB methylation"],
+                    ["cfOmicsMeth", "cfOmics methylation"],
+                    ["ctcExpr", "CTC FPKM expression"]
                   ] as const
                 ).map(([key, label]) => (
                   <label key={key} className="survival-check">
@@ -899,6 +955,87 @@ export function SurvivalAnalysisPage() {
                   chartRefs.current.vafMut = node;
                 }}
                 option={vafMutOpt}
+                style={{ width: "100%", height: "100%" }}
+              />
+            </div>
+          </article>
+        )}
+        {enabledPlots.cfMeth && cfMethOpt && (
+          <article className="survival-plot-card">
+            <div className="survival-plot-card-header">
+              <div>
+                <p className="section-eyebrow">Methylation Database</p>
+                <h3>cfMethDB methylation</h3>
+              </div>
+              <div className="survival-plot-actions">
+                <button type="button" onClick={() => exportChart("cfMeth", "png", `${gene}_cfMethDB_methylation`)}>
+                  PNG
+                </button>
+                <button type="button" onClick={() => exportChart("cfMeth", "pdf", `${gene}_cfMethDB_methylation`)}>
+                  PDF
+                </button>
+              </div>
+            </div>
+            <div className="survival-chart-frame survival-chart-frame--omics">
+              <ReactECharts
+                ref={(node) => {
+                  chartRefs.current.cfMeth = node;
+                }}
+                option={cfMethOpt}
+                style={{ width: "100%", height: "100%" }}
+              />
+            </div>
+          </article>
+        )}
+        {enabledPlots.cfOmicsMeth && cfOmicsMethOpt && (
+          <article className="survival-plot-card">
+            <div className="survival-plot-card-header">
+              <div>
+                <p className="section-eyebrow">Methylation Database</p>
+                <h3>cfOmics methylation</h3>
+              </div>
+              <div className="survival-plot-actions">
+                <button type="button" onClick={() => exportChart("cfOmicsMeth", "png", `${gene}_cfOmics_methylation`)}>
+                  PNG
+                </button>
+                <button type="button" onClick={() => exportChart("cfOmicsMeth", "pdf", `${gene}_cfOmics_methylation`)}>
+                  PDF
+                </button>
+              </div>
+            </div>
+            <div className="survival-chart-frame survival-chart-frame--omics">
+              <ReactECharts
+                ref={(node) => {
+                  chartRefs.current.cfOmicsMeth = node;
+                }}
+                option={cfOmicsMethOpt}
+                style={{ width: "100%", height: "100%" }}
+              />
+            </div>
+          </article>
+        )}
+        {enabledPlots.ctcExpr && ctcExprOpt && (
+          <article className="survival-plot-card">
+            <div className="survival-plot-card-header">
+              <div>
+                <p className="section-eyebrow">CTC Database</p>
+                <h3>CTC FPKM expression</h3>
+              </div>
+              <div className="survival-plot-actions">
+                <button type="button" onClick={() => exportChart("ctcExpr", "png", `${gene}_CTC_FPKM_expression`)}>
+                  PNG
+                </button>
+                <button type="button" onClick={() => exportChart("ctcExpr", "pdf", `${gene}_CTC_FPKM_expression`)}>
+                  PDF
+                </button>
+              </div>
+            </div>
+            <div className="survival-chart-frame survival-chart-frame--omics">
+              <ReactECharts
+                ref={(node) => {
+                  chartRefs.current.ctcExpr = node;
+                }}
+                option={ctcExprOpt}
                 style={{ width: "100%", height: "100%" }}
               />
             </div>

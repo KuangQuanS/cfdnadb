@@ -49,4 +49,19 @@ public class SurvivalController {
             @RequestParam String gene) {
         return ApiResponse.success(service.vafByMutationType(cohort, gene));
     }
+
+    @GetMapping("/multiomics/cfmethdb")
+    public ApiResponse<SurvivalAnalysisService.VafResult> cfMethDbMethylation(@RequestParam String gene) {
+        return ApiResponse.success(service.cfMethDbMethylation(gene));
+    }
+
+    @GetMapping("/multiomics/cfomics-methylation")
+    public ApiResponse<SurvivalAnalysisService.VafResult> cfOmicsMethylation(@RequestParam String gene) {
+        return ApiResponse.success(service.cfOmicsMethylation(gene));
+    }
+
+    @GetMapping("/multiomics/ctc-expression")
+    public ApiResponse<SurvivalAnalysisService.VafResult> ctcExpression(@RequestParam String gene) {
+        return ApiResponse.success(service.ctcExpression(gene));
+    }
 }
