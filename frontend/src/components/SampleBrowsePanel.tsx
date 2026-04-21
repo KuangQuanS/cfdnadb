@@ -17,6 +17,11 @@ const SOURCE_OPTIONS = [
   { value: "private", label: "cfDNA Private" },
   { value: "geo", label: "cfDNA GEO" },
 ] as const;
+const DOWNLOAD_SOURCE_OPTIONS = [
+  ...SOURCE_OPTIONS,
+  { value: "healthy", label: "Healthy VCF" },
+] as const;
+const DOWNLOAD_CANCER_OPTIONS = [...CANCER_OPTIONS, "Healthy"] as const;
 const COLUMN_OPTIONS = [
   { key: "sampleId", label: "Sample ID" },
   { key: "cancer", label: "Cohort" },
@@ -52,8 +57,8 @@ interface SampleBrowsePanelProps {
 
 function defaultDraft(mode: "browse" | "downloads"): BrowseDraft {
   return {
-    cancers: [DEFAULT_CANCER],
-    sources: ["private", "geo"],
+    cancers: mode === "downloads" ? [DEFAULT_CANCER, "Healthy"] : [DEFAULT_CANCER],
+    sources: mode === "downloads" ? ["private", "geo", "healthy"] : ["private", "geo"],
     gene: "",
     sample: "",
     minVariants: "",
@@ -82,6 +87,7 @@ function sourceLabel(source: string) {
   if (source === "private") return "Private cfDNA";
   if (source === "public") return "Public cfDNA";
   if (source === "tcga") return "TCGA";
+  if (source === "healthy") return "Healthy VCF";
   return source;
 }
 
@@ -115,7 +121,7 @@ export function SampleBrowsePanel({
   compact = false,
   eyebrow = "Filtered Multianno Export",
   title = "Select samples, inspect summaries, and export annotated files",
-  description = "Filter by cohort, source, mutation burden, or carrier gene, then select samples for multianno export.",
+  description = "Filter by cohort, source, mutation burden, or carrier gene, then select samples for file export.",
   mode = "browse"
 }: SampleBrowsePanelProps) {
   const availableColumns = COLUMN_OPTIONS.filter((item) => mode !== "downloads" || item.key !== "topGenes");
@@ -133,7 +139,7 @@ export function SampleBrowsePanel({
   const [selectedRows, setSelectedRows] = useState<Record<string, SampleBrowseItem>>({});
   const [detailTarget, setDetailTarget] = useState<SampleSelection | null>(null);
   const [downloadingType, setDownloadingType] = useState<string | null>(null);
-  const sourceOptions = SOURCE_OPTIONS;
+  const sourceOptions = mode === "downloads" ? DOWNLOAD_SOURCE_OPTIONS : SOURCE_OPTIONS;
   const showSomaticFilter = mode !== "downloads";
   const includeTopGenes = mode !== "downloads";
   const isDownloadsCompact = compact && mode === "downloads";
@@ -277,9 +283,9 @@ export function SampleBrowsePanel({
 
   const handleBatchDownload = async () => {
     if (selectedItems.length === 0) return;
-    setDownloadingType("anno");
+    setDownloadingType("files");
     try {
-      const result = await downloadSampleFiles("anno", selectedItems);
+      const result = await downloadSampleFiles("files", selectedItems);
       downloadBlob(result.blob, result.fileName);
     } finally {
       setDownloadingType(null);
@@ -311,13 +317,13 @@ export function SampleBrowsePanel({
     }
   };
 
-  const canDownloadAnno = selectedItems.some((item) => item.availableFiles.includes("anno"));
+  const canDownloadFiles = selectedItems.some((item) => item.availableFiles.length > 0);
   const wrapperClass = compact ? "browse-samples-page browse-samples-page--compact" : "browse-samples-page";
   const filterSections = (
     <>
       <FilterSection title="Cancer Type">
         <div className="browse-samples-chip-grid">
-          {CANCER_OPTIONS.map((cancer) => (
+          {(mode === "downloads" ? DOWNLOAD_CANCER_OPTIONS : CANCER_OPTIONS).map((cancer) => (
             <button
               key={cancer}
               type="button"
@@ -699,7 +705,7 @@ export function SampleBrowsePanel({
               ) : null}
               <div className="browse-panel-header">
                 <h3>Filters</h3>
-                <p className="browse-summary-line">Define which samples enter the filtered multianno export.</p>
+                <p className="browse-summary-line">Define which samples enter the filtered file export.</p>
               </div>
               <div className="browse-samples-top-filter-grid">
                 {filterSections}
@@ -715,7 +721,7 @@ export function SampleBrowsePanel({
                 <div>
                   <h3>Sample Table</h3>
                   <p className="browse-results-summary">
-                    Each row is a sample summary. Click a row to open the drawer with file details and mounted multianno files.
+                    Each row is a sample summary. Click a row to open the drawer with mounted file details.
                   </p>
                 </div>
               </div>
@@ -731,10 +737,10 @@ export function SampleBrowsePanel({
                     <button
                       className="button-secondary"
                       type="button"
-                      disabled={!canDownloadAnno || downloadingType != null}
+                      disabled={!canDownloadFiles || downloadingType != null}
                       onClick={handleBatchDownload}
                     >
-                      {downloadingType === "anno" ? "Downloading..." : "Download multianno zip"}
+                      {downloadingType === "files" ? "Downloading..." : "Download selected files"}
                     </button>
                   </div>
                 </div>
@@ -835,7 +841,7 @@ export function SampleBrowsePanel({
           <aside className="detail-card browse-samples-sidebar">
             <div className="browse-panel-header">
               <h3>Filters</h3>
-              <p className="browse-summary-line">Define which samples enter the filtered multianno export.</p>
+              <p className="browse-summary-line">Define which samples enter the filtered file export.</p>
             </div>
             {filterSections}
             <div className="browse-samples-sidebar-actions">
@@ -865,10 +871,10 @@ export function SampleBrowsePanel({
                 <button
                   className="button-secondary"
                   type="button"
-                  disabled={!canDownloadAnno || downloadingType != null}
+                  disabled={!canDownloadFiles || downloadingType != null}
                   onClick={handleBatchDownload}
                 >
-                  {downloadingType === "anno" ? "Downloading..." : "Download multianno zip"}
+                  {downloadingType === "files" ? "Downloading..." : "Download selected files"}
                 </button>
               </div>
             </div>

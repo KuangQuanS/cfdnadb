@@ -29,6 +29,11 @@ public class DataFileController {
         return ApiResponse.success(duckDbService.listDataFiles());
     }
 
+    @GetMapping("/healthy-vcf")
+    public ApiResponse<List<DataFileDto>> listHealthyVcfFiles() {
+        return ApiResponse.success(duckDbService.listHealthyVcfFiles());
+    }
+
     @GetMapping("/{category}/{fileName:.+}")
     public ResponseEntity<Resource> downloadFile(
             @PathVariable String category,
