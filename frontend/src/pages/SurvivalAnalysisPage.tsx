@@ -21,9 +21,9 @@ interface KmResult {
   gene: string;
   timeUnit: string;
   groups: Record<string, KmGroup>;
-  pairwiseP: Record<string, number>;
-  pairwiseHr?: Record<string, number> | null;
-  overallP?: number | null;
+  pairwiseP: Record<string, number | string | null>;
+  pairwiseHr?: Record<string, number | string | null> | null;
+  overallP?: number | string | null;
 }
 
 interface BoxStats {
@@ -46,8 +46,8 @@ interface VafResult {
   yLabel?: string;
   yScale?: "value" | "log";
   groups: Record<string, BoxStats>;
-  pairwiseP?: Record<string, number> | null;
-  overallP?: number | null;
+  pairwiseP?: Record<string, number | string | null> | null;
+  overallP?: number | string | null;
 }
 
 async function apiGet<T>(path: string): Promise<T> {
@@ -86,15 +86,23 @@ const BOX_PALETTE = [
   "#5DAF8B"
 ];
 
-function formatP(p: number | null | undefined): string {
-  if (p == null || Number.isNaN(p)) return "-";
-  if (p < 0.0001) return "< 0.0001";
-  return p.toFixed(4);
+function toFiniteNumber(value: number | string | null | undefined): number | null {
+  if (value == null) return null;
+  const numeric = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
-function formatHr(hr: number | null | undefined): string {
-  if (hr == null || Number.isNaN(hr) || !Number.isFinite(hr)) return "-";
-  return hr.toFixed(2);
+function formatP(p: number | string | null | undefined): string {
+  const value = toFiniteNumber(p);
+  if (value == null) return "-";
+  if (value < 0.0001) return "< 0.0001";
+  return value.toFixed(4);
+}
+
+function formatHr(hr: number | string | null | undefined): string {
+  const value = toFiniteNumber(hr);
+  if (value == null) return "-";
+  return value.toFixed(2);
 }
 
 function buildStepLine(points: [number, number][]) {
@@ -302,8 +310,7 @@ function boxOption(result: VafResult, title: string): EChartsOption {
       scatterData.push({ value: [n, v], symbolOffset: [jitterPx, 0] });
     });
   });
-  const subtitle =
-    result.overallP != null && !Number.isNaN(result.overallP) ? `p = ${formatP(result.overallP)}` : "";
+  const subtitle = toFiniteNumber(result.overallP) != null ? `p = ${formatP(result.overallP)}` : "";
   return {
     title: {
       text: title,
