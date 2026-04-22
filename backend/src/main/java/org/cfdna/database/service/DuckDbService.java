@@ -553,7 +553,7 @@ public class DuckDbService {
 
     private boolean isHealthyVcfFile(Path path) {
         String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
-        return Files.isRegularFile(path) && fileName.endsWith(".vcf.gz");
+        return Files.isRegularFile(path) && (fileName.endsWith(".vcf.gz") || fileName.endsWith("_vcf.gz"));
     }
 
     public DatabaseStatsDto getDatabaseStats() {
@@ -3167,7 +3167,8 @@ public class DuckDbService {
         if (normalizedSampleId.isBlank()) {
             throw new ResourceNotFoundException("Healthy VCF sample not found: " + sampleId);
         }
-        if (normalizedSampleId.toLowerCase(Locale.ROOT).endsWith(".vcf.gz")) {
+        String lowerSampleId = normalizedSampleId.toLowerCase(Locale.ROOT);
+        if (lowerSampleId.endsWith(".vcf.gz") || lowerSampleId.endsWith("_vcf.gz")) {
             return resolveHealthyVcfFile(normalizedSampleId);
         }
         try (Stream<Path> stream = Files.list(healthyVcfDir)) {
@@ -3731,6 +3732,8 @@ public class DuckDbService {
             int idx = fileName.indexOf(".filtered");
             if (idx > 0) return fileName.substring(0, idx);
             idx = fileName.indexOf(".vcf");
+            if (idx > 0) return fileName.substring(0, idx);
+            idx = fileName.indexOf("_vcf.gz");
             if (idx > 0) return fileName.substring(0, idx);
         }
         // fallback: strip extension
