@@ -7671,7 +7671,7 @@ button:disabled:hover {
 .downloads-filtered-table-tools {
   display: grid;
   gap: 14px;
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
 .downloads-filtered-control-summary {
@@ -7887,9 +7887,9 @@ button:disabled:hover {
 }
 
 .downloads-filtered-workspace-card--downloads .browse-results-header {
-  margin-bottom: 10px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e9eef7;
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .browse-samples-page--compact {
