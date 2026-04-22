@@ -366,8 +366,8 @@
 
 .gdc-overview-chart-shell {
   position: relative;
-  width: min(100%, 260px);
-  min-height: 240px;
+  width: min(100%, 300px);
+  min-height: 280px;
 }
 
 .gdc-overview-chart-shell::before {
@@ -597,8 +597,8 @@
   }
 
   .gdc-overview-chart-shell {
-    width: min(100%, 292px);
-    min-height: 256px;
+    width: min(100%, 308px);
+    min-height: 286px;
   }
 
   .gdc-search-row {
@@ -622,8 +622,8 @@
   }
 
   .gdc-overview-chart-shell {
-    width: min(100%, 300px);
-    min-height: 262px;
+    width: min(100%, 308px);
+    min-height: 288px;
   }
 }
 
