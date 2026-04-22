@@ -6,7 +6,7 @@ import siteLogoPng from "../assets/cfDNAlogo.png";
 
 const navItems = [
   { to: "/", label: "Home" },
-  { to: "/browse", label: "Browse" },
+  { to: "/browse", label: "Browser" },
   { to: "/statistics", label: "Statistics" },
   { to: "/downloads", label: "Downloads" },
   { to: "/help", label: "Help" }
