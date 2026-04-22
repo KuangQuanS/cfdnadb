@@ -75,10 +75,16 @@ type HeroRingEntry = {
   browseKey: string;
 };
 
-function buildSunburstEntries(entries: HeroRingEntry[], limit = 7) {
+function formatThousands(value: number) {
+  return `${(value / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })}k`;
+}
+
+function buildSunburstEntries(entries: HeroRingEntry[], limit = 7, mergeFromLabel?: string) {
   const sorted = [...entries].sort((a, b) => b.value - a.value);
-  const head = sorted.slice(0, limit);
-  const tail = sorted.slice(limit);
+  const mergeFromIndex = mergeFromLabel ? sorted.findIndex((entry) => entry.label === mergeFromLabel) : -1;
+  const splitIndex = mergeFromIndex >= 0 ? mergeFromIndex : limit;
+  const head = sorted.slice(0, splitIndex);
+  const tail = sorted.slice(splitIndex);
   const otherValue = tail.reduce((sum, entry) => sum + entry.value, 0);
 
   const children = head.map((entry) => ({
@@ -102,7 +108,8 @@ function buildSunburstEntries(entries: HeroRingEntry[], limit = 7) {
 
 function buildHeroSunburstOption(title: string, total: number, entries: HeroRingEntry[]): EChartsOption {
   const isMutations = title === "Mutations";
-  const children = buildSunburstEntries(entries);
+  const children = buildSunburstEntries(entries, 7, isMutations ? "Bladder" : undefined);
+  const formatValue = (value: number) => (isMutations ? formatThousands(value) : formatNumber(value));
 
   return {
     animationDuration: 600,
@@ -117,12 +124,16 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
       formatter: (params: { name?: string; value?: number }) => {
         const value = params.value ?? 0;
         const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0.0";
-        return `${params.name}<br/>${formatNumber(value)} ${title.toLowerCase()} (${pct}%)`;
+        return `${params.name}<br/>${formatValue(value)} ${title.toLowerCase()} (${pct}%)`;
       },
     },
     series: [
       {
         type: "sunburst",
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
         radius: [0, "96%"],
         center: ["50%", "50%"],
         sort: undefined,
@@ -134,7 +145,7 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
             itemStyle: { color: "#1d5f38" },
             label: {
               rotate: 0,
-              formatter: `{title|${title}}\n{value|${formatNumber(total)}}`,
+              formatter: `{title|${title}}\n{value|${formatValue(total)}}`,
               rich: {
                 title: {
                   color: "#ffffff",
@@ -184,10 +195,10 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
               formatter: (params: { name?: string; value?: number }) => {
                 const value = params.value ?? 0;
                 if (!params.name || params.name === "Other") {
-                  return value > 0 ? `Other\n${formatNumber(value)}` : "";
+                  return value > 0 ? `Other\n${formatValue(value)}` : "";
                 }
                 return value >= Math.max(40, total * 0.035)
-                  ? `${params.name}\n${formatNumber(value)}`
+                  ? `${params.name}\n${formatValue(value)}`
                   : "";
               },
             },
@@ -227,9 +238,12 @@ function HeroRingChart({
       </h3>
       <div className="gdc-overview-chart-shell">
         <ReactECharts
+          key={`${title}-${total}`}
           option={option}
+          notMerge
+          lazyUpdate={false}
           style={{ height: 320, width: "100%" }}
-          opts={{ renderer: "svg" }}
+          opts={{ renderer: "canvas" }}
           onEvents={{
             click: (params: { data?: { browseKey?: string; name?: string } }) => {
               const browseKey = params.data?.browseKey;
