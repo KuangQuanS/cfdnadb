@@ -144,10 +144,10 @@ export function BrowsePage() {
 
   const sourceSummary = useMemo(() => {
     if (activeSource === "cfDNA") {
-      return "cfDNA uses the Private cfDNA statistics plots and pan-cancer oncoplot for the selected cancer type.";
+      return "cfDNA uses the Private cfDNA statistics plots and Private cfDNA mutation rows for the interactive oncoplot.";
     }
     if (activeSource === "geo") {
-      return "GEO uses GEO statistics plots; the interactive oncoplot uses the cfDNA pan-cancer mutation matrix.";
+      return "GEO uses GEO statistics plots and GEO mutation rows for the interactive oncoplot.";
     }
     if (activeSource === "tcga") {
       return "TCGA uses its independent oncoplot and cohort summary plots for the selected cancer type.";

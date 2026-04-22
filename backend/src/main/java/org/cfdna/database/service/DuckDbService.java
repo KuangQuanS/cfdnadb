@@ -1765,12 +1765,139 @@ public class DuckDbService {
      * Samples are ordered by total mutation count (descending).
      */
     public OncoplottDto getOncoplottData(String source, List<String> cancerTypes, int geneLimit) {
-        // Non-TCGA: use clinical_data.txt + mutations_data.txt (richer mutation-type data)
-        if (!isTcga(source)) {
-            return getOncoplottDataFromPanFiles(cancerTypes, geneLimit);
+        if (isTcga(source)) {
+            return getOncoplottDataFromTcga(cancerTypes, geneLimit);
         }
-        // TCGA: keep existing maf.duckdb path
-        return getOncoplottDataFromTcga(cancerTypes, geneLimit);
+        if (isGeo(source) || isPrivate(source)) {
+            return getOncoplottDataFromMafTable(source, cancerTypes, geneLimit);
+        }
+        return getOncoplottDataFromPanFiles(cancerTypes, geneLimit);
+    }
+
+    private OncoplottDto getOncoplottDataFromMafTable(String source, List<String> cancerTypes, int geneLimit) {
+        if (!mafDatabaseAvailable()) {
+            return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
+        }
+
+        String table = resolveMafTable(source);
+        List<String> requested = normalizeFilterValues(cancerTypes);
+        List<String> normalizedCancerTypes = normalizeOncoplotCancerTypesForMaf(source, requested);
+        int limit = Math.max(5, Math.min(geneLimit, 50));
+
+        String cancerWhere = normalizedCancerTypes.isEmpty()
+                ? ""
+                : "WHERE cancer_type IN (" + String.join(",", Collections.nCopies(normalizedCancerTypes.size(), "?")) + ")\n";
+        String sampleWhere = normalizedCancerTypes.isEmpty()
+                ? "WHERE tumor_sample_barcode IS NOT NULL AND TRIM(tumor_sample_barcode) <> ''\n"
+                : cancerWhere + "AND tumor_sample_barcode IS NOT NULL AND TRIM(tumor_sample_barcode) <> ''\n";
+
+        String sql =
+                "WITH raw AS (\n" +
+                "    SELECT hugo_symbol, tumor_sample_barcode, variant_classification,\n" +
+                "    CASE variant_classification\n" +
+                "        WHEN 'Nonsense_Mutation'       THEN 1\n" +
+                "        WHEN 'Frame_Shift_Del'         THEN 2\n" +
+                "        WHEN 'Frame_Shift_Ins'         THEN 3\n" +
+                "        WHEN 'Splice_Site'             THEN 4\n" +
+                "        WHEN 'Nonstop_Mutation'        THEN 4\n" +
+                "        WHEN 'Translation_Start_Site'  THEN 4\n" +
+                "        WHEN 'In_Frame_Del'            THEN 5\n" +
+                "        WHEN 'In_Frame_Ins'            THEN 6\n" +
+                "        WHEN 'Missense_Mutation'       THEN 7\n" +
+                "        WHEN 'Silent'                  THEN 8\n" +
+                "        ELSE 9\n" +
+                "    END AS sev\n" +
+                "    FROM " + table + "\n" +
+                cancerWhere +
+                "),\n" +
+                "top_genes AS (\n" +
+                "    SELECT hugo_symbol FROM (\n" +
+                "        SELECT hugo_symbol, COUNT(DISTINCT tumor_sample_barcode) AS nsamp\n" +
+                "        FROM raw\n" +
+                "        WHERE hugo_symbol IS NOT NULL AND hugo_symbol <> ''\n" +
+                "        GROUP BY hugo_symbol\n" +
+                "        ORDER BY nsamp DESC, hugo_symbol ASC\n" +
+                "        LIMIT " + limit + "\n" +
+                "    )\n" +
+                "),\n" +
+                "best AS (\n" +
+                "    SELECT r.hugo_symbol, r.tumor_sample_barcode,\n" +
+                "           arg_min(r.variant_classification, r.sev) AS variant_class\n" +
+                "    FROM raw r\n" +
+                "    WHERE r.hugo_symbol IN (SELECT hugo_symbol FROM top_genes)\n" +
+                "    AND r.tumor_sample_barcode IS NOT NULL AND r.tumor_sample_barcode <> ''\n" +
+                "    GROUP BY r.hugo_symbol, r.tumor_sample_barcode\n" +
+                ")\n" +
+                "SELECT hugo_symbol, tumor_sample_barcode, variant_class FROM best";
+
+        String sampleSql =
+                "SELECT DISTINCT TRIM(tumor_sample_barcode) AS tumor_sample_barcode\n" +
+                "FROM " + table + "\n" +
+                sampleWhere +
+                "ORDER BY tumor_sample_barcode";
+
+        Map<String, Long> geneCounts = new LinkedHashMap<>();
+        Map<String, Long> sampleCounts = new LinkedHashMap<>();
+        List<OncoplottDto.CellDto> cells = new ArrayList<>();
+
+        try (Connection conn = openMafConnection()) {
+            if (!mafTableExists(conn, table)) {
+                return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
+            }
+            try (PreparedStatement sampleStmt = conn.prepareStatement(sampleSql);
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                int idx = 1;
+                for (String cancerType : normalizedCancerTypes) sampleStmt.setString(idx++, cancerType);
+                try (ResultSet rs = sampleStmt.executeQuery()) {
+                    while (rs.next()) {
+                        String sample = rs.getString("tumor_sample_barcode");
+                        if (sample == null || sample.isBlank()) continue;
+                        sampleCounts.put(sample, 0L);
+                    }
+                }
+
+                idx = 1;
+                for (String cancerType : normalizedCancerTypes) stmt.setString(idx++, cancerType);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String gene = rs.getString("hugo_symbol");
+                        String sample = rs.getString("tumor_sample_barcode");
+                        String variantClass = rs.getString("variant_class");
+                        if (gene == null || sample == null || variantClass == null) continue;
+                        cells.add(new OncoplottDto.CellDto(gene, sample, variantClass));
+                        geneCounts.merge(gene, 1L, Long::sum);
+                        sampleCounts.merge(sample, 1L, Long::sum);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            log.error("[MAF] {} oncoplot query failed: {}", source, e.getMessage(), e);
+            return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
+        }
+
+        List<String> genes = geneCounts.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
+                        .thenComparing(Map.Entry.comparingByKey()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        List<String> samples = sampleCounts.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
+                        .thenComparing(Map.Entry.comparingByKey()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        return new OncoplottDto(genes, samples, cells, geneCounts, sampleCounts);
+    }
+
+    private List<String> normalizeOncoplotCancerTypesForMaf(String source, List<String> cancerTypes) {
+        if (isPrivate(source)) {
+            return cancerTypes.stream()
+                    .map(value -> CANCER_TO_CFDNA_TYPE.getOrDefault(value, value))
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+        return cancerTypes;
     }
 
     /**
