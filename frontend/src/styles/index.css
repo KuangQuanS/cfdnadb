@@ -129,7 +129,7 @@ button, input, select { font: inherit; }
 
 /* Header */
 .site-header {
-  background-size: cover;
+  background-size: 100% auto;
   background-position: center 38%;
   background-repeat: no-repeat;
   color: var(--ink);
@@ -353,6 +353,11 @@ button, input, select { font: inherit; }
 }
 
 @media (max-width: 760px) {
+  .site-header {
+    background-size: 165% auto;
+    background-position: center 34%;
+  }
+
   .title-area {
     gap: 10px;
   }

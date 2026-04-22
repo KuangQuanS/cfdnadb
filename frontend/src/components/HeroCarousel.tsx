@@ -122,8 +122,8 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
     series: [
       {
         type: "sunburst",
-        radius: [0, "84%"],
-        center: ["50%", "54%"],
+        radius: [0, "90%"],
+        center: ["50%", "50%"],
         sort: undefined,
         nodeClick: false,
         data: [
@@ -214,7 +214,7 @@ function HeroRingChart({
       <div className="gdc-overview-chart-shell">
         <ReactECharts
           option={option}
-          style={{ height: 240, width: "100%" }}
+          style={{ height: 280, width: "100%" }}
           opts={{ renderer: "svg" }}
           onEvents={{
             click: (params: { data?: { browseKey?: string; name?: string } }) => {
