@@ -227,7 +227,10 @@ function HeroRingChart({
       </h3>
       <div className="gdc-overview-chart-shell">
         <ReactECharts
+          key={`${title}-${total}`}
           option={option}
+          notMerge
+          lazyUpdate={false}
           style={{ height: 320, width: "100%" }}
           opts={{ renderer: "svg" }}
           onEvents={{
