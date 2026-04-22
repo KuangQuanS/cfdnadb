@@ -60,7 +60,7 @@ const ALL_CALLOUTS = [
   { id: "Endometrial", label: "Endometrial", side: "left", topPct: 52, anchorPct: 48, browseKey: "Endometrial", alwaysShow: false },
   { id: "Bladder", label: "Bladder", side: "left", topPct: 58, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
   /* ── right side (top → bottom) ── */
-  { id: "Breast", label: "Breast", side: "right", topPct: 31, anchorPct: 63, browseKey: "Breast", alwaysShow: true },
+  { id: "Breast", label: "Breast", side: "right", topPct: 31, anchorPct: 64, browseKey: "Breast", alwaysShow: true },
   { id: "Gastric", label: "Gastric", side: "right", topPct: 39, anchorPct: 54, browseKey: "Gastric", alwaysShow: false },
   { id: "Pancreatic", label: "Pancreas", side: "right", topPct: 43, anchorPct: 52, browseKey: "Pancreatic", alwaysShow: true },
   { id: "Colorectal", label: "Colorectal", side: "right", topPct: 51, anchorPct: 55, browseKey: "Colorectal", alwaysShow: true },
