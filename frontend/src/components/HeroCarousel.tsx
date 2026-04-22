@@ -52,14 +52,14 @@ const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] 
 
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 18, anchorPct: 51, browseKey: "HeadAndNeck", alwaysShow: false },
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 13, anchorPct: 48, browseKey: "HeadAndNeck", alwaysShow: false },
   { id: "Lung", label: "Lung", side: "left", topPct: 28, anchorPct: 42, browseKey: "Lung", alwaysShow: true },
   { id: "Liver", label: "Liver", side: "left", topPct: 38, anchorPct: 43, browseKey: "Liver", alwaysShow: true },
-  { id: "Kidney", label: "Kidney", side: "left", topPct: 43, anchorPct: 44, browseKey: "Kidney", alwaysShow: false },
+  { id: "Kidney", label: "Kidney", side: "left", topPct: 43, anchorPct: 41, browseKey: "Kidney", alwaysShow: false },
   { id: "Endometrial", label: "Endometrial", side: "left", topPct: 52, anchorPct: 48, browseKey: "Endometrial", alwaysShow: false },
   { id: "Bladder", label: "Bladder", side: "left", topPct: 58, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
   /* ── right side (top → bottom) ── */
-  { id: "Breast", label: "Breast", side: "right", topPct: 31, anchorPct: 60, browseKey: "Breast", alwaysShow: true },
+  { id: "Breast", label: "Breast", side: "right", topPct: 31, anchorPct: 58, browseKey: "Breast", alwaysShow: true },
   { id: "Gastric", label: "Gastric", side: "right", topPct: 39, anchorPct: 54, browseKey: "Gastric", alwaysShow: false },
   { id: "Pancreatic", label: "Pancreas", side: "right", topPct: 43, anchorPct: 52, browseKey: "Pancreatic", alwaysShow: true },
   { id: "Colorectal", label: "Colorectal", side: "right", topPct: 51, anchorPct: 55, browseKey: "Colorectal", alwaysShow: true },
@@ -121,8 +121,8 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
     series: [
       {
         type: "sunburst",
-        radius: [0, "90%"],
-        center: ["50%", "50%"],
+        radius: [0, "84%"],
+        center: ["50%", "54%"],
         sort: undefined,
         nodeClick: false,
         data: [
@@ -213,7 +213,7 @@ function HeroRingChart({
       <div className="gdc-overview-chart-shell">
         <ReactECharts
           option={option}
-          style={{ height: 280, width: "100%" }}
+          style={{ height: 240, width: "100%" }}
           opts={{ renderer: "svg" }}
           onEvents={{
             click: (params: { data?: { browseKey?: string; name?: string } }) => {
