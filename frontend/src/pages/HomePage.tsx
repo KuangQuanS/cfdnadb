@@ -6,7 +6,7 @@ import "../styles/home.css";
 const TOOL_TILES = [
   {
     id: "01",
-    title: "Browse",
+    title: "Browser",
     desc: "Open oncoplots and cohort summary views by cancer type.",
     link: "/browse",
     badge: "Cohort-level view",
