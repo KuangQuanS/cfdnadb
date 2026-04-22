@@ -9,7 +9,7 @@ import {
 } from "../api/client";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
 import type { LabelCount, SampleBrowseItem, SampleSelection } from "../types/api";
-import { formatNumber } from "../utils/format";
+import { formatFileSize, formatNumber } from "../utils/format";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const PRESETS_KEY = "cfdnadb-browse-sample-presets";
@@ -17,6 +17,11 @@ const SOURCE_OPTIONS = [
   { value: "private", label: "cfDNA Private" },
   { value: "geo", label: "cfDNA GEO" },
 ] as const;
+const DOWNLOAD_SOURCE_OPTIONS = [
+  ...SOURCE_OPTIONS,
+  { value: "healthy", label: "Healthy VCF" },
+] as const;
+const DOWNLOAD_CANCER_OPTIONS = [...CANCER_OPTIONS, "Healthy"] as const;
 const COLUMN_OPTIONS = [
   { key: "sampleId", label: "Sample ID" },
   { key: "cancer", label: "Cohort" },
@@ -62,6 +67,15 @@ function defaultDraft(mode: "browse" | "downloads"): BrowseDraft {
   };
 }
 
+function normalizeDraftForMode(draft: BrowseDraft, mode: "browse" | "downloads"): BrowseDraft {
+  const defaults = defaultDraft(mode);
+  return {
+    ...draft,
+    cancers: draft.cancers.length > 0 ? draft.cancers : defaults.cancers,
+    sources: draft.sources.length > 0 ? draft.sources : defaults.sources,
+  };
+}
+
 function loadPresets(): BrowsePreset[] {
   try {
     return JSON.parse(localStorage.getItem(PRESETS_KEY) ?? "[]") as BrowsePreset[];
@@ -82,6 +96,7 @@ function sourceLabel(source: string) {
   if (source === "private") return "Private cfDNA";
   if (source === "public") return "Public cfDNA";
   if (source === "tcga") return "TCGA";
+  if (source === "healthy") return "Healthy VCF";
   return source;
 }
 
@@ -115,7 +130,7 @@ export function SampleBrowsePanel({
   compact = false,
   eyebrow = "Filtered Multianno Export",
   title = "Select samples, inspect summaries, and export annotated files",
-  description = "Filter by cohort, source, mutation burden, or carrier gene, then select samples for multianno export.",
+  description = "Filter by cohort, source, mutation burden, or carrier gene, then select samples for file export.",
   mode = "browse"
 }: SampleBrowsePanelProps) {
   const availableColumns = COLUMN_OPTIONS.filter((item) => mode !== "downloads" || item.key !== "topGenes");
@@ -133,7 +148,7 @@ export function SampleBrowsePanel({
   const [selectedRows, setSelectedRows] = useState<Record<string, SampleBrowseItem>>({});
   const [detailTarget, setDetailTarget] = useState<SampleSelection | null>(null);
   const [downloadingType, setDownloadingType] = useState<string | null>(null);
-  const sourceOptions = SOURCE_OPTIONS;
+  const sourceOptions = mode === "downloads" ? DOWNLOAD_SOURCE_OPTIONS : SOURCE_OPTIONS;
   const showSomaticFilter = mode !== "downloads";
   const includeTopGenes = mode !== "downloads";
   const isDownloadsCompact = compact && mode === "downloads";
@@ -169,10 +184,12 @@ export function SampleBrowsePanel({
 
   const totalVariantsOnPage = rows.reduce((sum, item) => sum + item.variantCount, 0);
   const totalVisibleFiles = rows.reduce((sum, item) => sum + item.availableFiles.length, 0);
+  const defaultFilters = defaultDraft(mode);
+  const showSourceTags = mode !== "downloads" || submitted.sources.join("|") !== defaultFilters.sources.join("|");
 
   const activeTags = [
       ...submitted.cancers.map((cancer) => ({ key: `cancer:${cancer}`, label: "Cancer", value: cancer, rawValue: cancer })),
-      ...submitted.sources.map((source) => ({ key: `source:${source}`, label: "Source", value: sourceLabel(source), rawValue: source })),
+      ...(showSourceTags ? submitted.sources.map((source) => ({ key: `source:${source}`, label: "Source", value: sourceLabel(source), rawValue: source })) : []),
       ...(submitted.gene ? [{ key: "gene", label: "Gene", value: submitted.gene, rawValue: submitted.gene }] : []),
       ...(submitted.sample ? [{ key: "sample", label: "Sample", value: submitted.sample, rawValue: submitted.sample }] : []),
       ...(submitted.minVariants ? [{ key: "minVariants", label: "Min variants", value: submitted.minVariants, rawValue: submitted.minVariants }] : []),
@@ -180,12 +197,12 @@ export function SampleBrowsePanel({
     ...(showSomaticFilter && submitted.hasSomatic ? [{ key: "hasSomatic", label: "Files", value: "Has somatic", rawValue: "true" }] : []),
   ];
 
-  const applyFilters = () => {
+  const updateFilters = (updater: (previous: BrowseDraft) => BrowseDraft) => {
     setPage(1);
-    setSubmitted({
-      ...draft,
-      cancers: draft.cancers.length > 0 ? draft.cancers : [DEFAULT_CANCER],
-      sources: draft.sources.length > 0 ? draft.sources : ["private", "geo"]
+    setDraft((previous) => {
+      const next = normalizeDraftForMode(updater(previous), mode);
+      setSubmitted(next);
+      return next;
     });
   };
 
@@ -277,9 +294,9 @@ export function SampleBrowsePanel({
 
   const handleBatchDownload = async () => {
     if (selectedItems.length === 0) return;
-    setDownloadingType("anno");
+    setDownloadingType("files");
     try {
-      const result = await downloadSampleFiles("anno", selectedItems);
+      const result = await downloadSampleFiles("files", selectedItems);
       downloadBlob(result.blob, result.fileName);
     } finally {
       setDownloadingType(null);
@@ -288,41 +305,34 @@ export function SampleBrowsePanel({
 
   const removeTag = (key: string, value: string) => {
     if (key.startsWith("cancer:")) {
-      setDraft((previous) => ({ ...previous, cancers: previous.cancers.filter((item) => item !== value) }));
-      setSubmitted((previous) => ({ ...previous, cancers: previous.cancers.filter((item) => item !== value) }));
+      updateFilters((previous) => ({ ...previous, cancers: previous.cancers.filter((item) => item !== value) }));
     } else if (key.startsWith("source:")) {
-      setDraft((previous) => ({ ...previous, sources: previous.sources.filter((item) => item !== value) }));
-      setSubmitted((previous) => ({ ...previous, sources: previous.sources.filter((item) => item !== value) }));
+      updateFilters((previous) => ({ ...previous, sources: previous.sources.filter((item) => item !== value) }));
     } else if (key === "gene") {
-      setDraft((previous) => ({ ...previous, gene: "" }));
-      setSubmitted((previous) => ({ ...previous, gene: "" }));
+      updateFilters((previous) => ({ ...previous, gene: "" }));
     } else if (key === "sample") {
-      setDraft((previous) => ({ ...previous, sample: "" }));
-      setSubmitted((previous) => ({ ...previous, sample: "" }));
+      updateFilters((previous) => ({ ...previous, sample: "" }));
     } else if (key === "minVariants") {
-      setDraft((previous) => ({ ...previous, minVariants: "" }));
-      setSubmitted((previous) => ({ ...previous, minVariants: "" }));
+      updateFilters((previous) => ({ ...previous, minVariants: "" }));
     } else if (key === "hasAnnotated") {
-      setDraft((previous) => ({ ...previous, hasAnnotated: false }));
-      setSubmitted((previous) => ({ ...previous, hasAnnotated: false }));
+      updateFilters((previous) => ({ ...previous, hasAnnotated: false }));
     } else if (key === "hasSomatic") {
-      setDraft((previous) => ({ ...previous, hasSomatic: false }));
-      setSubmitted((previous) => ({ ...previous, hasSomatic: false }));
+      updateFilters((previous) => ({ ...previous, hasSomatic: false }));
     }
   };
 
-  const canDownloadAnno = selectedItems.some((item) => item.availableFiles.includes("anno"));
+  const canDownloadFiles = selectedItems.some((item) => item.availableFiles.length > 0);
   const wrapperClass = compact ? "browse-samples-page browse-samples-page--compact" : "browse-samples-page";
   const filterSections = (
     <>
       <FilterSection title="Cancer Type">
         <div className="browse-samples-chip-grid">
-          {CANCER_OPTIONS.map((cancer) => (
+          {(mode === "downloads" ? DOWNLOAD_CANCER_OPTIONS : CANCER_OPTIONS).map((cancer) => (
             <button
               key={cancer}
               type="button"
               className={`browse-samples-chip${draft.cancers.includes(cancer) ? " active" : ""}`}
-              onClick={() => setDraft((previous) => ({ ...previous, cancers: toggleValue(previous.cancers, cancer) }))}
+              onClick={() => updateFilters((previous) => ({ ...previous, cancers: toggleValue(previous.cancers, cancer) }))}
             >
               {cancer}
             </button>
@@ -337,7 +347,7 @@ export function SampleBrowsePanel({
               key={option.value}
               type="button"
               className={`browse-samples-chip${draft.sources.includes(option.value) ? " active" : ""}`}
-              onClick={() => setDraft((previous) => ({ ...previous, sources: toggleValue(previous.sources, option.value) }))}
+              onClick={() => updateFilters((previous) => ({ ...previous, sources: toggleValue(previous.sources, option.value) }))}
             >
               {option.label}
             </button>
@@ -350,7 +360,7 @@ export function SampleBrowsePanel({
           <span>Carrier Gene</span>
           <input
             value={draft.gene}
-            onChange={(event) => setDraft((previous) => ({ ...previous, gene: event.target.value.toUpperCase() }))}
+            onChange={(event) => updateFilters((previous) => ({ ...previous, gene: event.target.value.toUpperCase() }))}
             placeholder="e.g. TP53"
           />
         </label>
@@ -360,7 +370,7 @@ export function SampleBrowsePanel({
             type="number"
             min={0}
             value={draft.minVariants}
-            onChange={(event) => setDraft((previous) => ({ ...previous, minVariants: event.target.value }))}
+            onChange={(event) => updateFilters((previous) => ({ ...previous, minVariants: event.target.value }))}
             placeholder="0"
           />
         </label>
@@ -371,7 +381,7 @@ export function SampleBrowsePanel({
           <input
             type="checkbox"
             checked={draft.hasAnnotated}
-            onChange={(event) => setDraft((previous) => ({ ...previous, hasAnnotated: event.target.checked }))}
+            onChange={(event) => updateFilters((previous) => ({ ...previous, hasAnnotated: event.target.checked }))}
           />
           <span>Has multianno file</span>
         </label>
@@ -380,7 +390,7 @@ export function SampleBrowsePanel({
             <input
               type="checkbox"
               checked={draft.hasSomatic}
-              onChange={(event) => setDraft((previous) => ({ ...previous, hasSomatic: event.target.checked }))}
+              onChange={(event) => updateFilters((previous) => ({ ...previous, hasSomatic: event.target.checked }))}
             />
             <span>Has somatic file</span>
           </label>
@@ -393,88 +403,7 @@ export function SampleBrowsePanel({
     <div className={wrapperClass}>
       {compact ? (
         isDownloadsCompact ? (
-          <section className="detail-card downloads-filtered-control-card">
-            <div className="downloads-filtered-control-summary">
-              <div className="downloads-filtered-control-metrics">
-                <MetricTile label="Matching Samples" value={formatNumber(samplesQuery.data?.totalElements ?? 0)} />
-                <MetricTile label="Page Variants" value={formatNumber(totalVariantsOnPage)} />
-                <MetricTile label="Visible Files" value={formatNumber(totalVisibleFiles)} />
-                <MetricTile label="Selected" value={formatNumber(selectedCount)} />
-              </div>
-            </div>
-
-            <div className="downloads-filtered-control-bar">
-              <div className="downloads-filtered-control-search">
-                <label className="browse-field browse-samples-toolbar-search">
-                  <span>Sample ID Search</span>
-                  <input
-                    value={draft.sample}
-                    onChange={(event) => setDraft((previous) => ({ ...previous, sample: event.target.value }))}
-                    placeholder="Filter sample barcode"
-                    autoComplete="off"
-                  />
-                </label>
-                <button className="button-primary" type="button" onClick={applyFilters}>Apply</button>
-              </div>
-
-              <div className="downloads-filtered-control-actions">
-                <label className="browse-field-inline">
-                  <span>Rows</span>
-                  <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
-                    {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
-                  </select>
-                </label>
-
-                <div className="browse-dropdown-wrap">
-                  <button className="button-secondary" type="button" onClick={() => { setShowColumnMenu((value) => !value); setShowPresetMenu(false); }}>
-                    Columns
-                  </button>
-                  {showColumnMenu && (
-                    <div className="browse-dropdown-menu">
-                      {availableColumns.map((column) => (
-                        <label key={column.key} className="browse-dropdown-item">
-                          <input
-                            type="checkbox"
-                            checked={visibleColumns.has(column.key)}
-                            onChange={() => toggleColumn(column.key)}
-                          />
-                          {column.label}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="browse-dropdown-wrap">
-                  <button className="button-secondary" type="button" onClick={() => { setShowPresetMenu((value) => !value); setShowColumnMenu(false); }}>
-                    Presets
-                  </button>
-                  {showPresetMenu && (
-                    <div className="browse-dropdown-menu browse-preset-menu">
-                      <div className="browse-preset-save">
-                        <input value={presetName} onChange={(event) => setPresetName(event.target.value)} placeholder="Preset name" />
-                        <button className="button-primary browse-preset-save-btn" type="button" onClick={saveCurrentPreset}>Save</button>
-                      </div>
-                      {presets.length === 0 && <p className="browse-preset-empty">No saved presets</p>}
-                      {presets.map((preset) => (
-                        <div key={preset.name} className="browse-preset-row">
-                          <button type="button" className="browse-preset-load" onClick={() => loadPreset(preset)}>
-                            <strong>{preset.name}</strong>
-                            <span>
-                              {preset.cancers.join(", ")}
-                              {preset.gene ? ` / ${preset.gene}` : ""}
-                              {preset.minVariants ? ` / >= ${preset.minVariants}` : ""}
-                            </span>
-                          </button>
-                          <button type="button" className="browse-preset-delete" onClick={() => deletePreset(preset.name)}>&times;</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
+          null
         ) : (
         <section className={`detail-card downloads-filtered-hero-card${mode === "downloads" ? " downloads-filtered-hero-card--downloads" : ""}`}>
           <section className="browse-samples-hero browse-samples-hero--embedded">
@@ -497,12 +426,11 @@ export function SampleBrowsePanel({
                 <span>Sample ID Search</span>
                 <input
                   value={draft.sample}
-                  onChange={(event) => setDraft((previous) => ({ ...previous, sample: event.target.value }))}
+                  onChange={(event) => updateFilters((previous) => ({ ...previous, sample: event.target.value }))}
                   placeholder="Filter sample barcode"
                   autoComplete="off"
                 />
               </label>
-              <button className="button-primary" type="button" onClick={applyFilters}>Apply</button>
             </div>
 
             <div className="browse-samples-toolbar-actions">
@@ -586,12 +514,11 @@ export function SampleBrowsePanel({
                 <span>Sample ID Search</span>
                 <input
                   value={draft.sample}
-                  onChange={(event) => setDraft((previous) => ({ ...previous, sample: event.target.value }))}
+                  onChange={(event) => updateFilters((previous) => ({ ...previous, sample: event.target.value }))}
                   placeholder="Filter sample barcode"
                   autoComplete="off"
                 />
               </label>
-              <button className="button-primary" type="button" onClick={applyFilters}>Apply</button>
             </div>
 
             <div className="browse-samples-toolbar-actions">
@@ -699,13 +626,12 @@ export function SampleBrowsePanel({
               ) : null}
               <div className="browse-panel-header">
                 <h3>Filters</h3>
-                <p className="browse-summary-line">Define which samples enter the filtered multianno export.</p>
+                <p className="browse-summary-line">Define which samples enter the filtered file export.</p>
               </div>
               <div className="browse-samples-top-filter-grid">
                 {filterSections}
               </div>
               <div className="browse-samples-sidebar-actions">
-                <button className="button-primary" type="button" onClick={applyFilters}>Apply Filters</button>
                 <button className="button-secondary" type="button" onClick={resetFilters}>Reset</button>
               </div>
             </section>
@@ -715,10 +641,92 @@ export function SampleBrowsePanel({
                 <div>
                   <h3>Sample Table</h3>
                   <p className="browse-results-summary">
-                    Each row is a sample summary. Click a row to open the drawer with file details and mounted multianno files.
+                    Each row is a sample summary. Click a row to open the drawer with mounted file details.
                   </p>
                 </div>
               </div>
+
+              {isDownloadsCompact ? (
+                <div className="downloads-filtered-table-tools">
+                  <div className="downloads-filtered-control-metrics">
+                    <MetricTile label="Matching Samples" value={formatNumber(samplesQuery.data?.totalElements ?? 0)} />
+                    <MetricTile label="Page Variants" value={formatNumber(totalVariantsOnPage)} />
+                    <MetricTile label="Visible Files" value={formatNumber(totalVisibleFiles)} />
+                    <MetricTile label="Selected" value={formatNumber(selectedCount)} />
+                  </div>
+
+                  <div className="downloads-filtered-control-bar downloads-filtered-control-bar--inline">
+                    <div className="downloads-filtered-control-search">
+                      <label className="browse-field browse-samples-toolbar-search">
+                        <span>Sample ID Search</span>
+                        <input
+                          value={draft.sample}
+                          onChange={(event) => updateFilters((previous) => ({ ...previous, sample: event.target.value }))}
+                          placeholder="Filter sample barcode"
+                          autoComplete="off"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="downloads-filtered-control-actions">
+                      <label className="browse-field-inline">
+                        <span>Rows</span>
+                        <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
+                          {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
+                        </select>
+                      </label>
+
+                      <div className="browse-dropdown-wrap">
+                        <button className="button-secondary" type="button" onClick={() => { setShowColumnMenu((value) => !value); setShowPresetMenu(false); }}>
+                          Columns
+                        </button>
+                        {showColumnMenu && (
+                          <div className="browse-dropdown-menu">
+                            {availableColumns.map((column) => (
+                              <label key={column.key} className="browse-dropdown-item">
+                                <input
+                                  type="checkbox"
+                                  checked={visibleColumns.has(column.key)}
+                                  onChange={() => toggleColumn(column.key)}
+                                />
+                                {column.label}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="browse-dropdown-wrap">
+                        <button className="button-secondary" type="button" onClick={() => { setShowPresetMenu((value) => !value); setShowColumnMenu(false); }}>
+                          Presets
+                        </button>
+                        {showPresetMenu && (
+                          <div className="browse-dropdown-menu browse-preset-menu">
+                            <div className="browse-preset-save">
+                              <input value={presetName} onChange={(event) => setPresetName(event.target.value)} placeholder="Preset name" />
+                              <button className="button-primary browse-preset-save-btn" type="button" onClick={saveCurrentPreset}>Save</button>
+                            </div>
+                            {presets.length === 0 && <p className="browse-preset-empty">No saved presets</p>}
+                            {presets.map((preset) => (
+                              <div key={preset.name} className="browse-preset-row">
+                                <button type="button" className="browse-preset-load" onClick={() => loadPreset(preset)}>
+                                  <strong>{preset.name}</strong>
+                                  <span>
+                                    {preset.cancers.join(", ")}
+                                    {preset.gene ? ` / ${preset.gene}` : ""}
+                                    {preset.minVariants ? ` / >= ${preset.minVariants}` : ""}
+                                  </span>
+                                </button>
+                                <button type="button" className="browse-preset-delete" onClick={() => deletePreset(preset.name)}>&times;</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               {selectedCount > 0 && (
                 <div className="browse-samples-selection-bar">
@@ -731,10 +739,10 @@ export function SampleBrowsePanel({
                     <button
                       className="button-secondary"
                       type="button"
-                      disabled={!canDownloadAnno || downloadingType != null}
+                      disabled={!canDownloadFiles || downloadingType != null}
                       onClick={handleBatchDownload}
                     >
-                      {downloadingType === "anno" ? "Downloading..." : "Download multianno zip"}
+                      {downloadingType === "files" ? "Downloading..." : "Download selected files"}
                     </button>
                   </div>
                 </div>
@@ -835,11 +843,10 @@ export function SampleBrowsePanel({
           <aside className="detail-card browse-samples-sidebar">
             <div className="browse-panel-header">
               <h3>Filters</h3>
-              <p className="browse-summary-line">Define which samples enter the filtered multianno export.</p>
+              <p className="browse-summary-line">Define which samples enter the filtered file export.</p>
             </div>
             {filterSections}
             <div className="browse-samples-sidebar-actions">
-              <button className="button-primary" type="button" onClick={applyFilters}>Apply Filters</button>
               <button className="button-secondary" type="button" onClick={resetFilters}>Reset</button>
             </div>
           </aside>
@@ -865,10 +872,10 @@ export function SampleBrowsePanel({
                 <button
                   className="button-secondary"
                   type="button"
-                  disabled={!canDownloadAnno || downloadingType != null}
+                  disabled={!canDownloadFiles || downloadingType != null}
                   onClick={handleBatchDownload}
                 >
-                  {downloadingType === "anno" ? "Downloading..." : "Download multianno zip"}
+                  {downloadingType === "files" ? "Downloading..." : "Download selected files"}
                 </button>
               </div>
             </div>
@@ -1030,7 +1037,7 @@ export function SampleBrowsePanel({
                             <tr key={`${file.type}-${file.fileName}`}>
                               <td>{file.type}</td>
                               <td className="browse-mono">{file.fileName}</td>
-                              <td>{formatNumber(file.sizeBytes)}</td>
+                              <td>{formatFileSize(file.sizeBytes)}</td>
                               <td>{formatTimestamp(file.lastModified)}</td>
                               <td>
                                 {file.downloadUrl ? (

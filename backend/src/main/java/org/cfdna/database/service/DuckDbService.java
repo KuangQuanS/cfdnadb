@@ -71,6 +71,7 @@ public class DuckDbService {
     private static final Path DEFAULT_DATA_DIR = Path.of("/400T/cfdnaweb");
     private static final Path DEFAULT_HEALTHY_VCF_DIR = Path.of("/400T/cfdnadb/Healthy/Vcf");
     private static final String HEALTHY_COHORT = "Healthy";
+    private static final String HEALTHY_SAMPLE_SOURCE = "healthy";
     private static final String HEALTHY_VCF_CATEGORY = "healthy-vcf";
     private static final List<String> CANCERS = List.of(
             "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
@@ -447,8 +448,15 @@ public class DuckDbService {
                         "/api/v1/data-files/pan/" + p.getFileName()));
             }
         }
-        files.addAll(listHealthyVcfDataFiles());
+        DataFileDto healthySummary = buildHealthyVcfSummaryDataFile();
+        if (healthySummary != null) {
+            files.add(healthySummary);
+        }
         return files;
+    }
+
+    public List<DataFileDto> listHealthyVcfFiles() {
+        return listHealthyVcfDataFiles();
     }
 
     public Resource loadDataFile(String category, String subPath) {
@@ -496,6 +504,37 @@ public class DuckDbService {
         }
     }
 
+    private DataFileDto buildHealthyVcfSummaryDataFile() {
+        if (!Files.isDirectory(healthyVcfDir)) {
+            return null;
+        }
+
+        long totalSize = 0;
+        long fileCount = 0;
+        try (Stream<Path> stream = Files.list(healthyVcfDir)) {
+            for (Path path : stream.filter(this::isHealthyVcfFile).collect(Collectors.toList())) {
+                fileCount++;
+                try {
+                    totalSize += Files.size(path);
+                } catch (IOException ignored) {
+                }
+            }
+        } catch (IOException exception) {
+            log.warn("Failed to summarize healthy VCF files from {}", healthyVcfDir, exception);
+            return null;
+        }
+        if (fileCount == 0) {
+            return null;
+        }
+        return new DataFileDto(
+                HEALTHY_COHORT,
+                "Healthy VCF",
+                "Healthy VCF files (" + fileCount + " samples)",
+                "healthy-vcf-files",
+                totalSize,
+                "");
+    }
+
     private Path resolveHealthyVcfFile(String fileName) {
         if (fileName == null || fileName.isBlank()) {
             throw new ResourceNotFoundException("Healthy VCF file not found: " + fileName);
@@ -514,7 +553,7 @@ public class DuckDbService {
 
     private boolean isHealthyVcfFile(Path path) {
         String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
-        return Files.isRegularFile(path) && fileName.endsWith(".vcf.gz");
+        return Files.isRegularFile(path) && (fileName.endsWith(".vcf.gz") || fileName.endsWith("_vcf.gz"));
     }
 
     public DatabaseStatsDto getDatabaseStats() {
@@ -1726,12 +1765,139 @@ public class DuckDbService {
      * Samples are ordered by total mutation count (descending).
      */
     public OncoplottDto getOncoplottData(String source, List<String> cancerTypes, int geneLimit) {
-        // Non-TCGA: use clinical_data.txt + mutations_data.txt (richer mutation-type data)
-        if (!isTcga(source)) {
-            return getOncoplottDataFromPanFiles(cancerTypes, geneLimit);
+        if (isTcga(source)) {
+            return getOncoplottDataFromTcga(cancerTypes, geneLimit);
         }
-        // TCGA: keep existing maf.duckdb path
-        return getOncoplottDataFromTcga(cancerTypes, geneLimit);
+        if (isGeo(source) || isPrivate(source)) {
+            return getOncoplottDataFromMafTable(source, cancerTypes, geneLimit);
+        }
+        return getOncoplottDataFromPanFiles(cancerTypes, geneLimit);
+    }
+
+    private OncoplottDto getOncoplottDataFromMafTable(String source, List<String> cancerTypes, int geneLimit) {
+        if (!mafDatabaseAvailable()) {
+            return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
+        }
+
+        String table = resolveMafTable(source);
+        List<String> requested = normalizeFilterValues(cancerTypes);
+        List<String> normalizedCancerTypes = normalizeOncoplotCancerTypesForMaf(source, requested);
+        int limit = Math.max(5, Math.min(geneLimit, 50));
+
+        String cancerWhere = normalizedCancerTypes.isEmpty()
+                ? ""
+                : "WHERE cancer_type IN (" + String.join(",", Collections.nCopies(normalizedCancerTypes.size(), "?")) + ")\n";
+        String sampleWhere = normalizedCancerTypes.isEmpty()
+                ? "WHERE tumor_sample_barcode IS NOT NULL AND TRIM(tumor_sample_barcode) <> ''\n"
+                : cancerWhere + "AND tumor_sample_barcode IS NOT NULL AND TRIM(tumor_sample_barcode) <> ''\n";
+
+        String sql =
+                "WITH raw AS (\n" +
+                "    SELECT hugo_symbol, tumor_sample_barcode, variant_classification,\n" +
+                "    CASE variant_classification\n" +
+                "        WHEN 'Nonsense_Mutation'       THEN 1\n" +
+                "        WHEN 'Frame_Shift_Del'         THEN 2\n" +
+                "        WHEN 'Frame_Shift_Ins'         THEN 3\n" +
+                "        WHEN 'Splice_Site'             THEN 4\n" +
+                "        WHEN 'Nonstop_Mutation'        THEN 4\n" +
+                "        WHEN 'Translation_Start_Site'  THEN 4\n" +
+                "        WHEN 'In_Frame_Del'            THEN 5\n" +
+                "        WHEN 'In_Frame_Ins'            THEN 6\n" +
+                "        WHEN 'Missense_Mutation'       THEN 7\n" +
+                "        WHEN 'Silent'                  THEN 8\n" +
+                "        ELSE 9\n" +
+                "    END AS sev\n" +
+                "    FROM " + table + "\n" +
+                cancerWhere +
+                "),\n" +
+                "top_genes AS (\n" +
+                "    SELECT hugo_symbol FROM (\n" +
+                "        SELECT hugo_symbol, COUNT(DISTINCT tumor_sample_barcode) AS nsamp\n" +
+                "        FROM raw\n" +
+                "        WHERE hugo_symbol IS NOT NULL AND hugo_symbol <> ''\n" +
+                "        GROUP BY hugo_symbol\n" +
+                "        ORDER BY nsamp DESC, hugo_symbol ASC\n" +
+                "        LIMIT " + limit + "\n" +
+                "    )\n" +
+                "),\n" +
+                "best AS (\n" +
+                "    SELECT r.hugo_symbol, r.tumor_sample_barcode,\n" +
+                "           arg_min(r.variant_classification, r.sev) AS variant_class\n" +
+                "    FROM raw r\n" +
+                "    WHERE r.hugo_symbol IN (SELECT hugo_symbol FROM top_genes)\n" +
+                "    AND r.tumor_sample_barcode IS NOT NULL AND r.tumor_sample_barcode <> ''\n" +
+                "    GROUP BY r.hugo_symbol, r.tumor_sample_barcode\n" +
+                ")\n" +
+                "SELECT hugo_symbol, tumor_sample_barcode, variant_class FROM best";
+
+        String sampleSql =
+                "SELECT DISTINCT TRIM(tumor_sample_barcode) AS tumor_sample_barcode\n" +
+                "FROM " + table + "\n" +
+                sampleWhere +
+                "ORDER BY tumor_sample_barcode";
+
+        Map<String, Long> geneCounts = new LinkedHashMap<>();
+        Map<String, Long> sampleCounts = new LinkedHashMap<>();
+        List<OncoplottDto.CellDto> cells = new ArrayList<>();
+
+        try (Connection conn = openMafConnection()) {
+            if (!mafTableExists(conn, table)) {
+                return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
+            }
+            try (PreparedStatement sampleStmt = conn.prepareStatement(sampleSql);
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                int idx = 1;
+                for (String cancerType : normalizedCancerTypes) sampleStmt.setString(idx++, cancerType);
+                try (ResultSet rs = sampleStmt.executeQuery()) {
+                    while (rs.next()) {
+                        String sample = rs.getString("tumor_sample_barcode");
+                        if (sample == null || sample.isBlank()) continue;
+                        sampleCounts.put(sample, 0L);
+                    }
+                }
+
+                idx = 1;
+                for (String cancerType : normalizedCancerTypes) stmt.setString(idx++, cancerType);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String gene = rs.getString("hugo_symbol");
+                        String sample = rs.getString("tumor_sample_barcode");
+                        String variantClass = rs.getString("variant_class");
+                        if (gene == null || sample == null || variantClass == null) continue;
+                        cells.add(new OncoplottDto.CellDto(gene, sample, variantClass));
+                        geneCounts.merge(gene, 1L, Long::sum);
+                        sampleCounts.merge(sample, 1L, Long::sum);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            log.error("[MAF] {} oncoplot query failed: {}", source, e.getMessage(), e);
+            return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
+        }
+
+        List<String> genes = geneCounts.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
+                        .thenComparing(Map.Entry.comparingByKey()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        List<String> samples = sampleCounts.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
+                        .thenComparing(Map.Entry.comparingByKey()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        return new OncoplottDto(genes, samples, cells, geneCounts, sampleCounts);
+    }
+
+    private List<String> normalizeOncoplotCancerTypesForMaf(String source, List<String> cancerTypes) {
+        if (isPrivate(source)) {
+            return cancerTypes.stream()
+                    .map(value -> CANCER_TO_CFDNA_TYPE.getOrDefault(value, value))
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+        return cancerTypes;
     }
 
     /**
@@ -2620,7 +2786,7 @@ public class DuckDbService {
 
     // ---- Cohort files: per-source file listing for Browse Files tab ----
 
-    private static final List<String> DATA_SOURCES = List.of("private", "public", "tcga", "geo");
+    private static final List<String> DATA_SOURCES = List.of("private", "public", "tcga", "geo", HEALTHY_SAMPLE_SOURCE);
 
     private static final List<String> FILE_CATEGORIES = List.of("multianno", "vcf");
 
@@ -2703,17 +2869,41 @@ public class DuckDbService {
                                                           boolean includeTopGenes,
                                                           int page,
                                                           int pageSize) {
-        List<String> cancers = normalizeCancerFilters(cancerFilters);
+        List<String> cancers = normalizeSampleCancerFilters(cancerFilters);
         List<String> sources = normalizeSampleSources(sourceFilters);
         String normalizedGene = gene == null ? "" : gene.trim().toLowerCase(Locale.ROOT);
         String normalizedSample = sample == null ? "" : sample.trim().toLowerCase(Locale.ROOT);
         long minVariantCount = minVariants == null ? 0 : Math.max(minVariants, 0);
         int safePage = Math.max(page, 1);
+        boolean includeHealthy = cancers.contains(HEALTHY_COHORT) && sources.contains(HEALTHY_SAMPLE_SOURCE);
+        List<String> dbCancers = cancers.stream()
+                .filter(value -> !HEALTHY_COHORT.equals(value))
+                .collect(Collectors.toList());
+        List<String> dbSources = sources.stream()
+                .filter(value -> !HEALTHY_SAMPLE_SOURCE.equals(value))
+                .collect(Collectors.toList());
 
-        StringBuilder where = new StringBuilder(" WHERE cancer_type IN (" + String.join(",", Collections.nCopies(cancers.size(), "?")) + ")" +
-                " AND source IN (" + String.join(",", Collections.nCopies(sources.size(), "?")) + ")");
-        List<Object> params = new ArrayList<>(cancers);
-        params.addAll(sources);
+        if (includeHealthy) {
+            return listSamplesIncludingHealthy(
+                    dbCancers,
+                    dbSources,
+                    normalizedGene,
+                    normalizedSample,
+                    minVariantCount,
+                    hasAnnotated,
+                    hasSomatic,
+                    includeTopGenes,
+                    safePage,
+                    pageSize);
+        }
+        if (dbCancers.isEmpty() || dbSources.isEmpty()) {
+            return new PagedResponse<>(List.of(), safePage, pageSize, 0, 0, true, true);
+        }
+
+        StringBuilder where = new StringBuilder(" WHERE cancer_type IN (" + String.join(",", Collections.nCopies(dbCancers.size(), "?")) + ")" +
+                " AND source IN (" + String.join(",", Collections.nCopies(dbSources.size(), "?")) + ")");
+        List<Object> params = new ArrayList<>(dbCancers);
+        params.addAll(dbSources);
         if (!normalizedSample.isBlank()) {
             where.append(" AND LOWER(sample_id) LIKE ?");
             params.add("%" + normalizedSample + "%");
@@ -2783,7 +2973,126 @@ public class DuckDbService {
         }
     }
 
+    private PagedResponse<SampleBrowseItemDto> listSamplesIncludingHealthy(List<String> dbCancers,
+                                                                           List<String> dbSources,
+                                                                           String normalizedGene,
+                                                                           String normalizedSample,
+                                                                           long minVariantCount,
+                                                                           boolean hasAnnotated,
+                                                                           boolean hasSomatic,
+                                                                           boolean includeTopGenes,
+                                                                           int safePage,
+                                                                           int pageSize) {
+        List<SampleBrowseItemDto> allRows = new ArrayList<>();
+        if (!dbCancers.isEmpty() && !dbSources.isEmpty()) {
+            StringBuilder where = new StringBuilder(" WHERE cancer_type IN (" + String.join(",", Collections.nCopies(dbCancers.size(), "?")) + ")" +
+                    " AND source IN (" + String.join(",", Collections.nCopies(dbSources.size(), "?")) + ")");
+            List<Object> params = new ArrayList<>(dbCancers);
+            params.addAll(dbSources);
+            if (!normalizedSample.isBlank()) {
+                where.append(" AND LOWER(sample_id) LIKE ?");
+                params.add("%" + normalizedSample + "%");
+            }
+            if (hasAnnotated) {
+                where.append(" AND has_annotated = TRUE");
+            }
+            if (hasSomatic) {
+                where.append(" AND has_somatic = TRUE");
+            }
+            if (minVariantCount > 0) {
+                where.append(" AND variant_count >= ?");
+                params.add(minVariantCount);
+            }
+            if (!normalizedGene.isBlank()) {
+                where.append(" AND EXISTS (SELECT 1 FROM sample_top_genes stg WHERE stg.cancer_type = sample_inventory.cancer_type " +
+                        "AND stg.source = sample_inventory.source AND stg.sample_id = sample_inventory.sample_id AND LOWER(stg.gene_name) = ?)");
+                params.add(normalizedGene);
+            }
+
+            String dataSql = "SELECT cancer_type, source, sample_id, variant_count, has_annotated, has_somatic " +
+                    "FROM sample_inventory" + where;
+            try (Connection connection = openMafConnection();
+                 PreparedStatement dataStatement = connection.prepareStatement(dataSql)) {
+                bindDynamicParams(dataStatement, params);
+                try (ResultSet rs = dataStatement.executeQuery()) {
+                    while (rs.next()) {
+                        List<String> topGenes = includeTopGenes
+                                ? loadSampleTopGeneNames(connection, rs.getString("cancer_type"), rs.getString("source"), rs.getString("sample_id"), 3)
+                                : List.of();
+                        List<String> availableFiles = rs.getBoolean("has_annotated") ? List.of("anno") : List.of();
+                        allRows.add(new SampleBrowseItemDto(
+                                rs.getString("sample_id"),
+                                rs.getString("cancer_type"),
+                                rs.getString("source"),
+                                rs.getLong("variant_count"),
+                                topGenes,
+                                availableFiles,
+                                rs.getBoolean("has_annotated"),
+                                rs.getBoolean("has_somatic")));
+                    }
+                }
+            } catch (SQLException exception) {
+                throw new IllegalStateException("Failed to list samples", exception);
+            }
+        }
+
+        allRows.addAll(listHealthySampleBrowseItems(normalizedGene, normalizedSample, minVariantCount, hasAnnotated, hasSomatic));
+        allRows.sort(Comparator
+                .comparingLong(SampleBrowseItemDto::getVariantCount).reversed()
+                .thenComparing(SampleBrowseItemDto::getCancer)
+                .thenComparing(SampleBrowseItemDto::getSource)
+                .thenComparing(SampleBrowseItemDto::getSampleId));
+        return pageSampleBrowseItems(allRows, safePage, pageSize);
+    }
+
+    private List<SampleBrowseItemDto> listHealthySampleBrowseItems(String normalizedGene,
+                                                                   String normalizedSample,
+                                                                   long minVariantCount,
+                                                                   boolean hasAnnotated,
+                                                                   boolean hasSomatic) {
+        if (!Files.isDirectory(healthyVcfDir) || hasAnnotated || hasSomatic || minVariantCount > 0 || !normalizedGene.isBlank()) {
+            return List.of();
+        }
+        try (Stream<Path> stream = Files.list(healthyVcfDir)) {
+            return stream
+                    .filter(this::isHealthyVcfFile)
+                    .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                    .map(path -> extractSampleId(path.getFileName().toString(), "vcf"))
+                    .filter(sampleId -> sampleId != null && !sampleId.isBlank())
+                    .filter(sampleId -> normalizedSample.isBlank() || sampleId.toLowerCase(Locale.ROOT).contains(normalizedSample))
+                    .map(sampleId -> new SampleBrowseItemDto(
+                            sampleId,
+                            HEALTHY_COHORT,
+                            HEALTHY_SAMPLE_SOURCE,
+                            0,
+                            List.of(),
+                            List.of("vcf"),
+                            false,
+                            false))
+                    .collect(Collectors.toList());
+        } catch (IOException exception) {
+            log.warn("Failed to list healthy VCF samples from {}", healthyVcfDir, exception);
+            return List.of();
+        }
+    }
+
+    private PagedResponse<SampleBrowseItemDto> pageSampleBrowseItems(List<SampleBrowseItemDto> rows, int page, int pageSize) {
+        long total = rows.size();
+        if (total == 0) {
+            return new PagedResponse<>(List.of(), page, pageSize, 0, 0, true, true);
+        }
+        int totalPages = (int) Math.ceil(total / (double) pageSize);
+        int fromIndex = Math.min((page - 1) * pageSize, rows.size());
+        int toIndex = Math.min(fromIndex + pageSize, rows.size());
+        boolean first = page <= 1;
+        boolean last = totalPages == 0 || page >= totalPages;
+        return new PagedResponse<>(rows.subList(fromIndex, toIndex), page, pageSize, total, totalPages, first, last);
+    }
+
     public SampleDetailDto getSampleDetail(String cancer, String source, String sampleId) {
+        if (isHealthySampleRequest(cancer, source)) {
+            return getHealthySampleDetail(sampleId);
+        }
         String validatedCancer = validateCancer(cancer);
         String validatedSource = normalizeSingleSampleSource(source);
         String normalizedSampleId = sampleId == null ? "" : sampleId.trim();
@@ -2822,6 +3131,57 @@ public class DuckDbService {
         }
     }
 
+    private SampleDetailDto getHealthySampleDetail(String sampleId) {
+        String normalizedSampleId = sampleId == null ? "" : sampleId.trim();
+        if (normalizedSampleId.isBlank()) {
+            throw new IllegalArgumentException("Sample ID is required.");
+        }
+        Path vcfPath = resolveHealthyVcfSample(normalizedSampleId);
+        return new SampleDetailDto(
+                extractSampleId(vcfPath.getFileName().toString(), "vcf"),
+                HEALTHY_COHORT,
+                HEALTHY_SAMPLE_SOURCE,
+                0,
+                List.of(),
+                List.of(buildHealthyVcfSampleFileDto(vcfPath)));
+    }
+
+    private SampleFileDto buildHealthyVcfSampleFileDto(Path path) {
+        try {
+            long sizeBytes = Files.size(path);
+            String lastModified = Files.getLastModifiedTime(path).toInstant().toString();
+            String fileName = path.getFileName().toString();
+            String downloadUrl = "/api/v1/data-files/" + HEALTHY_VCF_CATEGORY + "/" +
+                    UriUtils.encodePathSegment(fileName, StandardCharsets.UTF_8);
+            return new SampleFileDto("vcf", fileName, sizeBytes, lastModified, downloadUrl);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to inspect healthy VCF file " + path, exception);
+        }
+    }
+
+    private Path resolveHealthyVcfSample(String sampleId) {
+        if (!Files.isDirectory(healthyVcfDir)) {
+            throw new ResourceNotFoundException("Healthy VCF sample not found: " + sampleId);
+        }
+        String normalizedSampleId = sampleId == null ? "" : sampleId.trim();
+        if (normalizedSampleId.isBlank()) {
+            throw new ResourceNotFoundException("Healthy VCF sample not found: " + sampleId);
+        }
+        String lowerSampleId = normalizedSampleId.toLowerCase(Locale.ROOT);
+        if (lowerSampleId.endsWith(".vcf.gz") || lowerSampleId.endsWith("_vcf.gz")) {
+            return resolveHealthyVcfFile(normalizedSampleId);
+        }
+        try (Stream<Path> stream = Files.list(healthyVcfDir)) {
+            return stream
+                    .filter(this::isHealthyVcfFile)
+                    .filter(path -> normalizedSampleId.equals(extractSampleId(path.getFileName().toString(), "vcf")))
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("Healthy VCF sample not found: " + sampleId));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to resolve healthy VCF sample " + sampleId, exception);
+        }
+    }
+
     public void writeSampleDownloadZip(SampleDownloadRequestDto request, OutputStream outputStream) throws IOException {
         if (request == null || request.getSamples() == null || request.getSamples().isEmpty()) {
             throw new IllegalArgumentException("At least one sample must be selected.");
@@ -2841,6 +3201,19 @@ public class DuckDbService {
         try (Connection connection = openMafConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             for (SampleSelectionDto selection : selections) {
+                if (isHealthySampleRequest(selection.getCancer(), selection.getSource())) {
+                    if (!"anno".equals(fileType)) {
+                        String normalizedSampleId = selection.getSampleId().trim();
+                        downloadItems.add(new SampleDownloadItem(
+                                new SampleKey(HEALTHY_COHORT, HEALTHY_SAMPLE_SOURCE, normalizedSampleId),
+                                "vcf",
+                                resolveHealthyVcfSample(normalizedSampleId)));
+                    }
+                    continue;
+                }
+                if ("vcf".equals(fileType)) {
+                    continue;
+                }
                 String validatedCancer = validateCancer(selection.getCancer());
                 String validatedSource = normalizeSingleSampleSource(selection.getSource());
                 String normalizedSampleId = selection.getSampleId().trim();
@@ -3212,6 +3585,31 @@ public class DuckDbService {
         return values.isEmpty() ? CANCERS : List.copyOf(values);
     }
 
+    private List<String> normalizeSampleCancerFilters(List<String> filters) {
+        List<String> defaultValues = new ArrayList<>(CANCERS);
+        defaultValues.add(HEALTHY_COHORT);
+        if (filters == null || filters.isEmpty()) {
+            return defaultValues;
+        }
+        LinkedHashSet<String> values = new LinkedHashSet<>();
+        for (String filter : filters) {
+            if (filter == null || filter.isBlank()) {
+                continue;
+            }
+            Arrays.stream(filter.split(","))
+                    .map(String::trim)
+                    .filter(value -> !value.isBlank())
+                    .forEach(value -> {
+                        if (HEALTHY_COHORT.equalsIgnoreCase(value)) {
+                            values.add(HEALTHY_COHORT);
+                        } else {
+                            values.add(validateCancer(value));
+                        }
+                    });
+        }
+        return values.isEmpty() ? defaultValues : List.copyOf(values);
+    }
+
     private List<String> normalizeSampleSources(List<String> filters) {
         if (filters == null || filters.isEmpty()) {
             return DATA_SOURCES;
@@ -3239,11 +3637,16 @@ public class DuckDbService {
     }
 
     private String normalizeDownloadType(String fileType) {
-        String normalized = fileType == null ? "" : fileType.trim().toLowerCase(Locale.ROOT);
-        if (!List.of("anno").contains(normalized)) {
+        String normalized = fileType == null || fileType.isBlank() ? "files" : fileType.trim().toLowerCase(Locale.ROOT);
+        if (!List.of("files", "anno", "vcf").contains(normalized)) {
             throw new IllegalArgumentException("Unsupported sample download type: " + fileType);
         }
         return normalized;
+    }
+
+    private boolean isHealthySampleRequest(String cancer, String source) {
+        return HEALTHY_COHORT.equalsIgnoreCase(cancer == null ? "" : cancer.trim())
+                && HEALTHY_SAMPLE_SOURCE.equalsIgnoreCase(source == null ? "" : source.trim());
     }
 
     private String buildZipFileName(SampleDownloadItem item) {
@@ -3329,6 +3732,8 @@ public class DuckDbService {
             int idx = fileName.indexOf(".filtered");
             if (idx > 0) return fileName.substring(0, idx);
             idx = fileName.indexOf(".vcf");
+            if (idx > 0) return fileName.substring(0, idx);
+            idx = fileName.indexOf("_vcf.gz");
             if (idx > 0) return fileName.substring(0, idx);
         }
         // fallback: strip extension

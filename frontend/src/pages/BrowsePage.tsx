@@ -14,7 +14,6 @@ import type { CancerAsset } from "../types/api";
 
 const BROWSE_SOURCES = [
   { source: "cfDNA", label: "cfDNA" },
-  { source: "private", label: "Private" },
   { source: "geo", label: "GEO" },
   { source: "tcga", label: "TCGA" },
 ] as const;
@@ -24,7 +23,9 @@ const SOURCE_LABELS: Record<string, string> = Object.fromEntries(
 );
 
 function toBrowsePlotSource(source: string) {
-  return source === "tcga" ? "tcga" : "Overview";
+  if (source === "cfDNA") return "private";
+  if (source === "tcga") return "tcga";
+  return "geo";
 }
 
 function normalizeCancerLabel(value: string) {
@@ -142,10 +143,16 @@ export function BrowsePage() {
   );
 
   const sourceSummary = useMemo(() => {
+    if (activeSource === "cfDNA") {
+      return "cfDNA uses the Private cfDNA statistics plots and Private cfDNA mutation rows for the interactive oncoplot.";
+    }
+    if (activeSource === "geo") {
+      return "GEO uses GEO statistics plots and GEO mutation rows for the interactive oncoplot.";
+    }
     if (activeSource === "tcga") {
       return "TCGA uses its independent oncoplot and cohort summary plots for the selected cancer type.";
     }
-    return "cfDNA, Private, and GEO use the same cfDNA cohort-level summary plots and pan-cancer oncoplot in this Browse view.";
+    return "";
   }, [activeSource]);
 
   return (

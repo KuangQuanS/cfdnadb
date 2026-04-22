@@ -200,6 +200,10 @@ export function listDataFiles() {
   return requestLive<DataFile[]>("/api/v1/data-files");
 }
 
+export function listHealthyVcfFiles() {
+  return requestLive<DataFile[]>("/api/v1/data-files/healthy-vcf");
+}
+
 export function getDatabaseStats() {
   return requestLive<DatabaseStats>("/api/v1/stats");
 }
