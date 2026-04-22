@@ -56,11 +56,11 @@ const ALL_CALLOUTS = [
   { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 17, anchorPct: 49, browseKey: "HeadAndNeck", alwaysShow: false },
   { id: "Lung", label: "Lung", side: "left", topPct: 28, anchorPct: 42, browseKey: "Lung", alwaysShow: true },
   { id: "Liver", label: "Liver", side: "left", topPct: 38, anchorPct: 43, browseKey: "Liver", alwaysShow: true },
-  { id: "Kidney", label: "Kidney", side: "left", topPct: 43, anchorPct: 41, browseKey: "Kidney", alwaysShow: false },
+  { id: "Kidney", label: "Kidney", side: "left", topPct: 43, anchorPct: 43, browseKey: "Kidney", alwaysShow: false },
   { id: "Endometrial", label: "Endometrial", side: "left", topPct: 52, anchorPct: 48, browseKey: "Endometrial", alwaysShow: false },
   { id: "Bladder", label: "Bladder", side: "left", topPct: 58, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
   /* ── right side (top → bottom) ── */
-  { id: "Breast", label: "Breast", side: "right", topPct: 31, anchorPct: 58, browseKey: "Breast", alwaysShow: true },
+  { id: "Breast", label: "Breast", side: "right", topPct: 31, anchorPct: 63, browseKey: "Breast", alwaysShow: true },
   { id: "Gastric", label: "Gastric", side: "right", topPct: 39, anchorPct: 54, browseKey: "Gastric", alwaysShow: false },
   { id: "Pancreatic", label: "Pancreas", side: "right", topPct: 43, anchorPct: 52, browseKey: "Pancreatic", alwaysShow: true },
   { id: "Colorectal", label: "Colorectal", side: "right", topPct: 51, anchorPct: 55, browseKey: "Colorectal", alwaysShow: true },
@@ -101,6 +101,7 @@ function buildSunburstEntries(entries: HeroRingEntry[], limit = 7) {
 }
 
 function buildHeroSunburstOption(title: string, total: number, entries: HeroRingEntry[]): EChartsOption {
+  const isMutations = title === "Mutations";
   const children = buildSunburstEntries(entries);
 
   return {
@@ -122,7 +123,7 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
     series: [
       {
         type: "sunburst",
-        radius: [0, "90%"],
+        radius: [0, "96%"],
         center: ["50%", "50%"],
         sort: undefined,
         nodeClick: false,
@@ -133,10 +134,23 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
             itemStyle: { color: "#1d5f38" },
             label: {
               rotate: 0,
-              color: "#ffffff",
-              fontWeight: 800,
-              fontSize: 12,
-              formatter: `${title}\n${formatNumber(total)}`,
+              formatter: `{title|${title}}\n{value|${formatNumber(total)}}`,
+              rich: {
+                title: {
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  fontSize: 12,
+                  align: "center",
+                  lineHeight: 16,
+                },
+                value: {
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  fontSize: isMutations ? 10 : 12,
+                  align: "center",
+                  lineHeight: 14,
+                },
+              },
             },
             children,
           },
@@ -145,7 +159,7 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
           {},
           {
             r0: "0%",
-            r: "44%",
+            r: "46%",
             itemStyle: {
               borderColor: "#ffffff",
               borderWidth: 2,
@@ -155,8 +169,8 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
             },
           },
           {
-            r0: "46%",
-            r: "84%",
+            r0: "48%",
+            r: "92%",
             itemStyle: {
               borderColor: "#ffffff",
               borderWidth: 2,
@@ -214,7 +228,7 @@ function HeroRingChart({
       <div className="gdc-overview-chart-shell">
         <ReactECharts
           option={option}
-          style={{ height: 280, width: "100%" }}
+          style={{ height: 320, width: "100%" }}
           opts={{ renderer: "svg" }}
           onEvents={{
             click: (params: { data?: { browseKey?: string; name?: string } }) => {

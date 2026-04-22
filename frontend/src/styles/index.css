@@ -130,7 +130,7 @@ button, input, select { font: inherit; }
 /* Header */
 .site-header {
   background-size: 100% auto;
-  background-position: center 38%;
+  background-position: center 39%;
   background-repeat: no-repeat;
   color: var(--ink);
   padding: 0;
@@ -354,7 +354,7 @@ button, input, select { font: inherit; }
 
 @media (max-width: 760px) {
   .site-header {
-    background-size: 165% auto;
+    background-size: 130% auto;
     background-position: center 34%;
   }
 

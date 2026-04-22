@@ -317,7 +317,7 @@
 }
 
 .gdc-side-rail {
-  width: min(100%, 580px);
+  width: min(100%, 640px);
   display: grid;
   gap: 12px;
   min-height: 100%;
@@ -366,8 +366,8 @@
 
 .gdc-overview-chart-shell {
   position: relative;
-  width: min(100%, 300px);
-  min-height: 280px;
+  width: min(100%, 340px);
+  min-height: 320px;
 }
 
 .gdc-overview-chart-shell::before {
@@ -597,8 +597,8 @@
   }
 
   .gdc-overview-chart-shell {
-    width: min(100%, 308px);
-    min-height: 286px;
+    width: min(100%, 324px);
+    min-height: 306px;
   }
 
   .gdc-search-row {
@@ -622,8 +622,8 @@
   }
 
   .gdc-overview-chart-shell {
-    width: min(100%, 308px);
-    min-height: 288px;
+    width: min(100%, 324px);
+    min-height: 308px;
   }
 }
 
