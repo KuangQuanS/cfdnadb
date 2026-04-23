@@ -402,10 +402,13 @@ export function HeroCarousel() {
           </h1>
           <div className="gdc-subtitle">
             <p>
-              cfDNAdb is a curated plasma cell-free DNA somatic mutation database covering {formatNumber(INTRO_TOTAL_SAMPLES)} samples, {formatNumber(INTRO_TOTAL_FILES)} data files, and {formatNumber(INTRO_TOTAL_MUTATIONS)} mutation records.
+              cfDNAdb represents a comprehensive plasma cell-free DNA somatic mutation resource encompassing {formatNumber(INTRO_TOTAL_SAMPLES)} curated samples across major cancer cohorts, including breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies.
             </p>
             <p>
-              The resource provides cohort summaries, annotated variants, gene-level queries, sample browsing, statistics, and downloadable analysis files for liquid biopsy research.
+              The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising {formatNumber(INTRO_TOTAL_FILES)} data files and {formatNumber(INTRO_TOTAL_MUTATIONS)} imported mutation records.
+            </p>
+            <p>
+              The platform provides anatomical browsing, sample exploration, gene-oriented querying, cohort statistics, visualization modules, and download workflows to support cross-cohort comparison and biomarker-focused liquid biopsy research.
             </p>
           </div>
 
