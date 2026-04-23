@@ -7,6 +7,7 @@ import org.cfdna.database.service.DuckDbService;
 import org.cfdna.database.service.StatisticsOverviewService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -32,5 +33,15 @@ public class StatisticsOverviewController {
     @GetMapping("/vaf-distribution")
     public ApiResponse<List<VafDistributionDto>> getVafDistribution() {
         return ApiResponse.success(duckDbService.getVafDistribution());
+    }
+
+    @GetMapping("/public-overview")
+    public ApiResponse<StatisticsOverviewDto> getPublicOverview(@RequestParam(required = false) String cancer) {
+        return ApiResponse.success(statisticsOverviewService.getPublicOverview(cancer));
+    }
+
+    @GetMapping("/public-cohorts")
+    public ApiResponse<List<String>> getPublicCohorts() {
+        return ApiResponse.success(statisticsOverviewService.listPublicCohortNames());
     }
 }

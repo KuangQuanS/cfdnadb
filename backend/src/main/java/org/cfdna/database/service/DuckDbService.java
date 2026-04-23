@@ -440,6 +440,31 @@ public class DuckDbService {
                     log.warn("Failed to scan maf dir for {}", cancer, e);
                 }
             }
+            // public/stats: aggregated mutation tables and cohort PDFs for public datasets (e.g. GEO_Breast_*)
+            Path publicStatsDir = resolveCancerDir(cancer).resolve("public").resolve("stats");
+            if (Files.isDirectory(publicStatsDir)) {
+                try (Stream<Path> stream = Files.list(publicStatsDir)) {
+                    stream.filter(Files::isRegularFile)
+                            .sorted()
+                            .forEach(p -> {
+                                String name = p.getFileName().toString();
+                                String lower = name.toLowerCase(Locale.ROOT);
+                                String fileType;
+                                if (lower.endsWith("_all_mutations.txt")) {
+                                    fileType = "Public Mutations";
+                                } else if (lower.endsWith(".pdf")) {
+                                    fileType = "Public Plot";
+                                } else {
+                                    return;
+                                }
+                                files.add(buildDataFileDto(cancer, fileType, p,
+                                        "/api/v1/data-files/" + cancer + "/public-stats/" +
+                                                UriUtils.encodePathSegment(name, StandardCharsets.UTF_8)));
+                            });
+                } catch (IOException e) {
+                    log.warn("Failed to scan public stats dir for {}", cancer, e);
+                }
+            }
         }
         Path[] panCancerFiles = {dataDir.resolve("all_sample_152.txt"), dataDir.resolve("all_sample_33.txt")};
         for (Path p : panCancerFiles) {
@@ -687,6 +712,128 @@ public class DuckDbService {
         }
     }
 
+    // ---- Public cohort aggregated statistics (reads from public_maf) ----
+
+    public List<LabelCountDto> getPublicFuncDistribution(String cancer) {
+        return queryPublicLabelCounts(cancer,
+                "SELECT TRIM(COALESCE(\"Func.refGene\", '')) AS label, COUNT(*) AS cnt " +
+                "FROM %s " +
+                "WHERE TRIM(COALESCE(\"Func.refGene\", '')) <> '' " +
+                "GROUP BY label ORDER BY cnt DESC");
+    }
+
+    public List<LabelCountDto> getPublicExonicDistribution(String cancer) {
+        return queryPublicLabelCounts(cancer,
+                "SELECT TRIM(COALESCE(\"ExonicFunc.refGene\", '')) AS label, COUNT(*) AS cnt " +
+                "FROM %s " +
+                "WHERE TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '' " +
+                "  AND TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '.' " +
+                "GROUP BY label ORDER BY cnt DESC");
+    }
+
+    public List<LabelCountDto> getPublicChromDistribution(String cancer) {
+        return queryPublicLabelCounts(cancer,
+                "SELECT TRIM(COALESCE(CAST(\"Chr\" AS VARCHAR), '')) AS label, COUNT(*) AS cnt " +
+                "FROM %s " +
+                "WHERE TRIM(COALESCE(CAST(\"Chr\" AS VARCHAR), '')) <> '' " +
+                "GROUP BY label " +
+                "ORDER BY TRY_CAST(REGEXP_REPLACE(label, '^chr', '') AS INTEGER) NULLS LAST, label ASC");
+    }
+
+    private List<LabelCountDto> queryPublicLabelCounts(String cancer, String sqlTemplate) {
+        String readExpr = resolvePublicMultiCancerReadExpr(cancer);
+        if (readExpr == null) return List.of();
+        String sql = String.format(sqlTemplate, readExpr);
+        List<LabelCountDto> results = new ArrayList<>();
+        try (Connection connection = openMafConnection();
+             Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            while (rs.next()) {
+                results.add(new LabelCountDto(rs.getString("label"), rs.getLong("cnt")));
+            }
+            return results;
+        } catch (SQLException exception) {
+            log.warn("Public label-count query failed for {} : {}", cancer, exception.getMessage());
+            return List.of();
+        }
+    }
+
+    private String resolvePublicMultiCancerReadExpr(String cancerParam) {
+        if (cancerParam == null || cancerParam.isBlank()) return null;
+        LinkedHashSet<String> cancers = new LinkedHashSet<>();
+        for (String part : cancerParam.split(",")) {
+            String value = part == null ? "" : part.trim();
+            if (!value.isBlank()) {
+                try {
+                    cancers.add(validateCancer(value));
+                } catch (IllegalArgumentException ignored) { }
+            }
+        }
+        if (cancers.isEmpty()) return null;
+        String inClause = cancers.stream()
+                .map(value -> "'" + value.replace("'", "''") + "'")
+                .collect(Collectors.joining(", "));
+        return "(SELECT * FROM " + PUBLIC_MAF_TABLE + " WHERE cancer_type IN (" + inClause + "))";
+    }
+
+    public MafSummaryDto getPublicMafSummary(String cancer) {
+        String inClause = resolvePublicCancerInClause(cancer);
+        if (inClause == null) {
+            return new MafSummaryDto("Public", 0, 0, 0);
+        }
+        String sql = "SELECT COUNT(*) AS total_variants, " +
+                "COUNT(DISTINCT NULLIF(TRIM(COALESCE(CAST(\"Tumor_Sample_Barcode\" AS VARCHAR), '')), '')) AS total_samples, " +
+                "COUNT(DISTINCT NULLIF(TRIM(COALESCE(hugo_symbol, '')), '')) AS total_genes " +
+                "FROM " + PUBLIC_MAF_TABLE + " WHERE cancer_type IN (" + inClause + ")";
+        try (Connection connection = openMafConnection();
+             Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            if (rs.next()) {
+                return new MafSummaryDto("Public",
+                        rs.getLong("total_variants"),
+                        rs.getLong("total_samples"),
+                        rs.getLong("total_genes"));
+            }
+        } catch (SQLException exception) {
+            log.warn("Public MAF summary query failed for {}: {}", cancer, exception.getMessage());
+        }
+        return new MafSummaryDto("Public", 0, 0, 0);
+    }
+
+    public List<String> listPublicCohortNames() {
+        List<String> cancers = new ArrayList<>();
+        String sql = "SELECT DISTINCT cancer_type FROM " + PUBLIC_MAF_TABLE +
+                " WHERE TRIM(COALESCE(cancer_type, '')) <> '' ORDER BY cancer_type ASC";
+        try (Connection connection = openMafConnection();
+             Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            while (rs.next()) {
+                String value = rs.getString(1);
+                if (value != null && !value.isBlank()) cancers.add(value.trim());
+            }
+        } catch (SQLException exception) {
+            log.warn("Public cohort listing failed: {}", exception.getMessage());
+        }
+        return cancers;
+    }
+
+    private String resolvePublicCancerInClause(String cancerParam) {
+        if (cancerParam == null || cancerParam.isBlank()) return null;
+        LinkedHashSet<String> cancers = new LinkedHashSet<>();
+        for (String part : cancerParam.split(",")) {
+            String value = part == null ? "" : part.trim();
+            if (!value.isBlank()) {
+                try {
+                    cancers.add(validateCancer(value));
+                } catch (IllegalArgumentException ignored) { }
+            }
+        }
+        if (cancers.isEmpty()) return null;
+        return cancers.stream()
+                .map(value -> "'" + value.replace("'", "''") + "'")
+                .collect(Collectors.joining(", "));
+    }
+
     public List<CancerAssetDto> getCancerAssets(String cancer) {
         String validatedCancer = validateCancer(cancer);
         String sql = "SELECT category, title, file_name, size_bytes FROM statistics_asset_index " +
@@ -844,6 +991,7 @@ public class DuckDbService {
     private static final String CFDNA_MAF_TABLE = "cfdna_maf";
     private static final String TCGA_MAF_TABLE = "tcga_maf";
     private static final String GEO_MAF_TABLE = "geo_maf";
+    private static final String PUBLIC_MAF_TABLE = "public_maf";
     private static final String ALL_CFDNA_MAF_VIEW = "all_cfdna_maf";
 
     /**
@@ -967,6 +1115,10 @@ public class DuckDbService {
         return "GEO".equalsIgnoreCase(source);
     }
 
+    private boolean isPublic(String source) {
+        return "Public".equalsIgnoreCase(source);
+    }
+
     /** Return the SELECT fragment for detail columns that may not exist in every MAF table. */
     private String mafDetailColumns(String source) {
         if (isGeo(source)) {
@@ -1055,7 +1207,7 @@ public class DuckDbService {
 
     private List<String> normalizeMafCancerFiltersForQuery(String source, List<String> cancerTypes) {
         List<String> normalized = normalizeFilterValues(cancerTypes);
-        if (isTcga(source) || isGeo(source)) {
+        if (isTcga(source) || isGeo(source) || isPublic(source)) {
             return normalized;
         }
         return normalized.stream()
@@ -1086,6 +1238,7 @@ public class DuckDbService {
     private String resolveMafTable(String source) {
         if (isTcga(source)) return TCGA_MAF_TABLE;
         if (isGeo(source)) return GEO_MAF_TABLE;
+        if (isPublic(source)) return "public_maf_view";
         if (isPrivate(source)) return CFDNA_MAF_TABLE;
         // "cfDNA" default -> union view if available, else fall back to private table
         return allCfdnaViewAvailable() ? ALL_CFDNA_MAF_VIEW : CFDNA_MAF_TABLE;
@@ -1785,6 +1938,7 @@ public class DuckDbService {
                                                                List<String> variantTypes) {
         return !isTcga(source)
                 && !isGeo(source)
+                && !isPublic(source)
                 && !hasGene
                 && !hasSample
                 && chromosomes.isEmpty()
@@ -1856,7 +2010,7 @@ public class DuckDbService {
         if (isTcga(source)) {
             return getOncoplottDataFromTcga(cancerTypes, geneLimit);
         }
-        if (isGeo(source) || isPrivate(source)) {
+        if (isGeo(source) || isPrivate(source) || isPublic(source)) {
             return getOncoplottDataFromMafTable(source, cancerTypes, geneLimit);
         }
         return getOncoplottDataFromPanFiles(cancerTypes, geneLimit);

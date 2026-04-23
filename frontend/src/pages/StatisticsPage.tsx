@@ -1,11 +1,17 @@
-import { useMemo, useRef, useEffect, useCallback } from "react";
+import { useMemo, useRef, useEffect, useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import { useNavigate } from "react-router-dom";
 import { SectionHeader } from "../components/SectionHeader";
-import { getStatisticsOverview, getVafDistribution } from "../api/client";
+import {
+  getStatisticsOverview,
+  getStatisticsPublicCohorts,
+  getStatisticsPublicOverview,
+  getVafDistribution,
+} from "../api/client";
 import type { CancerSummary, LabelCount, VafDistribution } from "../types/api";
+import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
 
 const PURPLE_SCALE = [
@@ -677,6 +683,9 @@ function KpiTile({
 
 export function StatisticsPage() {
   const navigate = useNavigate();
+  const [source, setSource] = useState<"private" | "public">("private");
+  const [publicCohort, setPublicCohort] = useState<string | null>(null);
+
   const overviewQ = useQuery({
     queryKey: ["statistics-overview-cfdna"],
     queryFn: getStatisticsOverview,
@@ -691,7 +700,30 @@ export function StatisticsPage() {
     refetchOnWindowFocus: false,
   });
 
-  const overview = overviewQ.data;
+  const publicCohortsQ = useQuery({
+    queryKey: ["statistics-public-cohorts"],
+    queryFn: getStatisticsPublicCohorts,
+    staleTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const publicCohorts = publicCohortsQ.data ?? [];
+  useEffect(() => {
+    if (source === "public" && publicCohort === null && publicCohorts.length > 0) {
+      setPublicCohort(publicCohorts[0]);
+    }
+  }, [source, publicCohort, publicCohorts]);
+
+  const publicOverviewQ = useQuery({
+    queryKey: ["statistics-public-overview", publicCohort ?? ""],
+    queryFn: () => getStatisticsPublicOverview(publicCohort ?? undefined),
+    enabled: source === "public" && publicCohort !== null,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const isPublic = source === "public";
+  const overview = isPublic ? publicOverviewQ.data : overviewQ.data;
   const cancerSummary = overview?.cancerSummary ?? [];
   const activeCohorts = useMemo(
     () => cancerSummary.filter((item) => item.sampleCount > 0),
@@ -706,36 +738,78 @@ export function StatisticsPage() {
     0
   );
   const mafSummary = overview?.mafSummary;
-  const totalSamples = sampleSum;
+  const totalSamples = isPublic ? mafSummary?.totalSamples ?? 0 : sampleSum;
   const totalVariants = mafSummary?.totalVariants ?? 0;
   const totalGenes = mafSummary?.totalGenes ?? 0;
 
   const vafData = vafQ.data ?? [];
 
-  const loading = overviewQ.isLoading;
-  const cohortChartLoading = overviewQ.isLoading;
-  const funcChartLoading = overviewQ.isLoading;
-  const exonicChartLoading = overviewQ.isLoading;
-  const chromChartLoading = overviewQ.isLoading;
+  const activeQ = isPublic ? publicOverviewQ : overviewQ;
+  const loading = activeQ.isLoading;
+  const cohortChartLoading = activeQ.isLoading;
+  const funcChartLoading = activeQ.isLoading;
+  const exonicChartLoading = activeQ.isLoading;
+  const chromChartLoading = activeQ.isLoading;
 
   return (
     <div className="page-stack statistics-private-page">
       <SectionHeader
         eyebrow="Database Statistics"
-        title="Mutational Landscape of the Internal Data Liquid-Biopsy Database"
-        description="A database-wide visual summary of somatic mutations curated from the full internal liquid-biopsy sample collection across all indexed cancer cohorts."
+        title={isPublic
+          ? "Mutational Landscape of Public Cohort Aggregates"
+          : "Mutational Landscape of the Internal Data Liquid-Biopsy Database"}
+        description={isPublic
+          ? "Aggregated somatic mutation counts from public liquid-biopsy datasets (e.g. GEO) curated per cancer cohort."
+          : "A database-wide visual summary of somatic mutations curated from the full internal liquid-biopsy sample collection across all indexed cancer cohorts."}
       />
 
       <section className="detail-card statistics-private-toolbar-card">
         <div className="statistics-private-toolbar-row">
           <div className="statistics-private-toolbar-meta">
             <p className="section-eyebrow">Data Source</p>
-            <strong>Internal Data Liquid Biopsy Collection</strong>
+            <div className="downloads-mode-switch" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className={`statistics-cohort-pill${!isPublic ? " active" : ""}`}
+                onClick={() => setSource("private")}
+              >
+                Internal Data
+              </button>
+              <button
+                type="button"
+                className={`statistics-cohort-pill${isPublic ? " active" : ""}`}
+                onClick={() => setSource("public")}
+                disabled={publicCohortsQ.isLoading}
+              >
+                Public Cohorts
+              </button>
+            </div>
           </div>
-          <div className="statistics-private-toolbar-badge">
-            <span>Cohorts</span>
-            <strong>{formatNumber(cancerCohorts.length)}</strong>
-          </div>
+          {isPublic ? (
+            <div className="statistics-private-toolbar-meta">
+              <p className="section-eyebrow">Cancer Cohort</p>
+              <div className="downloads-mode-switch" style={{ marginTop: 8, flexWrap: "wrap", gap: 6 }}>
+                {publicCohorts.length === 0 && publicCohortsQ.isFetched ? (
+                  <span className="panel-note">No public cohorts imported yet.</span>
+                ) : null}
+                {publicCohorts.map((cohort) => (
+                  <button
+                    type="button"
+                    key={cohort}
+                    className={`statistics-cohort-pill${publicCohort === cohort ? " active" : ""}`}
+                    onClick={() => setPublicCohort(cohort)}
+                  >
+                    {formatCohortLabel(cohort)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="statistics-private-toolbar-badge">
+              <span>Cohorts</span>
+              <strong>{formatNumber(cancerCohorts.length)}</strong>
+            </div>
+          )}
         </div>
       </section>
 
@@ -753,8 +827,8 @@ export function StatisticsPage() {
         />
         <KpiTile
           label="Cancer Cohorts"
-          value={cancerCohorts.length}
-          hint="With somatic data"
+          value={isPublic ? (publicCohort ? 1 : publicCohorts.length) : cancerCohorts.length}
+          hint={isPublic ? "Public datasets" : "With somatic data"}
         />
       </section>
 
@@ -763,23 +837,25 @@ export function StatisticsPage() {
       ) : null}
 
       <section className="statistics-private-grid">
-        <article className="detail-card statistics-private-card">
-          <header className="statistics-private-card-header">
-            <div className="statistics-private-card-header-row">
-              <p className="section-eyebrow">Cohort Composition</p>
-              <StatScope>sample-level</StatScope>
+        {!isPublic ? (
+          <article className="detail-card statistics-private-card">
+            <header className="statistics-private-card-header">
+              <div className="statistics-private-card-header-row">
+                <p className="section-eyebrow">Cohort Composition</p>
+                <StatScope>sample-level</StatScope>
+              </div>
+              <h3>Sample Distribution Across Cohorts</h3>
+            </header>
+            <div className="statistics-private-card-body">
+              <ReactECharts
+                option={buildCohortDonutOption(activeCohorts, totalSamples)}
+                showLoading={cohortChartLoading}
+                loadingOption={CHART_LOADING_OPTION}
+                style={{ height: 380 }}
+              />
             </div>
-            <h3>Sample Distribution Across Cohorts</h3>
-          </header>
-          <div className="statistics-private-card-body">
-            <ReactECharts
-              option={buildCohortDonutOption(activeCohorts, totalSamples)}
-              showLoading={cohortChartLoading}
-              loadingOption={CHART_LOADING_OPTION}
-              style={{ height: 380 }}
-            />
-          </div>
-        </article>
+          </article>
+        ) : null}
 
         <article className="detail-card statistics-private-card">
           <header className="statistics-private-card-header">
@@ -837,27 +913,29 @@ export function StatisticsPage() {
 
       </section>
 
-      {/* Ridgeline Plot — VAF Distribution */}
-      <section className="statistics-private-ridge-section">
-        <article className="detail-card statistics-private-card statistics-private-card-wide">
-          <header className="statistics-private-card-header">
-            <div className="statistics-private-card-header-row">
-              <p className="section-eyebrow">VAF Analysis</p>
-              <StatScope>sample-level</StatScope>
+      {/* Ridgeline Plot — VAF Distribution (private only; public aggregates lack per-sample VAF) */}
+      {!isPublic ? (
+        <section className="statistics-private-ridge-section">
+          <article className="detail-card statistics-private-card statistics-private-card-wide">
+            <header className="statistics-private-card-header">
+              <div className="statistics-private-card-header-row">
+                <p className="section-eyebrow">VAF Analysis</p>
+                <StatScope>sample-level</StatScope>
+              </div>
+              <h3>VAF Distribution by Cancer Type</h3>
+            </header>
+            <div className="statistics-private-card-body">
+              {vafQ.isLoading ? (
+                <p className="panel-note">Loading VAF distribution...</p>
+              ) : vafData.length > 0 ? (
+                <RidgelinePlot data={vafData} />
+              ) : (
+                <p className="panel-note">No VAF data available</p>
+              )}
             </div>
-            <h3>VAF Distribution by Cancer Type</h3>
-          </header>
-          <div className="statistics-private-card-body">
-            {vafQ.isLoading ? (
-              <p className="panel-note">Loading VAF distribution...</p>
-            ) : vafData.length > 0 ? (
-              <RidgelinePlot data={vafData} />
-            ) : (
-              <p className="panel-note">No VAF data available</p>
-            )}
-          </div>
-        </article>
-      </section>
+          </article>
+        </section>
+      ) : null}
     </div>
   );
 }

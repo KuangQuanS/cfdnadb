@@ -6,7 +6,13 @@ import { SectionHeader } from "../components/SectionHeader";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatFileSize } from "../utils/format";
 
-const FILE_TYPE_ORDER = ["Variant Data", "MAF Summary", "Pan-Cancer Variants"];
+const FILE_TYPE_ORDER = [
+  "Variant Data",
+  "MAF Summary",
+  "Public Mutations",
+  "Public Plot",
+  "Pan-Cancer Variants",
+];
 const COHORT_ORDER = [
   "Breast",
   "Colorectal",

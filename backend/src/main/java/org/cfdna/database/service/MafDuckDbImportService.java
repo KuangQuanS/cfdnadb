@@ -59,6 +59,8 @@ public class MafDuckDbImportService {
             "Chr", "Start", "End", "Ref", "Alt",
             "Func.refGene", "Gene.refGene", "ExonicFunc.refGene",
             "AAChange.refGene", "Tumor_Sample_Barcode");
+    private static final java.util.regex.Pattern PUBLIC_AGG_FILENAME = java.util.regex.Pattern.compile(
+            "^([A-Za-z0-9]+)_([A-Za-z0-9_]+)_all_mutations\\.txt$");
 
     private final Path dataDir;
     private final Path panCancerDir;
@@ -107,7 +109,7 @@ public class MafDuckDbImportService {
         try {
 
         // Phase 1: create tables & import MAF data (separate connections to avoid DuckDB JNI SIGSEGV in long transactions)
-        long cfdnaRows, tcgaRows, geoRows;
+        long cfdnaRows, tcgaRows, geoRows, publicRows;
         try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
             conn.setAutoCommit(false);
             recreateTables(conn);
@@ -141,6 +143,14 @@ public class MafDuckDbImportService {
             log.info("[QUERY-IMPORT] phase 2c/5: geo_maf={}", geoRows);
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to import GEO MAF into " + dbPath, e);
+        }
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            conn.setAutoCommit(false);
+            publicRows = importPublicAggregated(conn);
+            conn.commit();
+            log.info("[QUERY-IMPORT] phase 2d/5: public_maf={}", publicRows);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to import public aggregated MAF into " + dbPath, e);
         }
 
         // Phase 3: aggregates, pan-cancer, sample inventory — each sub-step in its own connection
@@ -236,7 +246,8 @@ public class MafDuckDbImportService {
             throw new IllegalStateException("Failed to publish query database from " + buildDbPath + " to " + dbPath, exception);
         }
 
-        log.info("[QUERY-IMPORT] finished db={}, cfdna_maf={}, tcga_maf={}, geo_maf={}", dbPath, cfdnaRows, tcgaRows, geoRows);
+        log.info("[QUERY-IMPORT] finished db={}, cfdna_maf={}, tcga_maf={}, geo_maf={}, public_maf={}",
+                dbPath, cfdnaRows, tcgaRows, geoRows, publicRows);
         return dbPath;
         } catch (RuntimeException exception) {
             cleanupFailedBuild(buildDbPath);
@@ -597,6 +608,7 @@ public class MafDuckDbImportService {
             statement.execute("DROP TABLE IF EXISTS cfdna_maf");
             statement.execute("DROP TABLE IF EXISTS tcga_maf");
             statement.execute("DROP TABLE IF EXISTS geo_maf");
+            statement.execute("DROP TABLE IF EXISTS public_maf");
             statement.execute("DROP TABLE IF EXISTS aggregate_multianno");
             statement.execute("DROP TABLE IF EXISTS pan_cancer_clinical");
             statement.execute("DROP TABLE IF EXISTS pan_cancer_mutations");
@@ -627,6 +639,18 @@ public class MafDuckDbImportService {
                             "hugo_symbol VARCHAR, variant_classification VARCHAR, variant_type VARCHAR, " +
                             "functional_region VARCHAR, gene_detail_refgene VARCHAR, aa_change_refgene VARCHAR, " +
                             "sample_type VARCHAR)");
+            // public_maf: aggregated public cohort mutations (one file per dataset per cancer,
+            // e.g. Breast/public/stats/GEO_Breast_all_mutations.txt). Column shape mirrors
+            // aggregate_multianno so the existing Func/Exonic/Chrom label-count SQL can be reused.
+            statement.execute(
+                    "CREATE TABLE public_maf (" +
+                            "cancer_type VARCHAR, source_dataset VARCHAR, file_name VARCHAR, file_path VARCHAR, " +
+                            "\"Chr\" VARCHAR, \"Start\" VARCHAR, \"End\" VARCHAR, \"Ref\" VARCHAR, \"Alt\" VARCHAR, " +
+                            "\"Func.refGene\" VARCHAR, \"Gene.refGene\" VARCHAR, \"GeneDetail.refGene\" VARCHAR, " +
+                            "\"ExonicFunc.refGene\" VARCHAR, \"AAChange.refGene\" VARCHAR, " +
+                            "\"Tumor_Sample_Barcode\" VARCHAR, " +
+                            "hugo_symbol VARCHAR, variant_classification VARCHAR, variant_type VARCHAR, " +
+                            "transcript VARCHAR, exon VARCHAR, tx_change VARCHAR, aa_change VARCHAR)");
             statement.execute(
                     "CREATE TABLE aggregate_multianno (" +
                             "cancer_type VARCHAR, source VARCHAR, sample_id VARCHAR, filename VARCHAR, file_path VARCHAR, " +
@@ -653,6 +677,33 @@ public class MafDuckDbImportService {
                             "cancer_type VARCHAR, source VARCHAR, asset_type VARCHAR, category VARCHAR, title VARCHAR, " +
                             "file_name VARCHAR, file_path VARCHAR, size_bytes BIGINT, gene_name VARCHAR, " +
                             "chromosome VARCHAR, start_position VARCHAR, end_position VARCHAR)");
+
+            // VIEW exposing public_maf with cfdna_maf-style lowercase columns
+            // so Gene Search can use the unified MAF query path against source=Public.
+            statement.execute("DROP VIEW IF EXISTS public_maf_view");
+            statement.execute(
+                    "CREATE VIEW public_maf_view AS " +
+                            "SELECT cancer_type, source_dataset, " +
+                            "COALESCE(\"Chr\", '') AS chromosome, " +
+                            "COALESCE(\"Start\", '') AS start_position, " +
+                            "COALESCE(\"End\", '') AS end_position, " +
+                            "COALESCE(\"Ref\", '') AS reference_allele, " +
+                            "COALESCE(\"Alt\", '') AS tumor_seq_allele2, " +
+                            "COALESCE(\"Tumor_Sample_Barcode\", '') AS tumor_sample_barcode, " +
+                            "COALESCE(hugo_symbol, '') AS hugo_symbol, " +
+                            "COALESCE(variant_classification, '') AS variant_classification, " +
+                            "COALESCE(variant_type, '') AS variant_type, " +
+                            "COALESCE(transcript, '') AS transcript, " +
+                            "COALESCE(exon, '') AS exon, " +
+                            "COALESCE(tx_change, '') AS tx_change, " +
+                            "COALESCE(aa_change, '') AS aa_change, " +
+                            "COALESCE(\"Func.refGene\", '') AS functional_region, " +
+                            "COALESCE(\"Gene.refGene\", '') AS gene_refgene, " +
+                            "COALESCE(\"GeneDetail.refGene\", '') AS gene_detail_refgene, " +
+                            "COALESCE(\"ExonicFunc.refGene\", '') AS exonic_function, " +
+                            "COALESCE(\"AAChange.refGene\", '') AS aa_change_refgene, " +
+                            "'' AS location " +
+                            "FROM public_maf");
 
             // VIEW that unions private cfDNA + GEO for "all cfDNA" queries
             statement.execute("DROP VIEW IF EXISTS all_cfdna_maf");
@@ -781,6 +832,78 @@ public class MafDuckDbImportService {
                         "COALESCE(CAST(\"GeneDetail.refGene\" AS VARCHAR), ''), " +
                         "COALESCE(CAST(\"AAChange.refGene\" AS VARCHAR), ''), " +
                         "COALESCE(CAST(Sample_Type AS VARCHAR), '') " +
+                        "FROM read_csv_auto('" + duckPath(filePath) + "', delim='\\t', header=true, all_varchar=true, ignore_errors=true)";
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
+        }
+    }
+
+    /**
+     * Imports pre-aggregated public mutation files from {cancer}/public/stats/.
+     * Expected filename: {SRC}_{Cancer}_all_mutations.txt (e.g. GEO_Breast_all_mutations.txt).
+     * One row per mutation, one file per (cancer, source_dataset) pair.
+     */
+    private long importPublicAggregated(Connection connection) throws SQLException {
+        long totalBefore = tableCount(connection, "public_maf");
+        for (String cancer : CANCERS) {
+            Path statsDir = dataDir.resolve(cancer).resolve("public").resolve("stats");
+            if (!Files.isDirectory(statsDir)) {
+                continue;
+            }
+            try (Stream<Path> files = Files.list(statsDir)) {
+                List<Path> aggFiles = files.filter(Files::isRegularFile)
+                        .filter(p -> {
+                            java.util.regex.Matcher m = PUBLIC_AGG_FILENAME.matcher(p.getFileName().toString());
+                            return m.matches() && m.group(2).equalsIgnoreCase(cancer);
+                        })
+                        .sorted()
+                        .collect(Collectors.toList());
+                for (Path aggFile : aggFiles) {
+                    java.util.regex.Matcher m = PUBLIC_AGG_FILENAME.matcher(aggFile.getFileName().toString());
+                    if (!m.matches()) continue;
+                    String source = m.group(1);
+                    importPublicAggregatedFile(connection, cancer, source, aggFile);
+                    log.info("[QUERY-IMPORT] imported public aggregate cancer={}, source={}, file={}",
+                            cancer, source, aggFile.getFileName());
+                }
+            } catch (IOException e) {
+                log.warn("[QUERY-IMPORT] failed to scan public stats for {}: {}", cancer, e.getMessage());
+            }
+        }
+        long total = tableCount(connection, "public_maf");
+        log.info("[QUERY-IMPORT] public_maf total rows: {}", total);
+        return total - totalBefore;
+    }
+
+    private void importPublicAggregatedFile(Connection connection, String cancer, String sourceDataset, Path filePath) throws SQLException {
+        // Source files use MAF-style column names (Chromosome, Start_Position, ...).
+        // We map them to aggregate_multianno's quoted short names (Chr, Start, ...)
+        // so the existing Func/Exonic/Chrom distribution SQL can read public_maf unchanged.
+        String sql =
+                "INSERT INTO public_maf " +
+                        "SELECT " +
+                        "'" + cancer.replace("'", "''") + "', " +
+                        "'" + sourceDataset.replace("'", "''") + "', " +
+                        "'" + filePath.getFileName().toString().replace("'", "''") + "', " +
+                        "'" + filePath.toAbsolutePath().toString().replace("\\", "/").replace("'", "''") + "', " +
+                        "COALESCE(CAST(Chromosome AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Start_Position AS VARCHAR), ''), " +
+                        "COALESCE(CAST(End_Position AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Reference_Allele AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Tumor_Seq_Allele2 AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"Func.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"Gene.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"GeneDetail.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"ExonicFunc.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(\"AAChange.refGene\" AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Hugo_Symbol AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Variant_Classification AS VARCHAR), ''), " +
+                        "COALESCE(CAST(Variant_Type AS VARCHAR), ''), " +
+                        "COALESCE(CAST(tx AS VARCHAR), ''), " +
+                        "COALESCE(CAST(exon AS VARCHAR), ''), " +
+                        "COALESCE(CAST(txChange AS VARCHAR), ''), " +
+                        "COALESCE(CAST(aaChange AS VARCHAR), '') " +
                         "FROM read_csv_auto('" + duckPath(filePath) + "', delim='\\t', header=true, all_varchar=true, ignore_errors=true)";
         try (Statement statement = connection.createStatement()) {
             statement.execute(sql);
@@ -1014,6 +1137,10 @@ public class MafDuckDbImportService {
                     "CREATE INDEX IF NOT EXISTS idx_geo_maf_gene ON geo_maf(hugo_symbol)",
                     "CREATE INDEX IF NOT EXISTS idx_geo_maf_sample ON geo_maf(tumor_sample_barcode)",
                     "CREATE INDEX IF NOT EXISTS idx_geo_maf_cancer ON geo_maf(cancer_type)",
+                    "CREATE INDEX IF NOT EXISTS idx_public_maf_gene ON public_maf(hugo_symbol)",
+                    "CREATE INDEX IF NOT EXISTS idx_public_maf_sample ON public_maf(\"Tumor_Sample_Barcode\")",
+                    "CREATE INDEX IF NOT EXISTS idx_public_maf_cancer ON public_maf(cancer_type)",
+                    "CREATE INDEX IF NOT EXISTS idx_public_maf_source ON public_maf(source_dataset)",
                     "CREATE INDEX IF NOT EXISTS idx_aggregate_cancer ON aggregate_multianno(cancer_type)",
                     "CREATE INDEX IF NOT EXISTS idx_aggregate_sample ON aggregate_multianno(\"Tumor_Sample_Barcode\")",
                     "CREATE INDEX IF NOT EXISTS idx_sample_inventory_lookup ON sample_inventory(cancer_type, source, sample_id)",
@@ -1024,7 +1151,7 @@ public class MafDuckDbImportService {
                 statement.execute(sql);
             }
             for (String table : List.of(
-                    "cfdna_maf", "tcga_maf", "geo_maf", "aggregate_multianno",
+                    "cfdna_maf", "tcga_maf", "geo_maf", "public_maf", "aggregate_multianno",
                     "pan_cancer_clinical", "pan_cancer_mutations",
                     "sample_inventory", "sample_top_genes",
                     "cohort_file_index", "statistics_asset_index")) {

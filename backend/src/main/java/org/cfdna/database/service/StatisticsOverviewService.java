@@ -106,4 +106,32 @@ public class StatisticsOverviewService {
                 List.of()
         );
     }
+
+    public StatisticsOverviewDto getPublicOverview(String cancer) {
+        String cohort = (cancer == null || cancer.isBlank()) ? null : cancer.trim();
+        String targetCohorts = cohort == null ? String.join(",", duckDbService.listPublicCohortNames()) : cohort;
+        if (targetCohorts == null || targetCohorts.isBlank()) {
+            return new StatisticsOverviewDto(
+                    "Public",
+                    Instant.now().toString(),
+                    List.of(),
+                    new MafSummaryDto("Public", 0, 0, 0),
+                    List.of(), List.of(), List.of(), List.of()
+            );
+        }
+        return new StatisticsOverviewDto(
+                "Public",
+                Instant.now().toString(),
+                List.of(),
+                duckDbService.getPublicMafSummary(targetCohorts),
+                duckDbService.getPublicFuncDistribution(targetCohorts),
+                duckDbService.getPublicExonicDistribution(targetCohorts),
+                duckDbService.getPublicChromDistribution(targetCohorts),
+                List.of()
+        );
+    }
+
+    public List<String> listPublicCohortNames() {
+        return duckDbService.listPublicCohortNames();
+    }
 }
