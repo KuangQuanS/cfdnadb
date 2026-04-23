@@ -62,7 +62,7 @@
   display: block;
   width: min(100%, 286px);
   height: auto;
-  margin-top: 0;
+  margin: -18px 0 -18px;
   object-fit: contain;
   filter: saturate(1.03) contrast(1.04);
 }
@@ -868,8 +868,8 @@
   min-height: 220px;
   text-decoration: none;
   border: 1px solid rgba(226, 233, 242, 0.6);
-  border-radius: 20px;
-  padding: 18px 18px 20px;
+  border-radius: 14px;
+  padding: 26px 28px 28px;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -884,92 +884,26 @@
   box-shadow: 0 20px 40px rgba(17, 32, 73, 0.08);
 }
 
-.portal-tool-preview {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 80px;
-  margin-bottom: 5px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid #f1f5f9;
-}
-
-.portal-tool-preview span {
-  width: 40%;
-  height: 4px;
-  border-radius: 2px;
-  background: #cbd5e1;
-}
-
-.portal-tool-preview::before {
-  content: "";
-  display: block;
-  width: 46px;
-  height: 46px;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
-  opacity: 0.92;
-}
-
-.portal-tool-preview--search::before {
-  content: "🔍";
-  font-size: 1.8rem;
-  opacity: 0.7;
-}
-
-.portal-tool-preview--bars::before {
-  content: "📊";
-  font-size: 1.8rem;
-  opacity: 0.7;
-}
-
-.portal-tool-preview--table::before {
-  content: "💾";
-  font-size: 1.8rem;
-  opacity: 0.7;
-}
-
-.portal-tool-preview span { display: none; } /* 隐藏旧的线段 */
-
-.portal-tool-preview--browse::before,
-.portal-tool-preview--search::before,
-.portal-tool-preview--statistics::before,
-.portal-tool-preview--survival::before {
-  content: "";
-  font-size: 0;
-  opacity: 0.92;
-}
-
-.portal-tool-preview--browse::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Cpath d='M8 13.5A3.5 3.5 0 0 1 11.5 10h25A3.5 3.5 0 0 1 40 13.5v21A3.5 3.5 0 0 1 36.5 38h-25A3.5 3.5 0 0 1 8 34.5v-21Z' stroke='%23345a8a' stroke-width='3'/%3E%3Cpath d='M15 18h18M15 24h10M15 30h13' stroke='%23345a8a' stroke-width='2.8' stroke-linecap='round'/%3E%3Ccircle cx='32.5' cy='24' r='3.5' stroke='%23345a8a' stroke-width='2.8'/%3E%3C/svg%3E");
-}
-
-.portal-tool-preview--search::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Ccircle cx='21' cy='21' r='9' stroke='%23345a8a' stroke-width='3'/%3E%3Cpath d='m28 28 8 8' stroke='%23345a8a' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M21 17v8M17 21h8' stroke='%23345a8a' stroke-width='2.8' stroke-linecap='round' opacity='.9'/%3E%3C/svg%3E");
-}
-
-.portal-tool-preview--statistics::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Cpath d='M11 36V18M21 36V12M31 36V22M39 36V9' stroke='%23345a8a' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M8 36h34' stroke='%23345a8a' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='18' r='2.3' fill='%23345a8a'/%3E%3Ccircle cx='21' cy='12' r='2.3' fill='%23345a8a'/%3E%3Ccircle cx='31' cy='22' r='2.3' fill='%23345a8a'/%3E%3Ccircle cx='39' cy='9' r='2.3' fill='%23345a8a'/%3E%3C/svg%3E");
-}
-
-.portal-tool-preview--survival::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Cpath d='M9 36h30' stroke='%23345a8a' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M11 31c3-10 7-14 11-14 4 0 6 5 9 5 2.5 0 4.5-2.5 6-7' stroke='%23345a8a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M18 14v5M28 20v5M37 13v5' stroke='%23345a8a' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E");
+.portal-tool-index {
+  color: #6b7c99;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin-bottom: 26px;
 }
 
 .portal-tool-caption strong {
   color: #1a202c;
-  font-size: 1.1rem;
-  margin-bottom: 4px;
+  display: block;
+  font-size: 1.22rem;
+  margin-bottom: 14px;
 }
 
 .portal-tool-caption p {
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: #4a5568;
-  min-height: 42px;
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.64;
+  color: #4a5a73;
 }
 
 .portal-showcase-sidecopy {

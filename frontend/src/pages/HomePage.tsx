@@ -7,30 +7,26 @@ const TOOL_TILES = [
   {
     id: "01",
     title: "Browser",
-    desc: "Cohort overview and sample records.",
+    desc: "Browse cancer cohorts, review anatomical summaries, and inspect sample-level mutation records with linked cohort resources.",
     link: "/browse",
-    preview: "browse",
   },
   {
     id: "02",
     title: "Gene Search",
-    desc: "Gene-level mutation query.",
+    desc: "Query HGNC gene symbols to retrieve cohort-specific variants, sample evidence, genomic coordinates, and annotation details.",
     link: "/gene-search",
-    preview: "search",
   },
   {
     id: "03",
     title: "Statistics",
-    desc: "Cohort summary statistics.",
+    desc: "Compare cohort composition, mutation burden, variant classes, VAF distributions, and summary metrics across the database.",
     link: "/statistics",
-    preview: "statistics",
   },
   {
     id: "04",
     title: "Survival",
-    desc: "TCGA survival and VAF analysis.",
+    desc: "Evaluate TCGA-linked survival patterns and VAF stratification results for selected cancer cohorts and genes.",
     link: "/survival",
-    preview: "survival",
   },
 ] as const;
 
@@ -189,11 +185,7 @@ export function HomePage() {
                 <div className="portal-showcase-band-grid">
                   {TOOL_TILES.map((tool) => (
                     <Link key={tool.title} to={tool.link} className="portal-tool-tile">
-                      <div className={`portal-tool-preview portal-tool-preview--${tool.preview}`} aria-hidden="true">
-                        <span />
-                        <span />
-                        <span />
-                      </div>
+                      <span className="portal-tool-index">{tool.id}</span>
                       <div className="portal-tool-caption">
                         <strong>{tool.title}</strong>
                         <p>{tool.desc}</p>
