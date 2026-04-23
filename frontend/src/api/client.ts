@@ -142,6 +142,15 @@ export function getVafDistribution() {
   return request<VafDistribution[]>("/api/v1/statistics/vaf-distribution");
 }
 
+export function getStatisticsPublicOverview(cancer?: string) {
+  const qs = cancer ? `?cancer=${encodeURIComponent(cancer)}` : "";
+  return requestLive<StatisticsOverview>(`/api/v1/statistics/public-overview${qs}`);
+}
+
+export function getStatisticsPublicCohorts() {
+  return requestLive<string[]>("/api/v1/statistics/public-cohorts");
+}
+
 export function getTopGenes(cancer: string, limit = 20) {
   const params = new URLSearchParams({ cancer, limit: String(limit) });
   return requestLive<TopGene[]>(`/api/v1/variants/top-genes?${params.toString()}`);

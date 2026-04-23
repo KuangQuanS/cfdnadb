@@ -56,8 +56,21 @@ public class DataFileController {
                 .body(resource);
     }
 
+    @GetMapping("/{category}/public-stats/{fileName:.+}")
+    public ResponseEntity<Resource> downloadPublicStatsFile(
+            @PathVariable String category,
+            @PathVariable String fileName) {
+        Resource resource = duckDbService.loadDataFile(category, "public/stats/" + fileName);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, contentTypeFor(fileName))
+                .body(resource);
+    }
+
     private String contentTypeFor(String fileName) {
         String lowerName = fileName.toLowerCase(Locale.ROOT);
-        return lowerName.endsWith(".gz") ? "application/gzip" : "text/plain";
+        if (lowerName.endsWith(".gz")) return "application/gzip";
+        if (lowerName.endsWith(".pdf")) return "application/pdf";
+        return "text/plain";
     }
 }

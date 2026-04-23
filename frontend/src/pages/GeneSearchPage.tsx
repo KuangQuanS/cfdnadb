@@ -12,8 +12,12 @@ import { formatNumber } from "../utils/format";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 10;
-const DATA_SOURCE_OPTIONS = ["private", "GEO"] as const;
-const DATA_SOURCE_LABELS: Record<string, string> = { private: "Internal Data", GEO: "GEO" };
+const DATA_SOURCE_OPTIONS = ["private", "GEO", "Public"] as const;
+const DATA_SOURCE_LABELS: Record<string, string> = {
+  private: "Internal Data",
+  GEO: "GEO",
+  Public: "Public Aggregates",
+};
 
 const HARDCODED_CHROMOSOMES = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","X","Y"];
 
