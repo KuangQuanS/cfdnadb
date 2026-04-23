@@ -184,19 +184,6 @@ export function HomePage() {
       <main className="portal-home">
         <section className="portal-showcase-section animate-fade-up animate-fade-up-2">
           <div className="portal-section-inner">
-            <div className="portal-showcase-hero">
-              <div className="portal-showcase-copy">
-                <span className="portal-showcase-kicker">Analysis modules</span>
-                <h2>Core cfDNAdb workflows</h2>
-              </div>
-
-              <div className="portal-showcase-visual portal-showcase-visual--tools" aria-hidden="true">
-                <div className="portal-tag-sphere-stage">
-                  <RotatingTagSphere />
-                </div>
-              </div>
-            </div>
-
             <div className="portal-showcase-band">
               <div className="portal-showcase-band-grid">
                 {TOOL_TILES.map((tool) => (

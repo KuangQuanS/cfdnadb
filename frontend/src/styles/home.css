@@ -52,14 +52,19 @@
   margin: 0;
   color: #18233f;
   font-size: clamp(2.3rem, 3.9vw, 4rem);
-  line-height: 0.98;
+  line-height: 1.02;
   font-weight: 900;
   letter-spacing: -0.035em;
   max-width: 560px;
 }
 
-.gdc-title span {
-  color: #2f79b7;
+.gdc-title-logo {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  margin-top: 4px;
+  object-fit: contain;
+  filter: saturate(1.03) contrast(1.04);
 }
 
 .gdc-hero-tagline {
@@ -103,12 +108,13 @@
 }
 
 .gdc-body-img {
-  height: 645px;
+  height: 684px;
   width: auto;
   object-fit: contain;
   opacity: 0.94;
   filter: drop-shadow(0 18px 30px rgba(23, 36, 70, 0.12));
   position: relative;
+  transform: translateY(-20px);
   z-index: 1;
   pointer-events: none;
 }
@@ -642,7 +648,7 @@
 }
 
 .portal-showcase-section {
-  padding: 82px 0 86px;
+  padding: 54px 0 70px;
   background:
     radial-gradient(circle at 0% 0%, rgba(47, 110, 167, 0.05) 0%, transparent 40%),
     radial-gradient(circle at 100% 100%, rgba(111, 91, 194, 0.04) 0%, transparent 40%),
@@ -836,7 +842,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 22px;
-  padding: 10px;
+  padding: 0;
   background: transparent;
   border: none;
 }
@@ -844,13 +850,13 @@
 .portal-showcase-band-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 22px;
 }
 
 .portal-tool-tile {
   display: flex;
   flex-direction: column;
-  min-height: 230px;
+  min-height: 220px;
   text-decoration: none;
   border: 1px solid rgba(226, 233, 242, 0.6);
   border-radius: 20px;
