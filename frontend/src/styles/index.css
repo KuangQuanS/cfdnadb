@@ -8028,6 +8028,20 @@ button:disabled:hover {
   text-decoration: underline;
 }
 
+.help-flowchart {
+  margin: 4px 0 26px;
+  padding: 14px;
+  border: 1px solid #e1e8f2;
+  border-radius: 6px;
+  background: #f9fbfe;
+}
+
+.help-flowchart img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .help-definition-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -8379,6 +8393,10 @@ button:disabled:hover {
   gap: 0;
 }
 
+.survival-results--omics .survival-plots {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .survival-results {
   padding: 0;
   overflow: hidden;
@@ -8471,6 +8489,10 @@ button:disabled:hover {
   }
 
   .survival-plots {
+    grid-template-columns: 1fr;
+  }
+
+  .survival-results--omics .survival-plots {
     grid-template-columns: 1fr;
   }
 

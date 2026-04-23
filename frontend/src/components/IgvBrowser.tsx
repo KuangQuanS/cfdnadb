@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import igv from "igv";
 import type { MafMutation } from "../types/api";
+import { formatCohortLabel } from "../utils/cohortLabels";
 
 /** Variant classification → display color */
 const CLASS_COLORS: Record<string, string> = {
@@ -98,7 +99,7 @@ export function IgvBrowser({ gene, mutations, onLocusClick }: IgvBrowserProps) {
     for (const [cancer, muts] of byCancer) {
       const features = mutationsToVariantFeatures(muts);
       tracks.push({
-        name: `${cancer} (${muts.length})`,
+        name: `${formatCohortLabel(cancer)} (${muts.length})`,
         type: "annotation",
         displayMode: "EXPANDED",
         height: 80,

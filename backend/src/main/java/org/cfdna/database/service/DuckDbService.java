@@ -866,8 +866,17 @@ public class DuckDbService {
             Map.entry("Ovarian",     "Ovarian"),
             Map.entry("Thyroid",     "Thyriod"),  // typo preserved from source data
             Map.entry("Brain",       "Brain"),
+            Map.entry("Benign_Tumor", "NGY"),
+            Map.entry("Cell_Line",    "Experiment"),
+            Map.entry("NGY",          "NGY"),
+            Map.entry("Experiment",   "Experiment")
+    );
+
+    private static final Map<String, String> CFDNA_TYPE_TO_CLIENT_CANCER = Map.ofEntries(
+            Map.entry("NGY", "Benign_Tumor"),
             Map.entry("Benign_Tumor", "Benign_Tumor"),
-            Map.entry("Cell_Line",    "Cell_Line")
+            Map.entry("Experiment", "Cell_Line"),
+            Map.entry("Cell_Line", "Cell_Line")
     );
 
     /**
@@ -1036,6 +1045,40 @@ public class DuckDbService {
                 .collect(Collectors.joining(", "));
     }
 
+    private String normalizeCfdnaCancerForClient(String cancerType) {
+        if (cancerType == null || cancerType.isBlank()) {
+            return cancerType;
+        }
+        String trimmed = cancerType.trim();
+        return CFDNA_TYPE_TO_CLIENT_CANCER.getOrDefault(trimmed, trimmed);
+    }
+
+    private List<String> normalizeMafCancerFiltersForQuery(String source, List<String> cancerTypes) {
+        List<String> normalized = normalizeFilterValues(cancerTypes);
+        if (isTcga(source) || isGeo(source)) {
+            return normalized;
+        }
+        return normalized.stream()
+                .map(value -> CANCER_TO_CFDNA_TYPE.getOrDefault(value, value))
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private List<String> normalizeMafCancerFiltersForSampleInventory(List<String> cancerTypes) {
+        List<String> normalized = normalizeFilterValues(cancerTypes);
+        if (normalized.isEmpty()) {
+            return CANCERS;
+        }
+        return normalized.stream()
+                .map(value -> {
+                    String cfdnaType = CANCER_TO_CFDNA_TYPE.getOrDefault(value, value);
+                    return CFDNA_TYPE_TO_CLIENT_CANCER.getOrDefault(cfdnaType, value);
+                })
+                .filter(CANCERS::contains)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
     private boolean isPrivate(String source) {
         return "private".equalsIgnoreCase(source);
     }
@@ -1098,7 +1141,7 @@ public class DuckDbService {
             return new MafFilterOptionsDto(source, List.of(), List.of(), List.of(), List.of());
         }
 
-        List<String> cancerTypes = new ArrayList<>();
+        Set<String> cancerTypeSet = new LinkedHashSet<>();
         List<String> chromosomes = new ArrayList<>();
         List<String> variantClassifications = new ArrayList<>();
         List<String> variantTypes = new ArrayList<>();
@@ -1114,7 +1157,7 @@ public class DuckDbService {
                 try (ResultSet rs = stmt.executeQuery(
                         "SELECT DISTINCT cancer_type FROM " + table +
                                 " WHERE NULLIF(TRIM(cancer_type), '') IS NOT NULL ORDER BY cancer_type")) {
-                    while (rs.next()) cancerTypes.add(rs.getString(1));
+                    while (rs.next()) cancerTypeSet.add(normalizeCfdnaCancerForClient(rs.getString(1)));
                 }
             }
             try (ResultSet rs = stmt.executeQuery(
@@ -1132,12 +1175,16 @@ public class DuckDbService {
                             " WHERE NULLIF(TRIM(variant_type), '') IS NOT NULL ORDER BY variant_type")) {
                 while (rs.next()) variantTypes.add(rs.getString(1));
             }
+            List<String> cancerTypes = cancerTypeSet.stream()
+                    .sorted()
+                    .collect(Collectors.toList());
             log.info("[MAF] filter-options loaded from {}: cancerTypes={}, chromosomes={}, variantClassifications={}, variantTypes={}",
                     table, cancerTypes.size(), chromosomes.size(), variantClassifications.size(), variantTypes.size());
+            return new MafFilterOptionsDto(source, cancerTypes, chromosomes, variantClassifications, variantTypes);
         } catch (SQLException e) {
             log.error("[MAF] SQL failed for filter-options source={}: {}", source, e.getMessage(), e);
         }
-        return new MafFilterOptionsDto(source, cancerTypes, chromosomes, variantClassifications, variantTypes);
+        return new MafFilterOptionsDto(source, List.of(), chromosomes, variantClassifications, variantTypes);
     }
 
     public PagedResponse<MafGeneSummaryDto> queryMafGenes(String source, String gene, String sample, List<String> cancerTypes,
@@ -1155,7 +1202,7 @@ public class DuckDbService {
         boolean tcga = isTcga(source);
         boolean hasGene = gene != null && !gene.isBlank();
         boolean hasSample = sample != null && !sample.isBlank();
-        List<String> normalizedCancerTypes = normalizeFilterValues(cancerTypes);
+        List<String> normalizedCancerTypes = normalizeMafCancerFiltersForQuery(source, cancerTypes);
         List<String> normalizedChromosomes = normalizeChromosomeFilterValues(chromosomes);
         List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
         List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
@@ -1260,7 +1307,7 @@ public class DuckDbService {
 
         boolean tcga = isTcga(source);
         boolean hasSample = sample != null && !sample.isBlank();
-        List<String> normalizedCancerTypes = normalizeFilterValues(cancerTypes);
+        List<String> normalizedCancerTypes = normalizeMafCancerFiltersForQuery(source, cancerTypes);
         List<String> normalizedChromosomes = normalizeChromosomeFilterValues(chromosomes);
         List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
         List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
@@ -1333,7 +1380,7 @@ public class DuckDbService {
 
         boolean tcga = isTcga(source);
         boolean hasSample = sample != null && !sample.isBlank();
-        List<String> normalizedCancerTypes = normalizeFilterValues(cancerTypes);
+        List<String> normalizedCancerTypes = normalizeMafCancerFiltersForQuery(source, cancerTypes);
         List<String> normalizedChromosomes = normalizeChromosomeFilterValues(chromosomes);
         List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
         List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
@@ -1388,7 +1435,7 @@ public class DuckDbService {
                         content.add(new MafMutationDto(
                                 ++rowId,
                                 rs.getString("hugo_symbol"),
-                                rs.getString("cancer_type"),
+                                tcga ? rs.getString("cancer_type") : normalizeCfdnaCancerForClient(rs.getString("cancer_type")),
                                 rs.getString("chromosome"),
                                 rs.getString("start_position"),
                                 rs.getString("end_position"),
@@ -1431,7 +1478,7 @@ public class DuckDbService {
 
         boolean hasGene = gene != null && !gene.isBlank();
         boolean hasSample = sample != null && !sample.isBlank();
-        List<String> normalizedCancerTypes = normalizeFilterValues(cancerTypes);
+        List<String> normalizedCancerTypes = normalizeMafCancerFiltersForQuery(source, cancerTypes);
         List<String> normalizedChromosomes = normalizeChromosomeFilterValues(chromosomes);
         List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
         List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
@@ -1488,7 +1535,7 @@ public class DuckDbService {
                         content.add(new MafMutationDto(
                                 ++rowId,
                                 rs.getString("hugo_symbol"),
-                                rs.getString("cancer_type"),
+                                tcga ? rs.getString("cancer_type") : normalizeCfdnaCancerForClient(rs.getString("cancer_type")),
                                 rs.getString("chromosome"),
                                 rs.getString("start_position"),
                                 rs.getString("end_position"),
@@ -1683,7 +1730,7 @@ public class DuckDbService {
 
         boolean hasGene = gene != null && !gene.isBlank();
         boolean hasSample = sample != null && !sample.isBlank();
-        List<String> normalizedCancerTypes = normalizeFilterValues(cancerTypes);
+        List<String> normalizedCancerTypes = normalizeMafCancerFiltersForQuery(source, cancerTypes);
         List<String> normalizedChromosomes = normalizeChromosomeFilterValues(chromosomes);
         List<String> normalizedVariantClasses = normalizeFilterValues(variantClasses);
         List<String> normalizedVariantTypes = normalizeFilterValues(variantTypes);
@@ -1705,10 +1752,19 @@ public class DuckDbService {
                 bindMafParams(stmt, 1, hasGene, gene, hasSample, sample, normalizedCancerTypes, normalizedChromosomes, normalizedVariantClasses, normalizedVariantTypes, tcga);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
+                        long totalSamples = shouldUseInventorySampleCountForMafSummary(
+                                source,
+                                hasGene,
+                                hasSample,
+                                normalizedChromosomes,
+                                normalizedVariantClasses,
+                                normalizedVariantTypes)
+                                ? countMafSummarySamplesFromInventory(conn, source, cancerTypes)
+                                : rs.getLong("total_samples");
                         return new MafSummaryDto(
                                 source,
                                 rs.getLong("total_variants"),
-                                rs.getLong("total_samples"),
+                                totalSamples,
                                 rs.getLong("total_genes")
                         );
                     }
@@ -1719,6 +1775,38 @@ public class DuckDbService {
         }
 
         return new MafSummaryDto(source, 0, 0, 0);
+    }
+
+    private boolean shouldUseInventorySampleCountForMafSummary(String source,
+                                                               boolean hasGene,
+                                                               boolean hasSample,
+                                                               List<String> chromosomes,
+                                                               List<String> variantClasses,
+                                                               List<String> variantTypes) {
+        return !isTcga(source)
+                && !isGeo(source)
+                && !hasGene
+                && !hasSample
+                && chromosomes.isEmpty()
+                && variantClasses.isEmpty()
+                && variantTypes.isEmpty();
+    }
+
+    private long countMafSummarySamplesFromInventory(Connection connection, String source, List<String> cancerTypes) throws SQLException {
+        List<String> inventoryCancers = normalizeMafCancerFiltersForSampleInventory(cancerTypes);
+        if (inventoryCancers.isEmpty()) {
+            return 0;
+        }
+        String sql = "SELECT COUNT(DISTINCT sample_id) AS total_samples FROM sample_inventory " +
+                "WHERE source = 'private' " +
+                "AND cancer_type IN (" + String.join(",", Collections.nCopies(inventoryCancers.size(), "?")) + ") " +
+                "AND NULLIF(TRIM(sample_id), '') IS NOT NULL";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            bindListParams(statement, 1, inventoryCancers);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next() ? rs.getLong("total_samples") : 0;
+            }
+        }
     }
 
     public List<TopGeneDto> getMafTopGenes(String source, int limit) {
@@ -2260,7 +2348,10 @@ public class DuckDbService {
         String cancerPreview = tcga
                 ? "-"
                 : joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
-                "COALESCE(cancer_type, '')", "COALESCE(cancer_type, '')", "value ASC", 4));
+                "COALESCE(cancer_type, '')", "COALESCE(cancer_type, '')", "value ASC", 4).stream()
+                .map(this::normalizeCfdnaCancerForClient)
+                .distinct()
+                .collect(Collectors.toList()));
         String samplePreview = joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
                 "COALESCE(tumor_sample_barcode, '')", "COALESCE(tumor_sample_barcode, '')", "value ASC", 4));
         String coordinatePreview = joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,

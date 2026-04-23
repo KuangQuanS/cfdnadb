@@ -11,9 +11,10 @@ import { SectionHeader } from "../components/SectionHeader";
 import { WaterfallChart } from "../components/WaterfallChart";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
 import type { CancerAsset } from "../types/api";
+import { formatCohortLabel } from "../utils/cohortLabels";
 
 const BROWSE_SOURCES = [
-  { source: "cfDNA", label: "cfDNA" },
+  { source: "cfDNA", label: "Internal Data" },
   { source: "geo", label: "GEO" },
   { source: "tcga", label: "TCGA" },
 ] as const;
@@ -26,11 +27,6 @@ function toBrowsePlotSource(source: string) {
   if (source === "cfDNA") return "private";
   if (source === "tcga") return "tcga";
   return "geo";
-}
-
-function normalizeCancerLabel(value: string) {
-  if (value === "HeadAndNeck") return "Head & Neck";
-  return value;
 }
 
 function getPlotDescription(asset: CancerAsset) {
@@ -144,7 +140,7 @@ export function BrowsePage() {
 
   const sourceSummary = useMemo(() => {
     if (activeSource === "cfDNA") {
-      return "cfDNA uses the Private cfDNA statistics plots and Private cfDNA mutation rows for the interactive oncoplot.";
+      return "Internal Data uses the internal cohort statistics plots and internal mutation rows for the interactive oncoplot.";
     }
     if (activeSource === "geo") {
       return "GEO uses GEO statistics plots and GEO mutation rows for the interactive oncoplot.";
@@ -160,7 +156,7 @@ export function BrowsePage() {
       <SectionHeader
         eyebrow="Browse"
         title="Cohort browser"
-        description="Browse each cohort through oncoplots and maftools summary plots. This page is now cohort-centric rather than sample-centric."
+        description="Browse each cohort through oncoplots and maftools summary plots. This page is cohort-centric rather than sample-centric."
       />
 
       <section className="detail-card statistics-toolbar-card">
@@ -170,7 +166,7 @@ export function BrowsePage() {
             <select value={cancer} onChange={(event) => setParam("cancer", event.target.value)}>
               {CANCER_OPTIONS.map((option) => (
                 <option key={option} value={option}>
-                  {normalizeCancerLabel(option)}
+                  {formatCohortLabel(option)}
                 </option>
               ))}
             </select>
@@ -190,7 +186,7 @@ export function BrowsePage() {
 
         <div className="statistics-toolbar-meta">
           <strong>
-            {normalizeCancerLabel(cancer)} {activeSource ? `| ${selectedLabel}` : ""}
+            {formatCohortLabel(cancer)} {activeSource ? `| ${selectedLabel}` : ""}
           </strong>
           <p>{sourceSummary}</p>
         </div>
@@ -202,14 +198,14 @@ export function BrowsePage() {
           <div className="statistics-panel-header">
             <h3 className="stat-pdf-title">Oncoplot</h3>
             <p className="statistics-panel-note">
-              Top 40 most frequently mutated genes across all samples in {normalizeCancerLabel(cancer)} / {selectedLabel}. Each column is a sample, each row is a gene, and cells are colored by the most severe mutation class observed.
+              Top 40 most frequently mutated genes across all samples in {formatCohortLabel(cancer)} / {selectedLabel}. Each column is a sample, each row is a gene, and cells are colored by the most severe mutation class observed.
             </p>
           </div>
           {oncoplottQ.isLoading ? <p className="panel-note">Loading oncoplot data...</p> : null}
           {oncoplottQ.isError ? <p className="panel-note" style={{ color: "#c0392b" }}>Failed to load oncoplot data.</p> : null}
           {oncoplottQ.data && oncoplottQ.data.genes.length > 0 ? (
             <div className="statistics-pdf-shell statistics-pdf-shell--oncoplot">
-              <WaterfallChart data={oncoplottQ.data} title={normalizeCancerLabel(cancer)} />
+              <WaterfallChart data={oncoplottQ.data} title={formatCohortLabel(cancer)} />
             </div>
           ) : oncoplottQ.data && !oncoplottQ.isLoading ? (
             <p className="panel-note">No mutation data available for this cohort / source.</p>
@@ -221,7 +217,7 @@ export function BrowsePage() {
         <section className="statistics-section-block">
           <div className="statistics-section-heading">
             <p className="section-eyebrow">
-              {normalizeCancerLabel(cancer)} | {selectedLabel}
+              {formatCohortLabel(cancer)} | {selectedLabel}
             </p>
             <h2>Summary Plots</h2>
             <p className="statistics-section-copy">
@@ -246,7 +242,7 @@ export function BrowsePage() {
             <section className="detail-card empty-card">
               <h3>No plots available</h3>
               <p>
-                No PDF files found for {normalizeCancerLabel(cancer)} / {selectedLabel}.
+                No PDF files found for {formatCohortLabel(cancer)} / {selectedLabel}.
               </p>
             </section>
           ) : null}

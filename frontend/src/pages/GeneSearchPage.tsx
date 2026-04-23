@@ -7,12 +7,13 @@ import {
   queryMafGenes
 } from "../api/client";
 import { Link, useSearchParams } from "react-router-dom";
+import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 10;
 const DATA_SOURCE_OPTIONS = ["private", "GEO"] as const;
-const DATA_SOURCE_LABELS: Record<string, string> = { private: "Private", GEO: "GEO" };
+const DATA_SOURCE_LABELS: Record<string, string> = { private: "Internal Data", GEO: "GEO" };
 
 const HARDCODED_CHROMOSOMES = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","X","Y"];
 
@@ -95,7 +96,7 @@ export function GeneSearchPage() {
   const activeFilters = useMemo(
     () => [
       ...dataSources.map((value) => ({ label: "Source", value: DATA_SOURCE_LABELS[value] ?? value })),
-      ...cancerTypes.map((value) => ({ label: "Cancer", value })),
+      ...cancerTypes.map((value) => ({ label: "Cancer", value: formatCohortLabel(value) })),
       ...chromosomes.map((value) => ({ label: "Chr", value: formatChromosome(value) })),
       ...variantClasses.map((value) => ({ label: "Class", value })),
       ...variantTypes.map((value) => ({ label: "Type", value }))
@@ -184,7 +185,7 @@ export function GeneSearchPage() {
         <div className="maf-hero-copy">
           <span className="maf-eyebrow">Mutation Workbench</span>
           <h2>Gene Search</h2>
-          <p>Search mutation calls in a gene-centric table. Use the Data Source filter to switch between cfDNA, GEO, and TCGA datasets.</p>
+          <p>Search mutation calls in a gene-centric table. Use the Data Source filter to switch between Internal Data, GEO, and TCGA datasets.</p>
         </div>
 
         <div className="detail-card maf-search-card">
@@ -220,6 +221,7 @@ export function GeneSearchPage() {
                 values={cancerTypes}
                 options={filterQ.data?.cancerTypes ?? []}
                 loading={filterQ.isLoading}
+                formatLabel={formatCohortLabel}
                 onToggle={(value) => toggleMultiValue("cancerType", value)}
               />
             ) : null}
@@ -261,7 +263,7 @@ export function GeneSearchPage() {
         <SummaryCard
           label="Matched Samples"
           value={summaryQ.isLoading ? "..." : formatNumber(summary?.totalSamples ?? 0)}
-          helper="Distinct Tumor_Sample_Barcode"
+          helper={gene || activeFilters.length > 0 ? "Distinct matching samples" : "Non-Healthy internal samples"}
         />
         <SummaryCard
           label="Matched Genes"
@@ -282,7 +284,7 @@ export function GeneSearchPage() {
       <section className="maf-active-panel">
         <div className="maf-active-header">
           <h3>Current Query</h3>
-          <span>{dataSources.length === 0 ? "All cfDNA" : dataSources.map((s) => DATA_SOURCE_LABELS[s] ?? s).join(" + ")}</span>
+          <span>{dataSources.length === 0 ? "All Internal Data" : dataSources.map((s) => DATA_SOURCE_LABELS[s] ?? s).join(" + ")}</span>
         </div>
         <div className="maf-active-tags">
           {gene ? <span className="maf-tag"><strong>Gene:</strong> {gene}</span> : null}
@@ -314,7 +316,7 @@ export function GeneSearchPage() {
             {isCfDNA ? (
               <span className="maf-results-hint-tip">
                 {cancerTypes.length === 1
-                  ? `Lollipop plots will be filtered to ${cancerTypes[0]}.`
+                  ? `Lollipop plots will be filtered to ${formatCohortLabel(cancerTypes[0])}.`
                   : "Detail pages include lollipop plots across all cohorts."}
               </span>
             ) : null}
@@ -375,7 +377,7 @@ export function GeneSearchPage() {
                         </td>
                         {isCfDNA ? (
                           <td>
-                            <PreviewValue value={row.cancerTypesPreview} variant="chips" />
+                            <PreviewValue value={row.cancerTypesPreview} variant="chips" formatEntry={formatCohortLabel} />
                           </td>
                         ) : null}
                         <td>
@@ -561,11 +563,13 @@ function extractSharedChips(groups: string[][]) {
 function PreviewValue({
   value,
   mono = false,
-  variant = "plain"
+  variant = "plain",
+  formatEntry = (entry: string) => entry
 }: {
   value: string;
   mono?: boolean;
   variant?: "plain" | "chips" | "annotation";
+  formatEntry?: (entry: string) => string;
 }) {
   const entries = splitPreviewEntries(value);
 
@@ -578,7 +582,7 @@ function PreviewValue({
       <div className="maf-preview-chip-row">
         {entries.map((entry) => (
           <span key={entry} className={`maf-preview-chip${mono ? " maf-mono-cell" : ""}`}>
-            {entry}
+            {formatEntry(entry)}
           </span>
         ))}
       </div>
@@ -638,7 +642,7 @@ function PreviewValue({
     <div className="maf-preview-list maf-preview-list--plain">
       {entries.map((entry) => (
         <div key={entry} className={`maf-preview-item maf-preview-item--plain${mono ? " maf-mono-cell" : ""}`}>
-          {entry}
+          {formatEntry(entry)}
         </div>
       ))}
     </div>

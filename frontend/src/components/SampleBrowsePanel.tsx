@@ -9,19 +9,19 @@ import {
 } from "../api/client";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
 import type { LabelCount, SampleBrowseItem, SampleSelection } from "../types/api";
+import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatFileSize, formatNumber } from "../utils/format";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const PRESETS_KEY = "cfdnadb-browse-sample-presets";
 const SOURCE_OPTIONS = [
-  { value: "private", label: "cfDNA Private" },
-  { value: "geo", label: "cfDNA GEO" },
+  { value: "private", label: "Internal Data" },
+  { value: "geo", label: "GEO" },
 ] as const;
 const DOWNLOAD_SOURCE_OPTIONS = [
   ...SOURCE_OPTIONS,
-  { value: "healthy", label: "Healthy VCF" },
 ] as const;
-const DOWNLOAD_CANCER_OPTIONS = [...CANCER_OPTIONS, "Healthy"] as const;
+const DOWNLOAD_CANCER_OPTIONS = [...CANCER_OPTIONS] as const;
 const COLUMN_OPTIONS = [
   { key: "sampleId", label: "Sample ID" },
   { key: "cancer", label: "Cohort" },
@@ -93,8 +93,8 @@ function sampleKey(item: SampleSelection) {
 }
 
 function sourceLabel(source: string) {
-  if (source === "private") return "Private cfDNA";
-  if (source === "public") return "Public cfDNA";
+  if (source === "private") return "Internal Data";
+  if (source === "public") return "Public Data";
   if (source === "tcga") return "TCGA";
   if (source === "healthy") return "Healthy VCF";
   return source;
@@ -188,7 +188,7 @@ export function SampleBrowsePanel({
   const showSourceTags = mode !== "downloads" || submitted.sources.join("|") !== defaultFilters.sources.join("|");
 
   const activeTags = [
-      ...submitted.cancers.map((cancer) => ({ key: `cancer:${cancer}`, label: "Cancer", value: cancer, rawValue: cancer })),
+      ...submitted.cancers.map((cancer) => ({ key: `cancer:${cancer}`, label: "Cancer", value: formatCohortLabel(cancer), rawValue: cancer })),
       ...(showSourceTags ? submitted.sources.map((source) => ({ key: `source:${source}`, label: "Source", value: sourceLabel(source), rawValue: source })) : []),
       ...(submitted.gene ? [{ key: "gene", label: "Gene", value: submitted.gene, rawValue: submitted.gene }] : []),
       ...(submitted.sample ? [{ key: "sample", label: "Sample", value: submitted.sample, rawValue: submitted.sample }] : []),
@@ -334,7 +334,7 @@ export function SampleBrowsePanel({
               className={`browse-samples-chip${draft.cancers.includes(cancer) ? " active" : ""}`}
               onClick={() => updateFilters((previous) => ({ ...previous, cancers: toggleValue(previous.cancers, cancer) }))}
             >
-              {cancer}
+              {formatCohortLabel(cancer)}
             </button>
           ))}
         </div>
@@ -477,7 +477,7 @@ export function SampleBrowsePanel({
                         <button type="button" className="browse-preset-load" onClick={() => loadPreset(preset)}>
                           <strong>{preset.name}</strong>
                           <span>
-                            {preset.cancers.join(", ")}
+                            {preset.cancers.map(formatCohortLabel).join(", ")}
                             {preset.gene ? ` / ${preset.gene}` : ""}
                             {preset.minVariants ? ` / >= ${preset.minVariants}` : ""}
                           </span>
@@ -565,7 +565,7 @@ export function SampleBrowsePanel({
                         <button type="button" className="browse-preset-load" onClick={() => loadPreset(preset)}>
                           <strong>{preset.name}</strong>
                           <span>
-                            {preset.cancers.join(", ")}
+                            {preset.cancers.map(formatCohortLabel).join(", ")}
                             {preset.gene ? ` / ${preset.gene}` : ""}
                             {preset.minVariants ? ` / >= ${preset.minVariants}` : ""}
                           </span>
@@ -712,7 +712,7 @@ export function SampleBrowsePanel({
                                 <button type="button" className="browse-preset-load" onClick={() => loadPreset(preset)}>
                                   <strong>{preset.name}</strong>
                                   <span>
-                                    {preset.cancers.join(", ")}
+                                    {preset.cancers.map(formatCohortLabel).join(", ")}
                                     {preset.gene ? ` / ${preset.gene}` : ""}
                                     {preset.minVariants ? ` / >= ${preset.minVariants}` : ""}
                                   </span>
@@ -794,7 +794,7 @@ export function SampleBrowsePanel({
                                   <div className="browse-samples-primary">{item.sampleId}</div>
                                 </td>
                               )}
-                              {visibleColumns.has("cancer") && <td>{item.cancer}</td>}
+                              {visibleColumns.has("cancer") && <td>{formatCohortLabel(item.cancer)}</td>}
                               {visibleColumns.has("source") && <td><SourceBadge source={item.source} /></td>}
                               {visibleColumns.has("variantCount") && <td>{formatNumber(item.variantCount)}</td>}
                               {visibleColumns.has("topGenes") && (
@@ -927,7 +927,7 @@ export function SampleBrowsePanel({
                               <div className="browse-samples-primary">{item.sampleId}</div>
                             </td>
                           )}
-                          {visibleColumns.has("cancer") && <td>{item.cancer}</td>}
+                          {visibleColumns.has("cancer") && <td>{formatCohortLabel(item.cancer)}</td>}
                           {visibleColumns.has("source") && <td><SourceBadge source={item.source} /></td>}
                           {visibleColumns.has("variantCount") && <td>{formatNumber(item.variantCount)}</td>}
                           {visibleColumns.has("topGenes") && (
@@ -980,7 +980,7 @@ export function SampleBrowsePanel({
                 <p className="section-eyebrow">Sample Drawer</p>
                 <h3>{detailTarget.sampleId}</h3>
                 <p className="browse-summary-line">
-                  {detailTarget.cancer} / {sourceLabel(detailTarget.source)}
+                  {formatCohortLabel(detailTarget.cancer)} / {sourceLabel(detailTarget.source)}
                 </p>
               </div>
               <button type="button" className="browse-files-close" onClick={() => setDetailTarget(null)}>&times;</button>
