@@ -51,6 +51,25 @@ const COHORT_COLOR_FALLBACK = [
 
 const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
 
+const INTRO_TOTAL_SAMPLES = 3293;
+const INTRO_TOTAL_FILES = 8995;
+const INTRO_TOTAL_MUTATIONS = 48403074;
+
+const COHORT_DISPLAY_LABELS: Record<string, string> = {
+  HeadAndNeck: "Head & Neck",
+  Benign_Tumor: "Benign Tumor",
+  Cell_Line: "Cell Line",
+};
+
+function formatCohortLabel(cancer: string) {
+  return COHORT_DISPLAY_LABELS[cancer] ?? cancer.replace(/_/g, " ");
+}
+
+function formatRingLabel(name: string, value: string) {
+  const label = name === "Head & Neck" ? "Head &\nNeck" : name;
+  return `${label}\n${value}`;
+}
+
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
   { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 17, anchorPct: 49, browseKey: "HeadAndNeck", alwaysShow: false },
@@ -197,9 +216,7 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
                 if (!params.name || params.name === "Other") {
                   return value > 0 ? `Other\n${formatValue(value)}` : "";
                 }
-                return value >= Math.max(40, total * 0.035)
-                  ? `${params.name}\n${formatValue(value)}`
-                  : "";
+                return value >= Math.max(40, total * 0.035) ? formatRingLabel(params.name, formatValue(value)) : "";
               },
             },
           },
@@ -242,7 +259,7 @@ function HeroRingChart({
           option={option}
           notMerge
           lazyUpdate={false}
-          style={{ height: 320, width: "100%" }}
+          style={{ height: 292, width: "100%" }}
           opts={{ renderer: "canvas" }}
           onEvents={{
             click: (params: { data?: { browseKey?: string; name?: string } }) => {
@@ -281,7 +298,7 @@ export function HeroCarousel() {
 
       return sorted.map((cohort, index) => ({
         id: cohort.cancer,
-        label: cohort.cancer,
+        label: formatCohortLabel(cohort.cancer),
         color: CORE_COHORT_COLORS[cohort.cancer] ?? COHORT_COLOR_FALLBACK[index % COHORT_COLOR_FALLBACK.length],
         sampleCount: cohort.sampleCount,
         fileCount: cohort.totalDataFiles,
@@ -300,11 +317,11 @@ export function HeroCarousel() {
     [ringEntries],
   );
   const sampleRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, sampleCount }) => ({ id, label, color, value: sampleCount, browseKey: label === "Healthy" ? "" : label })),
+    () => ringEntries.map(({ id, label, color, sampleCount }) => ({ id, label, color, value: sampleCount, browseKey: id === "Healthy" ? "" : id })),
     [ringEntries],
   );
   const fileRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, fileCount }) => ({ id, label, color, value: fileCount, browseKey: label === "Healthy" ? "" : label })),
+    () => ringEntries.map(({ id, label, color, fileCount }) => ({ id, label, color, value: fileCount, browseKey: id === "Healthy" ? "" : id })),
     [ringEntries],
   );
   const totalAnnotated = useMemo(
@@ -323,11 +340,11 @@ export function HeroCarousel() {
     [countMap],
   );
   const annotatedRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, annotatedCount }) => ({ id, label, color, value: annotatedCount, browseKey: label })),
+    () => ringEntries.map(({ id, label, color, annotatedCount }) => ({ id, label, color, value: annotatedCount, browseKey: id })),
     [ringEntries],
   );
   const mutationRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, mutationCount }) => ({ id, label, color, value: mutationCount, browseKey: label })),
+    () => ringEntries.map(({ id, label, color, mutationCount }) => ({ id, label, color, value: mutationCount, browseKey: id })),
     [ringEntries],
   );
   const overviewCards = useMemo(
@@ -380,21 +397,19 @@ export function HeroCarousel() {
       <div className="gdc-hero-inner">
 
         <div className="gdc-col-left">
-          <p className="gdc-eyebrow">Plasma somatic mutation database</p>
           <h1 className="gdc-title">
             Welcome to <span>cfDNAdb</span>
           </h1>
-          <p className="gdc-subtitle">
-            cfDNAdb centralizes cohort-level somatic mutation profiles, sample browse, gene-oriented querying,
-            and downloadable analysis resources across the full imported cancer collection, with anatomical browse highlights for breast, colorectal, liver, lung, and pancreatic cohorts.
-          </p>
+          <div className="gdc-subtitle">
+            <p>
+              cfDNAdb is a curated plasma cell-free DNA somatic mutation database covering {formatNumber(INTRO_TOTAL_SAMPLES)} samples, {formatNumber(INTRO_TOTAL_FILES)} data files, and {formatNumber(INTRO_TOTAL_MUTATIONS)} mutation records.
+            </p>
+            <p>
+              The resource provides cohort summaries, annotated variants, gene-level queries, sample browsing, statistics, and downloadable analysis files for liquid biopsy research.
+            </p>
+          </div>
 
           <div className="gdc-search-dock gdc-search-dock--inline">
-            <div className="gdc-search-dock-head">
-              <h2>Gene search</h2>
-              <p>Jump straight into the cfDNA mutation workbench with a gene symbol.</p>
-            </div>
-
             <form className="gdc-hero-search" onSubmit={handleSearch}>
               <div className="gdc-search-row">
                 <input

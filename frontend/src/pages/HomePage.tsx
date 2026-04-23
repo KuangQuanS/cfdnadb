@@ -7,33 +7,29 @@ const TOOL_TILES = [
   {
     id: "01",
     title: "Browser",
-    desc: "Open oncoplots and cohort summary views by cancer type.",
+    desc: "Cohort overview and sample records.",
     link: "/browse",
-    badge: "Cohort-level view",
     preview: "browse",
   },
   {
     id: "02",
     title: "Gene Search",
-    desc: "Query a gene and open sample-level mutation records.",
+    desc: "Gene-level mutation query.",
     link: "/gene-search",
-    badge: "Gene-level query",
     preview: "search",
   },
   {
     id: "03",
     title: "Statistics",
-    desc: "Review cohort-level mutation burden and summary analysis panels.",
+    desc: "Cohort summary statistics.",
     link: "/statistics",
-    badge: "Summary analytics",
     preview: "statistics",
   },
   {
     id: "04",
     title: "Survival",
-    desc: "Inspect Kaplan-Meier and VAF comparisons for TCGA cohorts.",
+    desc: "TCGA survival and VAF analysis.",
     link: "/survival",
-    badge: "Outcome analysis",
     preview: "survival",
   },
 ] as const;
@@ -190,14 +186,8 @@ export function HomePage() {
           <div className="portal-section-inner">
             <div className="portal-showcase-hero">
               <div className="portal-showcase-copy">
-                <span className="portal-showcase-kicker">Tools</span>
-                <h2>Explore cfdnadb through focused analysis workflows</h2>
-                <p>
-                  Use the core interfaces to search genes, inspect cohort-level mutation patterns, and retrieve curated outputs without moving between disconnected pages.
-                </p>
-                <div className="portal-showcase-actions">
-                  <Link to="/gene-search" className="portal-showcase-button">Open Gene Search</Link>
-                </div>
+                <span className="portal-showcase-kicker">Analysis modules</span>
+                <h2>Core cfDNAdb workflows</h2>
               </div>
 
               <div className="portal-showcase-visual portal-showcase-visual--tools" aria-hidden="true">
@@ -219,7 +209,6 @@ export function HomePage() {
                     <div className="portal-tool-caption">
                       <strong>{tool.title}</strong>
                       <p>{tool.desc}</p>
-                      <span>{tool.badge}</span>
                     </div>
                   </Link>
                 ))}

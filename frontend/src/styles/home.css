@@ -21,11 +21,11 @@
 }
 
 .gdc-hero-inner {
-  width: min(1500px, calc(100vw - 80px));
+  width: min(1680px, calc(100vw - 40px));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(390px, 0.94fr) minmax(410px, 0.82fr) minmax(560px, 1.34fr);
-  gap: 22px;
+  grid-template-columns: minmax(390px, 0.9fr) minmax(430px, 0.9fr) minmax(520px, 1.12fr);
+  gap: clamp(36px, 2.7vw, 58px);
   align-items: stretch;
   position: relative;
   z-index: 1;
@@ -74,15 +74,21 @@
 .gdc-subtitle {
   margin: 0;
   color: #43567a;
-  font-size: 1.05rem;
-  line-height: 1.78;
+  font-size: 0.98rem;
+  line-height: 1.62;
   max-width: 680px;
+  display: grid;
+  gap: 10px;
+}
+
+.gdc-subtitle p {
+  margin: 0;
 }
 
 /* ---- Middle col: body map ---- */
 .gdc-col-middle {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
   min-width: 0;
 }
@@ -317,7 +323,7 @@
 }
 
 .gdc-side-rail {
-  width: min(100%, 640px);
+  width: min(100%, 620px);
   display: grid;
   gap: 12px;
   min-height: 100%;
@@ -329,7 +335,7 @@
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 14px;
+  gap: 12px 18px;
   align-items: start;
 }
 
@@ -366,8 +372,8 @@
 
 .gdc-overview-chart-shell {
   position: relative;
-  width: min(100%, 340px);
-  min-height: 320px;
+  width: min(100%, 308px);
+  min-height: 292px;
 }
 
 .gdc-overview-chart-shell::before {
@@ -426,9 +432,9 @@
 
 .gdc-search-dock--inline {
   align-content: start;
-  gap: 14px;
-  margin-top: 8px;
-  padding-top: 16px;
+  gap: 0;
+  margin-top: 2px;
+  padding-top: 14px;
 }
 
 .gdc-search-dock-head {
@@ -844,7 +850,7 @@
 .portal-tool-tile {
   display: flex;
   flex-direction: column;
-  min-height: 320px;
+  min-height: 230px;
   text-decoration: none;
   border: 1px solid rgba(226, 233, 242, 0.6);
   border-radius: 20px;
@@ -948,18 +954,7 @@
   font-size: 0.9rem;
   line-height: 1.5;
   color: #4a5568;
-  min-height: 84px;
-}
-
-.portal-tool-caption span {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 4px 10px;
-  background: #edf2f7;
-  border-radius: 6px;
-  color: #4a5568;
-  font-size: 0.7rem;
-  font-weight: 700;
+  min-height: 42px;
 }
 
 .portal-showcase-sidecopy {
