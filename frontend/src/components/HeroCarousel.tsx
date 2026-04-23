@@ -8,6 +8,7 @@ import { DEFAULT_GENE } from "../constants/cfdna";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/human_body_new.png";
+import siteLogoPng from "../assets/cfDNAlogo.png";
 import "../styles/home.css";
 
 const MOCK_COHORTS: CancerSummary[] = [
@@ -398,7 +399,7 @@ export function HeroCarousel() {
 
         <div className="gdc-col-left">
           <h1 className="gdc-title">
-            Welcome to <span>cfDNAdb</span>
+            Welcome to <img src={siteLogoPng} alt="cfDNAdb" className="gdc-title-logo" />
           </h1>
           <div className="gdc-subtitle">
             <p>

@@ -2,14 +2,13 @@ import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { PageLoader } from "./PageLoader";
 import headerBgPng from "../assets/background_original.png";
-import siteLogoPng from "../assets/cfDNAlogo.png";
 
 const navItems = [
   { to: "/", label: "Home" },
   { to: "/browse", label: "Browser" },
   { to: "/statistics", label: "Statistics" },
   { to: "/downloads", label: "Downloads" },
-  { to: "/help", label: "Help" }
+  { to: "/help", label: "Tutorial" }
 ];
 
 function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
@@ -112,13 +111,7 @@ export function AppShell({ children }: PropsWithChildren) {
         }}
       >
         <div className="header-container">
-          <div className="title-area">
-            <div className="title-stack">
-              <Link to="/" className="site-logo-link" aria-label="cfDNAdb Home">
-                <img src={siteLogoPng} alt="cfDNAdb" className="site-logo-img" />
-              </Link>
-            </div>
-          </div>
+          <div className="title-area" aria-hidden="true" />
           <nav className="site-nav">
             {navItems.slice(0, 2).map((item) => (
               <NavLink

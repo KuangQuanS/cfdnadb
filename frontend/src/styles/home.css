@@ -52,14 +52,19 @@
   margin: 0;
   color: #18233f;
   font-size: clamp(2.3rem, 3.9vw, 4rem);
-  line-height: 0.98;
+  line-height: 1.02;
   font-weight: 900;
   letter-spacing: -0.035em;
   max-width: 560px;
 }
 
-.gdc-title span {
-  color: #2f79b7;
+.gdc-title-logo {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  margin-top: 4px;
+  object-fit: contain;
+  filter: saturate(1.03) contrast(1.04);
 }
 
 .gdc-hero-tagline {
