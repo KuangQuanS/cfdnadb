@@ -82,9 +82,6 @@ type HeroRingEntry = {
 };
 
 function formatMutationValue(value: number) {
-  if (value >= 1_000_000) {
-    return `${Math.round(value / 1_000_000).toLocaleString()}M`;
-  }
   if (value >= 1_000) {
     return `${Math.round(value / 1_000).toLocaleString()}K`;
   }
@@ -151,82 +148,83 @@ function buildHeroSunburstOption(
     },
     series: [
       {
-        type: "sunburst",
+        type: "pie",
         left: 0,
         top: 0,
         right: 0,
         bottom: 0,
-        radius: [0, "88%"],
+        radius: [0, "46%"],
+        center: ["50%", "50%"],
+        silent: true,
+        tooltip: {
+          show: false,
+        },
+        label: {
+          position: "center",
+          formatter: `{title|${title}}\n{value|${formatValue(total)}}`,
+          rich: {
+            title: {
+              color: "#ffffff",
+              fontWeight: 800,
+              fontSize: 12,
+              align: "center",
+              lineHeight: 16,
+            },
+            value: {
+              color: "#ffffff",
+              fontWeight: 800,
+              fontSize: isMutations ? 10 : 12,
+              align: "center",
+              lineHeight: 14,
+            },
+          },
+        },
+        labelLine: {
+          show: false,
+        },
+        itemStyle: {
+          color: "#1d5f38",
+          borderColor: "#ffffff",
+          borderWidth: 2,
+        },
+        data: [{ name: title, value: total }],
+      },
+      {
+        type: "pie",
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        radius: ["52%", "88%"],
         center: ["50%", "50%"],
         startAngle: 180,
         sort: undefined,
-        nodeClick: false,
+        clockwise: true,
         minAngle: 30,
-        data: [
-          {
-            name: title,
-            value: total,
-            itemStyle: { color: "#1d5f38" },
-            label: {
-              rotate: 0,
-              formatter: `{title|${title}}\n{value|${formatValue(total)}}`,
-              rich: {
-                title: {
-                  color: "#ffffff",
-                  fontWeight: 800,
-                  fontSize: 12,
-                  align: "center",
-                  lineHeight: 16,
-                },
-                value: {
-                  color: "#ffffff",
-                  fontWeight: 800,
-                  fontSize: isMutations ? 10 : 12,
-                  align: "center",
-                  lineHeight: 14,
-                },
-              },
-            },
-            children,
+        avoidLabelOverlap: false,
+        labelLine: {
+          show: false,
+        },
+        itemStyle: {
+          borderColor: "#ffffff",
+          borderWidth: 2,
+        },
+        label: {
+          position: "inside",
+          rotate: "radial",
+          color: "#ffffff",
+          fontSize: 10,
+          lineHeight: 11,
+          overflow: "break",
+          formatter: (params: { name?: string; value?: number }) => {
+            const value = params.value ?? 0;
+            if (!params.name || params.name === "Other") {
+              return value > 0 ? `Other\n${formatValue(value)}` : "";
+            }
+            return formatRingLabel(params.name, formatValue(value));
           },
-        ],
-        levels: [
-          {},
-          {
-            r0: "0%",
-            r: "46%",
-            itemStyle: {
-              borderColor: "#ffffff",
-              borderWidth: 2,
-            },
-            label: {
-              rotate: 0,
-            },
-          },
-          {
-            r0: "48%",
-            r: "84%",
-            itemStyle: {
-              borderColor: "#ffffff",
-              borderWidth: 2,
-            },
-            label: {
-              rotate: "radial",
-              color: "#ffffff",
-              minAngle: 12,
-              fontSize: 10,
-              lineHeight: 11,
-              overflow: "break",
-              formatter: (params: { name?: string; value?: number }) => {
-                const value = params.value ?? 0;
-                if (!params.name || params.name === "Other") {
-                  return value > 0 ? `Other\n${formatValue(value)}` : "";
-                }
-                return value >= Math.max(40, total * 0.04) ? formatRingLabel(params.name, formatValue(value)) : "";
-              },
-            },
-          },
-        ],
+        },
+        data: children,
         emphasis: {
           scale: true,
           itemStyle: {
