@@ -8394,7 +8394,11 @@ button:disabled:hover {
 }
 
 .survival-results--omics .survival-plots {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.survival-results--omics .survival-plot-card:nth-child(3) {
+  grid-column: 1 / -1;
 }
 
 .survival-results {
@@ -8494,6 +8498,10 @@ button:disabled:hover {
 
   .survival-results--omics .survival-plots {
     grid-template-columns: 1fr;
+  }
+
+  .survival-results--omics .survival-plot-card:nth-child(3) {
+    grid-column: auto;
   }
 
   .survival-plot-card {
