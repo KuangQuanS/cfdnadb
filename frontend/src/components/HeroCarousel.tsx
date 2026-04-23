@@ -23,32 +23,14 @@ const MOCK_COHORTS: CancerSummary[] = [
   { cancer: "Ovarian", sampleCount: 92, totalDataFiles: 184, avinputCount: 92, filteredCount: 92, annotatedCount: 92, somaticCount: 0, plotAssetCount: 3, externalAssetCount: 2, mutationCount: 368000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
 ];
 
-const CORE_COHORT_COLORS: Record<string, string> = {
-  Healthy: "#7d8da6",
-  Breast: "#eb6a7f",
-  Colorectal: "#5a49b7",
-  Liver: "#28a07f",
-  Lung: "#2f79b7",
-  Pancreatic: "#f29a4a",
-};
+const RING_PALETTES = {
+  samples: ["#26456e", "#3e6a9a", "#5a8ab8", "#7ba5c9", "#9fbddb", "#c2d2e5", "#dde6ef", "#8fa2b8"],
+  files: ["#1f5f48", "#36805f", "#53a079", "#79b794", "#a1ccae", "#c5ddc9", "#dfebdf", "#809c8b"],
+  annotated: ["#5f2440", "#82405f", "#a3627b", "#be8596", "#d3aab6", "#e3cbd3", "#efdee3", "#9c7786"],
+  mutations: ["#7d3b0f", "#a25821", "#c47b3c", "#d79f62", "#e5bf89", "#eed4ac", "#f4e2c6", "#a47c5a"],
+} as const;
 
-const COHORT_COLOR_FALLBACK = [
-  "#eb6a7f",
-  "#2f79b7",
-  "#28a07f",
-  "#5a49b7",
-  "#f29a4a",
-  "#7b61c9",
-  "#1f9d8a",
-  "#d06a8a",
-  "#4f8bc9",
-  "#84b547",
-  "#cf7f44",
-  "#7d8da6",
-  "#a05195",
-  "#2d7f5e",
-  "#c1556b",
-];
+const OTHER_SLICE_COLOR = "#cfd6dd";
 
 const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
 
@@ -67,7 +49,12 @@ function formatCohortLabel(cancer: string) {
 }
 
 function formatRingLabel(name: string, value: string) {
-  const label = name === "Head & Neck" ? "Head &\nNeck" : name;
+  const label =
+    name === "Head & Neck"
+      ? "Head &\nNeck"
+      : name.includes(" ")
+        ? name.split(/\s+/).join("\n")
+        : name;
   return `${label}\n${value}`;
 }
 
@@ -90,7 +77,6 @@ const ALL_CALLOUTS = [
 type HeroRingEntry = {
   id: string;
   label: string;
-  color: string;
   value: number;
   browseKey: string;
 };
@@ -99,7 +85,12 @@ function formatThousands(value: number) {
   return `${(value / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })}k`;
 }
 
-function buildSunburstEntries(entries: HeroRingEntry[], limit = 7, mergeFromLabel?: string) {
+function buildSunburstEntries(
+  entries: HeroRingEntry[],
+  palette: readonly string[],
+  limit = 7,
+  mergeFromLabel?: string,
+) {
   const sorted = [...entries].sort((a, b) => b.value - a.value);
   const mergeFromIndex = mergeFromLabel ? sorted.findIndex((entry) => entry.label === mergeFromLabel) : -1;
   const splitIndex = mergeFromIndex >= 0 ? mergeFromIndex : limit;
@@ -107,11 +98,11 @@ function buildSunburstEntries(entries: HeroRingEntry[], limit = 7, mergeFromLabe
   const tail = sorted.slice(splitIndex);
   const otherValue = tail.reduce((sum, entry) => sum + entry.value, 0);
 
-  const children = head.map((entry) => ({
+  const children = head.map((entry, idx) => ({
     name: entry.label,
     value: entry.value,
     browseKey: entry.browseKey,
-    itemStyle: { color: entry.color },
+    itemStyle: { color: palette[idx % palette.length] },
   }));
 
   if (otherValue > 0) {
@@ -119,16 +110,21 @@ function buildSunburstEntries(entries: HeroRingEntry[], limit = 7, mergeFromLabe
       name: "Other",
       value: otherValue,
       browseKey: "",
-      itemStyle: { color: "#d9e2ee" },
+      itemStyle: { color: OTHER_SLICE_COLOR },
     });
   }
 
   return children;
 }
 
-function buildHeroSunburstOption(title: string, total: number, entries: HeroRingEntry[]): EChartsOption {
+function buildHeroSunburstOption(
+  title: string,
+  total: number,
+  entries: HeroRingEntry[],
+  palette: readonly string[],
+): EChartsOption {
   const isMutations = title === "Mutations";
-  const children = buildSunburstEntries(entries, 7, isMutations ? "Bladder" : undefined);
+  const children = buildSunburstEntries(entries, palette, 7, isMutations ? "Bladder" : undefined);
   const formatValue = (value: number) => (isMutations ? formatThousands(value) : formatNumber(value));
 
   return {
@@ -209,15 +205,16 @@ function buildHeroSunburstOption(title: string, total: number, entries: HeroRing
             label: {
               rotate: "radial",
               color: "#ffffff",
-              minAngle: 9,
+              minAngle: 12,
               fontSize: 10,
-              overflow: "truncate",
+              lineHeight: 11,
+              overflow: "break",
               formatter: (params: { name?: string; value?: number }) => {
                 const value = params.value ?? 0;
                 if (!params.name || params.name === "Other") {
                   return value > 0 ? `Other\n${formatValue(value)}` : "";
                 }
-                return value >= Math.max(40, total * 0.035) ? formatRingLabel(params.name, formatValue(value)) : "";
+                return value >= Math.max(40, total * 0.04) ? formatRingLabel(params.name, formatValue(value)) : "";
               },
             },
           },
@@ -239,15 +236,20 @@ function HeroRingChart({
   total,
   entries,
   caption,
+  palette,
   onSliceClick,
 }: {
   title: string;
   total: number;
   entries: HeroRingEntry[];
   caption: string;
+  palette: readonly string[];
   onSliceClick: (browseKey: string) => void;
 }) {
-  const option = useMemo(() => buildHeroSunburstOption(title, total, entries), [entries, title, total]);
+  const option = useMemo(
+    () => buildHeroSunburstOption(title, total, entries, palette),
+    [entries, palette, title, total],
+  );
 
   return (
     <article className="gdc-overview-chart" aria-label={title}>
@@ -297,10 +299,9 @@ export function HeroCarousel() {
         return a.cancer.localeCompare(b.cancer);
       });
 
-      return sorted.map((cohort, index) => ({
+      return sorted.map((cohort) => ({
         id: cohort.cancer,
         label: formatCohortLabel(cohort.cancer),
-        color: CORE_COHORT_COLORS[cohort.cancer] ?? COHORT_COLOR_FALLBACK[index % COHORT_COLOR_FALLBACK.length],
         sampleCount: cohort.sampleCount,
         fileCount: cohort.totalDataFiles,
         annotatedCount: cohort.annotatedCount,
@@ -318,11 +319,11 @@ export function HeroCarousel() {
     [ringEntries],
   );
   const sampleRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, sampleCount }) => ({ id, label, color, value: sampleCount, browseKey: id === "Healthy" ? "" : id })),
+    () => ringEntries.map(({ id, label, sampleCount }) => ({ id, label, value: sampleCount, browseKey: id === "Healthy" ? "" : id })),
     [ringEntries],
   );
   const fileRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, fileCount }) => ({ id, label, color, value: fileCount, browseKey: id === "Healthy" ? "" : id })),
+    () => ringEntries.map(({ id, label, fileCount }) => ({ id, label, value: fileCount, browseKey: id === "Healthy" ? "" : id })),
     [ringEntries],
   );
   const totalAnnotated = useMemo(
@@ -341,11 +342,11 @@ export function HeroCarousel() {
     [countMap],
   );
   const annotatedRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, annotatedCount }) => ({ id, label, color, value: annotatedCount, browseKey: id })),
+    () => ringEntries.map(({ id, label, annotatedCount }) => ({ id, label, value: annotatedCount, browseKey: id })),
     [ringEntries],
   );
   const mutationRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, color, mutationCount }) => ({ id, label, color, value: mutationCount, browseKey: id })),
+    () => ringEntries.map(({ id, label, mutationCount }) => ({ id, label, value: mutationCount, browseKey: id })),
     [ringEntries],
   );
   const overviewCards = useMemo(
@@ -356,6 +357,7 @@ export function HeroCarousel() {
         total: totalSamples,
         entries: sampleRingEntries,
         caption: "Cohort distribution of curated plasma samples.",
+        palette: RING_PALETTES.samples,
       },
       {
         id: "files",
@@ -363,6 +365,7 @@ export function HeroCarousel() {
         total: totalFiles,
         entries: fileRingEntries,
         caption: "Imported mutation and cohort-level source files.",
+        palette: RING_PALETTES.files,
       },
       {
         id: "annotated",
@@ -370,6 +373,7 @@ export function HeroCarousel() {
         total: totalAnnotated,
         entries: annotatedRingEntries,
         caption: "Variants with functional annotations per cohort.",
+        palette: RING_PALETTES.annotated,
       },
       {
         id: "mutations",
@@ -377,6 +381,7 @@ export function HeroCarousel() {
         total: totalMutations,
         entries: mutationRingEntries,
         caption: "Somatic mutation records per cohort.",
+        palette: RING_PALETTES.mutations,
       },
     ],
     [annotatedRingEntries, mutationRingEntries, fileRingEntries, sampleRingEntries, totalAnnotated, totalMutations, totalFiles, totalSamples],
@@ -478,6 +483,7 @@ export function HeroCarousel() {
                   total={card.total}
                   entries={card.entries}
                   caption={card.caption}
+                  palette={card.palette}
                   onSliceClick={goToBrowse}
                 />
               ))}
