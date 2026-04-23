@@ -81,8 +81,14 @@ type HeroRingEntry = {
   browseKey: string;
 };
 
-function formatThousands(value: number) {
-  return `${Math.round(value / 1000).toLocaleString()}K`;
+function formatMutationValue(value: number) {
+  if (value >= 1_000_000) {
+    return `${Math.round(value / 1_000_000).toLocaleString()}M`;
+  }
+  if (value >= 1_000) {
+    return `${Math.round(value / 1_000).toLocaleString()}K`;
+  }
+  return formatNumber(value);
 }
 
 function buildSunburstEntries(
@@ -125,7 +131,7 @@ function buildHeroSunburstOption(
 ): EChartsOption {
   const isMutations = title === "Mutations";
   const children = buildSunburstEntries(entries, palette, 7, isMutations ? "Bladder" : undefined);
-  const formatValue = (value: number) => (isMutations ? formatThousands(value) : formatNumber(value));
+  const formatValue = (value: number) => (isMutations ? formatMutationValue(value) : formatNumber(value));
 
   return {
     animationDuration: 600,
@@ -150,8 +156,9 @@ function buildHeroSunburstOption(
         top: 0,
         right: 0,
         bottom: 0,
-        radius: [0, "96%"],
+        radius: [0, "88%"],
         center: ["50%", "50%"],
+        startAngle: 180,
         sort: undefined,
         nodeClick: false,
         minAngle: 30,
@@ -198,7 +205,7 @@ function buildHeroSunburstOption(
           },
           {
             r0: "48%",
-            r: "92%",
+            r: "84%",
             itemStyle: {
               borderColor: "#ffffff",
               borderWidth: 2,
@@ -247,6 +254,7 @@ function HeroRingChart({
   palette: readonly string[];
   onSliceClick: (browseKey: string) => void;
 }) {
+  const displayTotal = title === "Mutations" ? formatMutationValue(total) : formatNumber(total);
   const option = useMemo(
     () => buildHeroSunburstOption(title, total, entries, palette),
     [entries, palette, title, total],
@@ -255,7 +263,7 @@ function HeroRingChart({
   return (
     <article className="gdc-overview-chart" aria-label={title}>
       <h3 className="gdc-overview-chart-title">
-        {formatNumber(total)} {title}
+        {displayTotal} {title}
       </h3>
       <div className="gdc-overview-chart-shell">
         <ReactECharts
