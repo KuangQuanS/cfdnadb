@@ -184,21 +184,29 @@ export function HomePage() {
       <main className="portal-home">
         <section className="portal-showcase-section animate-fade-up animate-fade-up-2">
           <div className="portal-section-inner">
-            <div className="portal-showcase-band">
-              <div className="portal-showcase-band-grid">
-                {TOOL_TILES.map((tool) => (
-                  <Link key={tool.title} to={tool.link} className="portal-tool-tile">
-                    <div className={`portal-tool-preview portal-tool-preview--${tool.preview}`} aria-hidden="true">
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                    <div className="portal-tool-caption">
-                      <strong>{tool.title}</strong>
-                      <p>{tool.desc}</p>
-                    </div>
-                  </Link>
-                ))}
+            <div className="portal-showcase-hero portal-showcase-hero--modules">
+              <div className="portal-showcase-band">
+                <div className="portal-showcase-band-grid">
+                  {TOOL_TILES.map((tool) => (
+                    <Link key={tool.title} to={tool.link} className="portal-tool-tile">
+                      <div className={`portal-tool-preview portal-tool-preview--${tool.preview}`} aria-hidden="true">
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                      <div className="portal-tool-caption">
+                        <strong>{tool.title}</strong>
+                        <p>{tool.desc}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <div className="portal-showcase-visual portal-showcase-visual--tools" aria-hidden="true">
+                <div className="portal-tag-sphere-stage">
+                  <RotatingTagSphere />
+                </div>
               </div>
             </div>
           </div>
