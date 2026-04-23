@@ -483,7 +483,7 @@ export const vcfDemoMock: VcfDemo = {
     {
       step: "04",
       title: "Expose public browser",
-      description: "Publish dataset summaries, release notes, download links and searchable variant rows without exposing private storage details.",
+      description: "Publish dataset summaries, release notes, download links and searchable variant rows without exposing internal storage details.",
       output: "dataset detail, variant browser"
     }
   ],

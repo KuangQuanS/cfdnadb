@@ -722,15 +722,15 @@ export function StatisticsPage() {
     <div className="page-stack statistics-private-page">
       <SectionHeader
         eyebrow="Database Statistics"
-        title="Mutational Landscape of the cfDNA Liquid-Biopsy Database"
-        description="A database-wide visual summary of somatic mutations curated from the full cfDNA liquid-biopsy sample collection across all indexed cancer cohorts."
+        title="Mutational Landscape of the Internal Data Liquid-Biopsy Database"
+        description="A database-wide visual summary of somatic mutations curated from the full internal liquid-biopsy sample collection across all indexed cancer cohorts."
       />
 
       <section className="detail-card statistics-private-toolbar-card">
         <div className="statistics-private-toolbar-row">
           <div className="statistics-private-toolbar-meta">
             <p className="section-eyebrow">Data Source</p>
-            <strong>cfDNA Liquid Biopsy Collection</strong>
+            <strong>Internal Data Liquid Biopsy Collection</strong>
           </div>
           <div className="statistics-private-toolbar-badge">
             <span>Cohorts</span>

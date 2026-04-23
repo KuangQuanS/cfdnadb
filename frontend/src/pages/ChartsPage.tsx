@@ -106,7 +106,7 @@ export function ChartsPage() {
         {assetsQuery.data && assetsQuery.data.length === 0 ? (
           <section className="detail-card empty-card">
             <h3>No PDF previews available</h3>
-            <p>{cancer} currently has no discoverable Plot or TCGA PDF files under the server-side cfDNA directory.</p>
+            <p>{cancer} currently has no discoverable Plot or TCGA PDF files under the server-side internal data directory.</p>
           </section>
         ) : null}
       </section>

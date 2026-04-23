@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { SectionHeader } from "../components/SectionHeader";
+import tutorialFlowchart from "../assets/tutorial.png";
 
 const GUIDE_LINKS = [
   { href: "#orientation", label: "Orientation" },
@@ -7,7 +8,7 @@ const GUIDE_LINKS = [
   { href: "#gene-search", label: "Gene Search" },
   { href: "#statistics", label: "Statistics" },
   { href: "#survival", label: "Survival" },
-  { href: "#downloads", label: "Downloads" },
+  { href: "#downloads", label: "Download" },
   { href: "#sources", label: "Data sources" },
   { href: "#troubleshooting", label: "Troubleshooting" },
 ];
@@ -35,9 +36,12 @@ export function HelpPage() {
           <section id="orientation">
             <p className="section-eyebrow">Orientation</p>
             <h3>What cfDNAdb is built for</h3>
+            <figure className="help-flowchart">
+              <img src={tutorialFlowchart} alt="cfDNAdb tutorial workflow flowchart" />
+            </figure>
             <p>
               cfDNAdb is a plasma somatic mutation database organized around cohorts, genes, samples, and downloadable analysis files.
-              The database brings together private cfDNA cohorts, GEO-derived public cfDNA cohorts, TCGA reference mutation data, and healthy
+              The database brings together Internal Data cohorts, GEO-derived public cfDNA cohorts, TCGA reference mutation data, and healthy
               VCF files so that users can move from a broad cohort overview to a concrete file download without leaving the application.
             </p>
             <p>
@@ -45,7 +49,7 @@ export function HelpPage() {
               you want to inspect one cancer cohort visually. Use <Link to="/gene-search">Gene Search</Link> when the question starts with
               a gene symbol. Use <Link to="/statistics">Statistics</Link> when you want database-wide counts and distributions.
               Use <Link to="/survival">Survival Analysis</Link> when you want TCGA survival context or multi-omics expression comparisons.
-              Use <Link to="/downloads">Downloads</Link> when you need the underlying files.
+              Use <Link to="/downloads">Download</Link> when you need the underlying files.
             </p>
           </section>
 
@@ -58,14 +62,14 @@ export function HelpPage() {
               gene-sample pair.
             </p>
             <p>
-              The source selector currently exposes cfDNA, GEO, and TCGA. The cfDNA option represents the private cfDNA cohort files.
+              The source selector currently exposes Internal Data, GEO, and TCGA. Internal Data represents the internal cohort files.
               GEO uses GEO mutation rows for the interactive oncoplot and GEO-specific PDF plots when those files exist. TCGA uses the
               TCGA mutation table and TCGA plot assets. If a source has no PDF for a given cohort, the oncoplot can still appear if the
               mutation rows are present in the DuckDB query database.
             </p>
             <ol>
               <li>Open Browse and choose the cancer cohort, for example Breast or Colorectal.</li>
-              <li>Choose cfDNA, GEO, or TCGA from Data Source.</li>
+              <li>Choose Internal Data, GEO, or TCGA from Data Source.</li>
               <li>Read the oncoplot first to identify recurrently mutated genes and mutation-class patterns.</li>
               <li>Scroll to Summary Plots for cohort-level PDF summaries such as mutation spectrum, Ti/Tv, and maftools summary views.</li>
             </ol>
@@ -82,7 +86,7 @@ export function HelpPage() {
             <p>
               Use the filters to narrow the result to cancer types, chromosomes, variant classifications, and variant types. The summary
               metrics above the table update with the current query and help distinguish a broad recurrent signal from a sparse
-              one-sample result. Selecting a gene detail page gives a more focused view for that gene across cfDNA and TCGA contexts.
+              one-sample result. Selecting a gene detail page gives a more focused view for that gene across Internal Data and TCGA contexts.
             </p>
           </section>
 
@@ -117,12 +121,10 @@ export function HelpPage() {
           </section>
 
           <section id="downloads">
-            <h3>Downloads: move from visual evidence to files</h3>
+            <h3>Download: move from visual evidence to files</h3>
             <p>
-              Downloads has two different jobs. The All Downloads view lists cohort-level resources, including mutation tables, summary
-              resources, and the Healthy VCF collection. Healthy is shown as one collection-level row because the mounted VCF folder
-              contains many large sample files. Open the collection through the filtered download workflow when you need a specific
-              healthy sample VCF.
+              Download has two different jobs. The All Downloads view lists cohort-level resources, including mutation tables and summary
+              resources. Healthy VCF download controls are temporarily hidden while that workflow is being revised.
             </p>
             <p>
               Filtered Download is sample-centered. Use the cohort and source chips to define a sample set, type in the sample search box
@@ -136,8 +138,8 @@ export function HelpPage() {
             <h3>How to interpret data sources</h3>
             <dl className="help-definition-list">
               <div>
-                <dt>cfDNA</dt>
-                <dd>The private cfDNA cohort collection. In Browse, cfDNA uses the private statistics plots and private cfDNA mutation rows.</dd>
+                <dt>Internal Data</dt>
+                <dd>The internal cohort collection. In Browse, Internal Data uses the internal statistics plots and internal mutation rows.</dd>
               </div>
               <div>
                 <dt>GEO</dt>
@@ -145,7 +147,7 @@ export function HelpPage() {
               </div>
               <div>
                 <dt>TCGA</dt>
-                <dd>Reference tumor mutation and survival context from TCGA. TCGA is independent from cfDNA and GEO source switching.</dd>
+                <dd>Reference tumor mutation and survival context from TCGA. TCGA is independent from Internal Data and GEO source switching.</dd>
               </div>
               <div>
                 <dt>Healthy</dt>
@@ -158,7 +160,7 @@ export function HelpPage() {
             <h3>Troubleshooting and expected behavior</h3>
             <p>
               If a PDF does not appear in Browse, first check whether that source actually has PDF assets for the selected cohort. A source
-              can have mutation rows for the oncoplot but no PDF summary files. If GEO and cfDNA oncoplots look identical after deployment,
+              can have mutation rows for the oncoplot but no PDF summary files. If GEO and Internal Data oncoplots look identical after deployment,
               the server may still be using an older WAR or an older DuckDB file that does not contain the current geo_maf table.
             </p>
             <p>

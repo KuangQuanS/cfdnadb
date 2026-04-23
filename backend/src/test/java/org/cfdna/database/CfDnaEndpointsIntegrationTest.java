@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
@@ -43,7 +44,7 @@ class CfDnaEndpointsIntegrationTest {
     void cancerSummaryReflectsFilesystemProgress() throws Exception {
         mockMvc.perform(get("/api/v1/summary/cancers"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(15)))
+                .andExpect(jsonPath("$.data", hasSize(16)))
                 .andExpect(jsonPath("$.data[0].cancer").value("Breast"))
                 .andExpect(jsonPath("$.data[0].sampleCount").value(2))
                 .andExpect(jsonPath("$.data[0].rawImportStatus").value("Completed"))
@@ -133,6 +134,31 @@ class CfDnaEndpointsIntegrationTest {
                 .andExpect(jsonPath("$.data.cancerTypesPreview", containsString("Breast")));
     }
 
+    @Test
+    void cfdnaAliasCohortsResolveRawMafCancerTypes() throws Exception {
+        mockMvc.perform(get("/api/v1/maf-mutations/filter-options")
+                        .param("source", "private"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cancerTypes", hasItem("Cell_Line")))
+                .andExpect(jsonPath("$.data.cancerTypes", hasItem("Benign_Tumor")))
+                .andExpect(jsonPath("$.data.cancerTypes", not(hasItem("Experiment"))))
+                .andExpect(jsonPath("$.data.cancerTypes", not(hasItem("NGY"))));
+
+        mockMvc.perform(get("/api/v1/maf-mutations/oncoplot")
+                        .param("source", "private")
+                        .param("cancerType", "Cell_Line")
+                        .param("limit", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.genes", hasItem("TTN")))
+                .andExpect(jsonPath("$.data.samples", hasItem("MKN28_cfDNA_5h")));
+
+        mockMvc.perform(get("/api/v1/maf-mutations/genes/TP53")
+                        .param("source", "private")
+                        .param("cancerType", "Benign_Tumor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cancerTypesPreview").value("Benign_Tumor"));
+    }
+
     @AfterAll
     static void cleanup() throws IOException {
         if (Files.notExists(TEST_DATA_DIR)) {
@@ -189,7 +215,9 @@ class CfDnaEndpointsIntegrationTest {
         Files.writeString(root.resolve("cfDNA_MAF_Mutations.tsv"),
                 "Cancer_Type\tChromosome\tStart_Position\tEnd_Position\tReference_Allele\tTumor_Seq_Allele2\tTumor_Sample_Barcode\tHugo_Symbol\tVariant_Classification\ttx\texon\ttxChange\taaChange\tVariant_Type\tFunc.refGene\tGene.refGene\tGeneDetail.refGene\tExonicFunc.refGene\tAAChange.refGene\tLocation\n" +
                         "Breast\tchr17\t7579472\t7579472\tC\tT\tBR-001\tTP53\tMissense_Mutation\t\t\t\t\tSNP\texonic\tTP53\t\tnonsynonymous SNV\tTP53:p.R175H\tchr17:7579472\n" +
-                        "Breast\tchr12\t25245350\t25245350\tG\tA\tBR-002\tKRAS\tMissense_Mutation\t\t\t\t\tSNP\texonic\tKRAS\t\tnonsynonymous SNV\tKRAS:p.G12D\tchr12:25245350\n");
+                        "Breast\tchr12\t25245350\t25245350\tG\tA\tBR-002\tKRAS\tMissense_Mutation\t\t\t\t\tSNP\texonic\tKRAS\t\tnonsynonymous SNV\tKRAS:p.G12D\tchr12:25245350\n" +
+                        "Experiment\tchr2\t179650000\t179650000\tA\tG\tMKN28_cfDNA_5h\tTTN\tMissense_Mutation\t\t\t\t\tSNP\texonic\tTTN\t\tnonsynonymous SNV\tTTN:p.K1R\tchr2:179650000\n" +
+                        "NGY\tchr17\t7579472\t7579472\tC\tT\tNGYX000027\tTP53\tMissense_Mutation\t\t\t\t\tSNP\texonic\tTP53\t\tnonsynonymous SNV\tTP53:p.R175H\tchr17:7579472\n");
         Files.writeString(root.resolve("TCGA_maf_mutation.tsv"),
                 "Hugo_Symbol\tChromosome\tStart_Position\tEnd_Position\tReference_Allele\tTumor_Seq_Allele2\tTumor_Sample_Barcode\tVariant_Classification\tVariant_Type\n" +
                         "TP53\tchr17\t7579472\t7579472\tC\tT\tTCGA-BR-01\tMissense_Mutation\tSNP\n");

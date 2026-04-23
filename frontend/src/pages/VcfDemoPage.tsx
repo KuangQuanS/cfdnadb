@@ -98,7 +98,7 @@ export function VcfDemoPage() {
         <SectionHeader
           eyebrow="Releases"
           title="Recognized public dataset manifests"
-          description="These cards stand in for future public release pages backed by private server-side storage and import jobs."
+          description="These cards stand in for future public release pages backed by internal server-side storage and import jobs."
         />
         <div className="dataset-card-grid">
           {demo?.datasetFolders.map((dataset) => (

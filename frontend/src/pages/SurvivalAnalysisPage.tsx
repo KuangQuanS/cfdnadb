@@ -295,6 +295,8 @@ function AtRiskTable({ result }: { result: KmResult }) {
 function boxOption(result: VafResult, title: string): EChartsOption {
   const names = Object.keys(result.groups);
   const colors = names.map((n, i) => GROUP_COLORS[n] ?? BOX_PALETTE[i % BOX_PALETTE.length]);
+  const hasLongLabels = names.some((name) => name.length > 10);
+  const labelRotate = names.length > 7 ? 45 : hasLongLabels ? 30 : 0;
   const boxData = names.map((n, i) => ({
     value: (() => {
       const b = result.groups[n];
@@ -324,7 +326,7 @@ function boxOption(result: VafResult, title: string): EChartsOption {
       left: 72,
       right: 28,
       top: 108,
-      bottom: 82,
+      bottom: labelRotate ? 132 : 96,
       show: true,
       borderColor: "#202020",
       borderWidth: 1,
@@ -335,8 +337,16 @@ function boxOption(result: VafResult, title: string): EChartsOption {
       data: names,
       name: result.xLabel,
       nameLocation: "middle",
-      nameGap: 32,
+      nameGap: labelRotate ? 78 : 38,
       nameTextStyle: { fontSize: 13 },
+      axisLabel: {
+        interval: 0,
+        rotate: labelRotate,
+        hideOverlap: false,
+        margin: 14,
+        width: 92,
+        overflow: "break"
+      },
       axisLine: { show: true, lineStyle: { color: "#202020", width: 1 } },
       axisTick: { show: true, lineStyle: { color: "#202020" } }
     },
@@ -840,7 +850,7 @@ export function SurvivalAnalysisPage() {
 
       <section className="detail-card survival-results">
         <div className="survival-masthead-copy">
-          <p className="section-eyebrow">Rendered Plots</p>
+          <p className="section-eyebrow">TCGA Survival</p>
           <h2>TCGA {formatCohortLabel(cohort)} survival and allele frequency views</h2>
         </div>
 
@@ -967,6 +977,16 @@ export function SurvivalAnalysisPage() {
             </div>
           </article>
         )}
+        </section>
+      </section>
+
+      <section className="detail-card survival-results survival-results--omics">
+        <div className="survival-masthead-copy">
+          <p className="section-eyebrow">Methylation and CTC</p>
+          <h2>Methylation and CTC distribution views</h2>
+        </div>
+
+        <section className="survival-plots">
         {enabledPlots.cfMeth && cfMethOpt && (
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">

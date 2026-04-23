@@ -3,6 +3,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent 
 import { Link, useParams } from "react-router-dom";
 import { getGeneNcbiSummary, getMafGeneDetail, getMafSampleSuggestions, queryMafGeneMutations } from "../api/client";
 import { IgvBrowser } from "../components/IgvBrowser";
+import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
@@ -11,7 +12,7 @@ const DEFAULT_PAGE_SIZE = 5;
 type SourceKey = "cfDNA" | "TCGA";
 
 const SOURCE_LABELS: Record<SourceKey, string> = {
-  cfDNA: "cfDNA All",
+  cfDNA: "Internal Data All",
   TCGA: "TCGA",
 };
 
@@ -41,7 +42,7 @@ export function GeneMarkerDetailPage() {
           <span className="maf-eyebrow">Gene Detail</span>
           <h2>{geneSymbol}</h2>
           <p>
-            Sample-level mutation records for <strong>{geneSymbol}</strong> across cfDNA and TCGA sources.
+            Sample-level mutation records for <strong>{geneSymbol}</strong> across Internal Data and TCGA sources.
           </p>
         </div>
         <div className="maf-detail-actions">
@@ -312,7 +313,7 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
             <option value="">All</option>
             {derivedCancerTypes.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {formatCohortLabel(option)}
               </option>
             ))}
           </select>
@@ -370,7 +371,7 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
             <h3>Genome Browser</h3>
             <p>
               Interactive mutation map for <strong>{geneSymbol}</strong> on hg38.
-              {applied.cancerType.length > 0 ? ` Filtered to ${applied.cancerType.join(", ")}.` : ""}
+              {applied.cancerType.length > 0 ? ` Filtered to ${applied.cancerType.map(formatCohortLabel).join(", ")}.` : ""}
             </p>
           </div>
           <div className="maf-results-hint">
@@ -442,7 +443,7 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
                           <div className="maf-cell-title">{row.hugoSymbol}</div>
                           {row.transcript ? <div className="maf-cell-sub">{row.transcript}</div> : null}
                         </td>
-                        <td>{row.cancerType || "-"}</td>
+                        <td>{formatCohortLabel(row.cancerType)}</td>
                         <td className="maf-mono-cell">{row.tumorSampleBarcode}</td>
                         <td className="maf-mono-cell">
                           {formatChromosome(row.chromosome)}:{row.startPosition}
