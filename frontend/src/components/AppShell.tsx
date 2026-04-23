@@ -156,32 +156,11 @@ export function AppShell({ children }: PropsWithChildren) {
               A curated academic database of somatic mutations identified from plasma cell-free DNA across multiple cancer cohorts. Built to support liquid biopsy research, biomarker discovery, and cross-cohort comparative genomics.
             </p>
             <p className="footer-badges">
-              <span className="footer-badge">hg38</span>
-              <span className="footer-badge">MuTect2</span>
-              <span className="footer-badge">ANNOVAR</span>
+              <span className="footer-badge">cfDNA</span>
+              <span className="footer-badge">Somatic variants</span>
               <span className="footer-badge">Liquid biopsy</span>
               <span className="footer-badge">Open access</span>
             </p>
-          </div>
-
-          <div className="footer-col">
-            <h4>Data</h4>
-            <ul>
-              <li>Plasma cfDNA, hg38 reference</li>
-              <li>Targeted panel &amp; whole-exome sequencing</li>
-              <li>Somatic SNVs and small indels</li>
-              <li>Per-cohort aggregate files available for download</li>
-            </ul>
-          </div>
-
-          <div className="footer-col">
-            <h4>Methods</h4>
-            <ul>
-              <li>Alignment: BWA-MEM + GATK4 BQSR</li>
-              <li>Calling: MuTect2 tumor-only + PoN + FilterMutectCalls</li>
-              <li>Annotation: ANNOVAR (refGene, gnomAD, ClinVar)</li>
-              <li>Query: embedded DuckDB JDBC over cohort aggregates</li>
-            </ul>
           </div>
 
           <div className="footer-col">

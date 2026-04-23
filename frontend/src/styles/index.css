@@ -129,15 +129,15 @@ button, input, select { font: inherit; }
 
 /* Header */
 .site-header {
-  background-size: 88% auto;
+  background-color: #102744;
+  background-size: cover;
   background-position: center 40%;
   background-repeat: no-repeat;
   color: var(--ink);
   padding: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow: 0 10px 24px rgba(18, 20, 42, 0.18);
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 10;
 }
 
@@ -354,7 +354,7 @@ button, input, select { font: inherit; }
 
 @media (max-width: 760px) {
   .site-header {
-    background-size: 145% auto;
+    background-size: cover;
     background-position: center 34%;
   }
 
@@ -3576,7 +3576,7 @@ button, input, select { font: inherit; }
   margin: 0 auto;
   padding: 34px 28px 24px;
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1.1fr;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 0.8fr);
   gap: 28px;
 }
 .footer-brand .footer-logo {
@@ -3591,7 +3591,7 @@ button, input, select { font: inherit; }
   line-height: 1.6;
   font-size: 0.84rem;
   margin: 0;
-  max-width: 320px;
+  max-width: 620px;
 }
 .footer-col h4 {
   color: rgba(255,255,255,0.45);
