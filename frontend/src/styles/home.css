@@ -21,7 +21,7 @@
 }
 
 .gdc-hero-inner {
-  width: min(1520px, calc(100vw - 40px));
+  width: min(1680px, calc(100vw - 24px));
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(390px, 0.9fr) minmax(430px, 0.9fr) minmax(520px, 1.12fr);
@@ -62,7 +62,7 @@
   display: block;
   width: min(100%, 286px);
   height: auto;
-  margin: -18px 0 -18px;
+  margin: -18px 0 -30px;
   object-fit: contain;
   filter: saturate(1.03) contrast(1.04);
 }

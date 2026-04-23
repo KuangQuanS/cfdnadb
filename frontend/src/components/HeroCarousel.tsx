@@ -82,7 +82,7 @@ type HeroRingEntry = {
 };
 
 function formatThousands(value: number) {
-  return `${(value / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })}k`;
+  return `${Math.round(value / 1000).toLocaleString()}K`;
 }
 
 function buildSunburstEntries(
@@ -154,6 +154,7 @@ function buildHeroSunburstOption(
         center: ["50%", "50%"],
         sort: undefined,
         nodeClick: false,
+        minAngle: 30,
         data: [
           {
             name: title,
