@@ -60,9 +60,9 @@
 
 .gdc-title-logo {
   display: block;
-  width: min(100%, 360px);
+  width: min(100%, 286px);
   height: auto;
-  margin-top: 4px;
+  margin-top: 0;
   object-fit: contain;
   filter: saturate(1.03) contrast(1.04);
 }
@@ -689,6 +689,11 @@
   margin-bottom: 34px;
 }
 
+.portal-showcase-hero--modules {
+  grid-template-columns: minmax(520px, 1fr) minmax(420px, 0.86fr);
+  margin-bottom: 0;
+}
+
 .portal-showcase-hero--reverse {
   grid-template-columns: minmax(420px, 0.92fr) minmax(0, 1fr);
 }
@@ -851,6 +856,10 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 22px;
+}
+
+.portal-showcase-hero--modules .portal-showcase-band-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .portal-tool-tile {

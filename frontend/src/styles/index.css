@@ -158,7 +158,7 @@ button, input, select { font: inherit; }
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 20px 72px 20px 56px;
+  padding: 30px 72px 30px 56px;
   display: flex;
   justify-content: space-between;
   align-items: center;
