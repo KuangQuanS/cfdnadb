@@ -108,12 +108,13 @@
 }
 
 .gdc-body-img {
-  height: 645px;
+  height: 684px;
   width: auto;
   object-fit: contain;
   opacity: 0.94;
   filter: drop-shadow(0 18px 30px rgba(23, 36, 70, 0.12));
   position: relative;
+  transform: translateY(-20px);
   z-index: 1;
   pointer-events: none;
 }
