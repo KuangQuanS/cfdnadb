@@ -131,7 +131,7 @@ button, input, select { font: inherit; }
 .site-header {
   background-color: #102744;
   background-size: cover;
-  background-position: center 40%;
+  background-position: center center;
   background-repeat: no-repeat;
   color: var(--ink);
   padding: 0;
