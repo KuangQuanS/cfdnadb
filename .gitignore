@@ -39,3 +39,4 @@ docs
 CLAUDE.md
 *.zip
 *.tmp
+.codex

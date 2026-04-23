@@ -21,7 +21,7 @@
 }
 
 .gdc-hero-inner {
-  width: min(1680px, calc(100vw - 40px));
+  width: min(1520px, calc(100vw - 40px));
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(390px, 0.9fr) minmax(430px, 0.9fr) minmax(520px, 1.12fr);
