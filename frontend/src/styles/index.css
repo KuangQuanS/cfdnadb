@@ -2966,6 +2966,11 @@ button, input, select { font: inherit; }
   box-shadow: 0 10px 24px rgba(31, 42, 68, 0.08);
   overflow-x: auto;
   overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.waterfall-chart-legend--overlay::-webkit-scrollbar {
+  display: none;
 }
 
 .waterfall-chart-legend-item {
