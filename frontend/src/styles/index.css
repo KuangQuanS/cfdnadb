@@ -250,7 +250,7 @@ button, input, select { font: inherit; }
 .site-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 28px;
   margin-left: auto;
   transform: none;
 }
