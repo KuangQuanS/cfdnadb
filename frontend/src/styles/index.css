@@ -2949,7 +2949,8 @@ button, input, select { font: inherit; }
   right: 10px;
   z-index: 3;
   max-width: min(48%, 720px);
-  justify-content: flex-end;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
   padding: 8px 14px;
   border: 1px solid rgba(215, 222, 234, 0.95);
   border-radius: 10px;
@@ -2958,11 +2959,6 @@ button, input, select { font: inherit; }
   box-shadow: 0 10px 24px rgba(31, 42, 68, 0.08);
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: none;
-}
-
-.waterfall-chart-legend--overlay::-webkit-scrollbar {
-  display: none;
 }
 
 .waterfall-chart-legend-item {
