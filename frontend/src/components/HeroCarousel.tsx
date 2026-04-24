@@ -59,18 +59,18 @@ function formatRingLabel(name: string, value: string) {
 
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 16, anchorPct: 50, browseKey: "HeadAndNeck", alwaysShow: false },
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 16, anchorPct: 51, browseKey: "HeadAndNeck", alwaysShow: false },
   { id: "Lung", label: "Lung", side: "left", topPct: 26, anchorPct: 43, browseKey: "Lung", alwaysShow: true },
-  { id: "Liver", label: "Liver", side: "left", topPct: 36, anchorPct: 43, browseKey: "Liver", alwaysShow: true },
-  { id: "Kidney", label: "Kidney", side: "left", topPct: 42, anchorPct: 44, browseKey: "Kidney", alwaysShow: false },
+  { id: "Liver", label: "Liver", side: "left", topPct: 35, anchorPct: 43, browseKey: "Liver", alwaysShow: true },
+  { id: "Kidney", label: "Kidney", side: "left", topPct: 41, anchorPct: 45, browseKey: "Kidney", alwaysShow: false },
   { id: "Endometrial", label: "Endometrial", side: "left", topPct: 52, anchorPct: 48, browseKey: "Endometrial", alwaysShow: false },
-  { id: "Bladder", label: "Bladder", side: "left", topPct: 57, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
+  { id: "Bladder", label: "Bladder", side: "left", topPct: 55, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
   /* ── right side (top → bottom) ── */
-  { id: "Breast", label: "Breast", side: "right", topPct: 29, anchorPct: 59, browseKey: "Breast", alwaysShow: true },
-  { id: "Gastric", label: "Gastric", side: "right", topPct: 37, anchorPct: 54, browseKey: "Gastric", alwaysShow: false },
-  { id: "Pancreatic", label: "Pancreas", side: "right", topPct: 42, anchorPct: 50, browseKey: "Pancreatic", alwaysShow: true },
-  { id: "Colorectal", label: "Colorectal", side: "right", topPct: 50, anchorPct: 55, browseKey: "Colorectal", alwaysShow: true },
-  { id: "Ovarian", label: "Ovarian", side: "right", topPct: 54, anchorPct: 53, browseKey: "Ovarian", alwaysShow: false },
+  { id: "Breast", label: "Breast", side: "right", topPct: 28, anchorPct: 59, browseKey: "Breast", alwaysShow: true },
+  { id: "Gastric", label: "Gastric", side: "right", topPct: 36, anchorPct: 54, browseKey: "Gastric", alwaysShow: false },
+  { id: "Pancreatic", label: "Pancreas", side: "right", topPct: 37, anchorPct: 48, browseKey: "Pancreatic", alwaysShow: true },
+  { id: "Colorectal", label: "Colorectal", side: "right", topPct: 48, anchorPct: 55, browseKey: "Colorectal", alwaysShow: true },
+  { id: "Ovarian", label: "Ovarian", side: "right", topPct: 51, anchorPct: 53, browseKey: "Ovarian", alwaysShow: false },
 ] as const;
 
 type HeroRingEntry = {
