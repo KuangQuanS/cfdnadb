@@ -416,7 +416,7 @@ export function HeroCarousel() {
   };
 
   const goToBrowse = (browseKey: string) => {
-    navigate(`/browse?cancer=${encodeURIComponent(browseKey)}`);
+    navigate(`/browse?cancer=${encodeURIComponent(browseKey)}&source=cfDNA`);
   };
 
   return (
