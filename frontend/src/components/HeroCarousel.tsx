@@ -152,7 +152,7 @@ function buildHeroSunburstOption(
         top: 0,
         right: 0,
         bottom: 0,
-        radius: [0, "46%"],
+        radius: [0, "44%"],
         center: ["50%", "50%"],
         silent: true,
         tooltip: {
@@ -194,7 +194,7 @@ function buildHeroSunburstOption(
         top: 0,
         right: 0,
         bottom: 0,
-        radius: ["49%", "94%"],
+        radius: ["46%", "94%"],
         center: ["50%", "50%"],
         startAngle: 180,
         sort: undefined,
@@ -473,7 +473,7 @@ export function HeroCarousel() {
                 )}
               </button>
             ))}
-            <div className="body-map-note">Discover Cohort</div>
+            <Link to="/browse" className="body-map-note">Discover Cohort</Link>
           </div>
         </div>
 
