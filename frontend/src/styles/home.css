@@ -45,6 +45,13 @@
   z-index: 1;
 }
 
+@media (min-width: 1201px) and (max-width: 1920px) {
+  .gdc-hero-inner,
+  .portal-section-inner {
+    width: calc(100vw - 56px);
+  }
+}
+
 .gdc-hero-heading {
   display: none;
 }
