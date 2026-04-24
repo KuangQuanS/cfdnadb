@@ -324,9 +324,6 @@ export function BrowsePage() {
                 onChange={(event) => void onFileChange(event.target.files?.[0] ?? null)}
               />
             </div>
-            <span className="statistics-gene-upload-hint">
-              {parsedGenes.length > 0 ? `${parsedGenes.length} genes entered` : "No input provided: showing Top 40 by default"}
-            </span>
             {geneError ? <p className="statistics-gene-error">{geneError}</p> : null}
           </div>
         </div>
