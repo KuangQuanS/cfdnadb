@@ -171,6 +171,7 @@ export function BrowsePage() {
   const [geneInput, setGeneInput] = useState("");
   const [geneError, setGeneError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const geneInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const parsedGenes = useMemo(() => {
     return Array.from(new Set(
@@ -220,6 +221,11 @@ export function BrowsePage() {
     setGeneError(count > MAX_ONCOPLOT_GENES ? `Up to ${MAX_ONCOPLOT_GENES} genes are supported.` : null);
   }, []);
 
+  const syncGeneInputHeight = useCallback((target: HTMLTextAreaElement) => {
+    target.style.height = "44px";
+    target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+  }, []);
+
   const onFileChange = useCallback(async (file: File | null) => {
     if (!file) return;
     const extension = file.name.split(".").pop()?.toLowerCase();
@@ -235,12 +241,15 @@ export function BrowsePage() {
         content = await file.text();
       }
       onGeneInputChange(content);
+      if (geneInputRef.current) {
+        syncGeneInputHeight(geneInputRef.current);
+      }
     } catch (_error) {
       setGeneError("Failed to parse the file. Please verify the file format.");
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }, [onGeneInputChange]);
+  }, [onGeneInputChange, syncGeneInputHeight]);
 
   const plotAssets = useMemo(
     () => [...(plotsQ.data ?? [])].sort((left, right) => rankPlot(left) - rankPlot(right) || left.title.localeCompare(right.title)),
@@ -307,11 +316,16 @@ export function BrowsePage() {
           <div className="statistics-toolbar-field statistics-toolbar-field--genes">
             <span>Gene Input</span>
             <div className="statistics-gene-inline">
-              <input
-                className="statistics-gene-text-input"
+              <textarea
+                ref={geneInputRef}
+                className="statistics-gene-textarea"
                 value={geneInput}
-                onChange={(event) => onGeneInputChange(event.target.value)}
+                onChange={(event) => {
+                  onGeneInputChange(event.target.value);
+                  syncGeneInputHeight(event.target);
+                }}
                 placeholder="Enter genes separated by commas, spaces, or new lines"
+                rows={1}
               />
               <button type="button" className="statistics-gene-upload-btn" onClick={() => fileInputRef.current?.click()}>
                 Upload file

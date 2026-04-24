@@ -2371,7 +2371,7 @@ button, input, select { font: inherit; }
   display: grid;
   grid-template-columns: 240px 190px minmax(0, 1fr);
   gap: 18px;
-  align-items: end;
+  align-items: start;
 }
 
 .statistics-toolbar-field,
@@ -2420,23 +2420,28 @@ button, input, select { font: inherit; }
 
 .statistics-gene-inline {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
 }
 
-.statistics-gene-text-input {
+.statistics-gene-textarea {
+  min-height: 44px;
   height: 44px;
+  max-height: 120px;
   width: 100%;
-  padding: 0 12px;
+  padding: 10px 12px;
   border: 1px solid #cfd7e6;
   border-radius: 4px;
   background: #fff;
   color: #253851;
   font-weight: 600;
+  line-height: 1.4;
+  overflow-y: auto;
+  resize: vertical;
   outline: none;
 }
 
-.statistics-gene-text-input:focus {
+.statistics-gene-textarea:focus {
   border-color: #4f73b8;
   box-shadow: 0 0 0 3px rgba(79, 115, 184, 0.1);
 }
