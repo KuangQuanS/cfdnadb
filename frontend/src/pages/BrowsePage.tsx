@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -12,6 +12,82 @@ import { WaterfallChart } from "../components/WaterfallChart";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
 import type { CancerAsset } from "../types/api";
 import { formatCohortLabel } from "../utils/cohortLabels";
+
+const MAX_ONCOPLOT_GENES = 30;
+const DEFAULT_ONCOPLOT_LIMIT = 40;
+
+async function inflateRaw(data: Uint8Array) {
+  const stream = new DecompressionStream("deflate-raw");
+  const writer = stream.writable.getWriter();
+  await writer.write(data);
+  await writer.close();
+  return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+}
+
+async function readZipEntries(arrayBuffer: ArrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  const entries = new Map<string, Uint8Array>();
+  let offset = 0;
+  while (offset + 30 <= bytes.length) {
+    const signature = bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24);
+    if (signature !== 0x04034b50) break;
+    const compression = bytes[offset + 8] | (bytes[offset + 9] << 8);
+    const compressedSize = bytes[offset + 18] | (bytes[offset + 19] << 8) | (bytes[offset + 20] << 16) | (bytes[offset + 21] << 24);
+    const fileNameLength = bytes[offset + 26] | (bytes[offset + 27] << 8);
+    const extraFieldLength = bytes[offset + 28] | (bytes[offset + 29] << 8);
+    const fileName = new TextDecoder().decode(bytes.slice(offset + 30, offset + 30 + fileNameLength));
+    const dataStart = offset + 30 + fileNameLength + extraFieldLength;
+    const dataEnd = dataStart + compressedSize;
+    if (dataEnd > bytes.length) break;
+    const compressed = bytes.slice(dataStart, dataEnd);
+    if (!fileName.endsWith("/")) {
+      if (compression === 0) entries.set(fileName, compressed);
+      if (compression === 8) entries.set(fileName, await inflateRaw(compressed));
+    }
+    offset = dataEnd;
+  }
+  return entries;
+}
+
+function decodeXmlText(bytes: Uint8Array) {
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
+async function parseXlsxToText(file: File) {
+  const entries = await readZipEntries(await file.arrayBuffer());
+  const workbookXml = entries.get("xl/workbook.xml");
+  const relsXml = entries.get("xl/_rels/workbook.xml.rels");
+  if (!workbookXml || !relsXml) return "";
+  const parser = new DOMParser();
+  const workbookDoc = parser.parseFromString(decodeXmlText(workbookXml), "application/xml");
+  const relsDoc = parser.parseFromString(decodeXmlText(relsXml), "application/xml");
+  const firstSheet = workbookDoc.getElementsByTagName("sheet")[0];
+  if (!firstSheet) return "";
+  const relId = firstSheet.getAttribute("r:id");
+  const relationships = Array.from(relsDoc.getElementsByTagName("Relationship"));
+  const rel = relationships.find((item) => item.getAttribute("Id") === relId);
+  const target = rel?.getAttribute("Target");
+  if (!target) return "";
+  const worksheetPath = `xl/${target.replace(/^\/+/, "")}`;
+  const worksheetXml = entries.get(worksheetPath);
+  if (!worksheetXml) return "";
+  const sharedStringsXml = entries.get("xl/sharedStrings.xml");
+  const sharedStrings = sharedStringsXml
+    ? Array.from(parser.parseFromString(decodeXmlText(sharedStringsXml), "application/xml").getElementsByTagName("t")).map((node) => node.textContent ?? "")
+    : [];
+  const sheetDoc = parser.parseFromString(decodeXmlText(worksheetXml), "application/xml");
+  const values = Array.from(sheetDoc.getElementsByTagName("c")).map((cell) => {
+    const type = cell.getAttribute("t");
+    const raw = cell.getElementsByTagName("v")[0]?.textContent?.trim() ?? "";
+    if (!raw) return "";
+    if (type === "s") {
+      const index = Number(raw);
+      return Number.isInteger(index) ? (sharedStrings[index] ?? "") : "";
+    }
+    return raw;
+  });
+  return values.join("\n");
+}
 
 const BROWSE_SOURCES = [
   { source: "cfDNA", label: "Internal Data" },
@@ -92,6 +168,19 @@ export function BrowsePage() {
 
   const activeSource = source && BROWSE_SOURCES.some((item) => item.source === source) ? source : BROWSE_SOURCES[0].source;
   const selectedLabel = SOURCE_LABELS[activeSource] ?? activeSource;
+  const [geneInput, setGeneInput] = useState("");
+  const [geneError, setGeneError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const parsedGenes = useMemo(() => {
+    return Array.from(new Set(
+      geneInput
+        .split(/[\s,;\n\r\t]+/)
+        .map((value) => value.trim().toUpperCase())
+        .filter(Boolean)
+    ));
+  }, [geneInput]);
+  const effectiveGenes = useMemo(() => parsedGenes.slice(0, MAX_ONCOPLOT_GENES), [parsedGenes]);
 
   const setParam = useCallback(
     (key: string, value: string) => {
@@ -114,11 +203,44 @@ export function BrowsePage() {
   });
 
   const oncoplottQ = useQuery({
-    queryKey: ["browse-oncoplot", plotSource, cancer],
-    queryFn: () => getOncoplottData(plotSource, [cancer], 40),
-    enabled: !!plotSource && !!cancer,
+    queryKey: ["browse-oncoplot", plotSource, cancer, effectiveGenes],
+    queryFn: () => getOncoplottData(plotSource, [cancer], DEFAULT_ONCOPLOT_LIMIT, effectiveGenes.length > 0 ? effectiveGenes : undefined),
+    enabled: !!plotSource && !!cancer && !geneError,
     staleTime: 5 * 60_000,
   });
+
+  const onGeneInputChange = useCallback((value: string) => {
+    setGeneInput(value);
+    const count = Array.from(new Set(
+      value
+        .split(/[\s,;\n\r\t]+/)
+        .map((token) => token.trim())
+        .filter(Boolean)
+    )).length;
+    setGeneError(count > MAX_ONCOPLOT_GENES ? `Up to ${MAX_ONCOPLOT_GENES} genes are supported.` : null);
+  }, []);
+
+  const onFileChange = useCallback(async (file: File | null) => {
+    if (!file) return;
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (!extension || !["txt", "csv", "xlsx"].includes(extension)) {
+      setGeneError("Only txt, csv, and xlsx files are supported.");
+      return;
+    }
+    try {
+      let content = "";
+      if (extension === "xlsx") {
+        content = await parseXlsxToText(file);
+      } else {
+        content = await file.text();
+      }
+      onGeneInputChange(content);
+    } catch (_error) {
+      setGeneError("Failed to parse the file. Please verify the file format.");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }, [onGeneInputChange]);
 
   const plotAssets = useMemo(
     () => [...(plotsQ.data ?? [])].sort((left, right) => rankPlot(left) - rankPlot(right) || left.title.localeCompare(right.title)),
@@ -182,6 +304,28 @@ export function BrowsePage() {
               ))}
             </select>
           </label>
+          <div className="statistics-toolbar-field statistics-toolbar-field--genes">
+            <span>Gene Input</span>
+            <div className="statistics-gene-inline">
+              <input
+                className="statistics-gene-text-input"
+                value={geneInput}
+                onChange={(event) => onGeneInputChange(event.target.value)}
+                placeholder="Enter genes separated by commas, spaces, or new lines"
+              />
+              <button type="button" className="statistics-gene-upload-btn" onClick={() => fileInputRef.current?.click()}>
+                Upload file
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.csv,.xlsx"
+                className="statistics-gene-hidden-file"
+                onChange={(event) => void onFileChange(event.target.files?.[0] ?? null)}
+              />
+            </div>
+            {geneError ? <p className="statistics-gene-error">{geneError}</p> : null}
+          </div>
         </div>
 
         <div className="statistics-toolbar-meta">
@@ -198,9 +342,12 @@ export function BrowsePage() {
           <div className="statistics-panel-header">
             <h3 className="stat-pdf-title">Oncoplot</h3>
             <p className="statistics-panel-note">
-              Top 40 most frequently mutated genes across all samples in {formatCohortLabel(cancer)} / {selectedLabel}. Each column is a sample, each row is a gene, and cells are colored by the most severe mutation class observed.
+              {parsedGenes.length > 0
+                ? `Selected genes in ${formatCohortLabel(cancer)} / ${selectedLabel} (up to ${MAX_ONCOPLOT_GENES}). Each column is a sample, each row is a gene, and cells are colored by the most severe mutation class observed.`
+                : `Top ${DEFAULT_ONCOPLOT_LIMIT} most frequently mutated genes across all samples in ${formatCohortLabel(cancer)} / ${selectedLabel}. Each column is a sample, each row is a gene, and cells are colored by the most severe mutation class observed.`}
             </p>
           </div>
+          {geneError ? <p className="panel-note" style={{ color: "#c0392b" }}>{geneError}</p> : null}
           {oncoplottQ.isLoading ? <p className="panel-note">Loading oncoplot data...</p> : null}
           {oncoplottQ.isError ? <p className="panel-note" style={{ color: "#c0392b" }}>Failed to load oncoplot data.</p> : null}
           {oncoplottQ.data && oncoplottQ.data.genes.length > 0 ? (

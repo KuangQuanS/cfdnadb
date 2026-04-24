@@ -373,9 +373,10 @@ export function toGenePlotUrl(url: string) {
   return `${API_BASE}${url}`;
 }
 
-export function getOncoplottData(source: string, cancerTypes: string[], limit = 20) {
+export function getOncoplottData(source: string, cancerTypes: string[], limit = 20, genes?: string[]) {
   const params = new URLSearchParams({ source, limit: String(limit) });
   for (const c of cancerTypes) params.append("cancerType", c);
+  for (const gene of genes ?? []) params.append("gene", gene);
   return requestLive<OncoplottData>(`/api/v1/maf-mutations/oncoplot?${params.toString()}`);
 }
 
