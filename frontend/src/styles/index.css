@@ -2400,23 +2400,6 @@ button, input, select { font: inherit; }
   outline: none;
 }
 
-.statistics-toolbar-field textarea {
-  min-height: 72px;
-  padding: 10px 12px;
-  border: 1px solid #cfd7e6;
-  border-radius: 4px;
-  background: #fff;
-  color: #253851;
-  font-weight: 600;
-  resize: vertical;
-  outline: none;
-}
-
-.statistics-toolbar-field textarea:focus {
-  border-color: #4f73b8;
-  box-shadow: 0 0 0 3px rgba(79, 115, 184, 0.1);
-}
-
 .statistics-toolbar-field select:focus {
   border-color: #4f73b8;
   box-shadow: 0 0 0 3px rgba(79, 115, 184, 0.1);
@@ -2435,15 +2418,47 @@ button, input, select { font: inherit; }
   min-width: 320px;
 }
 
-.statistics-gene-upload-row {
+.statistics-gene-inline {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
-.statistics-gene-upload-row input[type="file"] {
-  font-size: 0.82rem;
-  color: #45556d;
+.statistics-gene-text-input {
+  height: 44px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid #cfd7e6;
+  border-radius: 4px;
+  background: #fff;
+  color: #253851;
+  font-weight: 600;
+  outline: none;
+}
+
+.statistics-gene-text-input:focus {
+  border-color: #4f73b8;
+  box-shadow: 0 0 0 3px rgba(79, 115, 184, 0.1);
+}
+
+.statistics-gene-upload-btn {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #cfd7e6;
+  border-radius: 4px;
+  background: #fff;
+  color: #2d4368;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.statistics-gene-upload-btn:hover {
+  border-color: #9eb0ca;
+}
+
+.statistics-gene-hidden-file {
+  display: none;
 }
 
 .statistics-gene-upload-hint {

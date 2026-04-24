@@ -306,23 +306,27 @@ export function BrowsePage() {
           </label>
           <div className="statistics-toolbar-field statistics-toolbar-field--genes">
             <span>Gene Input</span>
-            <textarea
-              value={geneInput}
-              onChange={(event) => onGeneInputChange(event.target.value)}
-              placeholder="输入基因（逗号/空格/换行分隔），或上传 txt/csv/xlsx"
-              rows={2}
-            />
-            <div className="statistics-gene-upload-row">
+            <div className="statistics-gene-inline">
+              <input
+                className="statistics-gene-text-input"
+                value={geneInput}
+                onChange={(event) => onGeneInputChange(event.target.value)}
+                placeholder="输入基因（逗号/空格/换行分隔）"
+              />
+              <button type="button" className="statistics-gene-upload-btn" onClick={() => fileInputRef.current?.click()}>
+                上传文件
+              </button>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".txt,.csv,.xlsx"
+                className="statistics-gene-hidden-file"
                 onChange={(event) => void onFileChange(event.target.files?.[0] ?? null)}
               />
-              <span className="statistics-gene-upload-hint">
-                {parsedGenes.length > 0 ? `已输入 ${parsedGenes.length} 个基因` : "未输入时默认展示 Top 40"}
-              </span>
             </div>
+            <span className="statistics-gene-upload-hint">
+              {parsedGenes.length > 0 ? `已输入 ${parsedGenes.length} 个基因` : "未输入时默认展示 Top 40"}
+            </span>
             {geneError ? <p className="statistics-gene-error">{geneError}</p> : null}
           </div>
         </div>
