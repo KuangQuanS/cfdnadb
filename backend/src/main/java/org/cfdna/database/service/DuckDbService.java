@@ -4112,14 +4112,15 @@ public class DuckDbService {
     /** List PDF plots (not in gene subfolders) for a cancer + source. */
     public List<CancerAssetDto> getStatisticsPlots(String cancer, String source) {
         String validated = validateCancer(cancer);
-        // GEO PDFs (oncoplot/spectrum/summary) live alongside the public aggregates at
-        // {cancer}/public/stats/GEO_{Cancer}_*.pdf and are indexed under source='public'.
-        // Map the public-facing source='geo' to that storage location.
-        boolean geoFromPublic = isGeo(source);
-        String storageSource = geoFromPublic ? "public" : source;
+        // Public-cohort PDFs live under {cancer}/public/stats/ and are indexed with source='public'
+        // (lowercase). Map the public-facing sources 'Public' and legacy 'geo' to that storage key;
+        // legacy 'geo' additionally narrows to GEO_*-prefixed files for backward compatibility.
+        boolean geoLegacy = isGeo(source);
+        boolean publicSource = isPublic(source) || geoLegacy;
+        String storageSource = publicSource ? "public" : source;
         String sql = "SELECT title, file_name, size_bytes FROM statistics_asset_index " +
                 "WHERE cancer_type = ? AND source = ? AND asset_type = 'statistics_plot'" +
-                (geoFromPublic ? " AND file_name LIKE 'GEO\\_%' ESCAPE '\\'" : "") +
+                (geoLegacy ? " AND file_name LIKE 'GEO\\_%' ESCAPE '\\'" : "") +
                 " ORDER BY file_name ASC";
         List<CancerAssetDto> plots = new ArrayList<>();
         try (Connection connection = openMafConnection();
@@ -4148,11 +4149,12 @@ public class DuckDbService {
     /** Serve a specific statistics plot PDF file. */
     public CancerAssetResource loadStatisticsPlot(String cancer, String source, String fileName) {
         String validated = validateCancer(cancer);
-        boolean geoFromPublic = isGeo(source);
-        String storageSource = geoFromPublic ? "public" : source;
+        boolean geoLegacy = isGeo(source);
+        boolean publicSource = isPublic(source) || geoLegacy;
+        String storageSource = publicSource ? "public" : source;
         String sql = "SELECT file_path, size_bytes FROM statistics_asset_index " +
                 "WHERE cancer_type = ? AND source = ? AND asset_type = 'statistics_plot' AND file_name = ?" +
-                (geoFromPublic ? " AND file_name LIKE 'GEO\\_%' ESCAPE '\\'" : "") +
+                (geoLegacy ? " AND file_name LIKE 'GEO\\_%' ESCAPE '\\'" : "") +
                 " LIMIT 1";
         try (Connection connection = openMafConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
