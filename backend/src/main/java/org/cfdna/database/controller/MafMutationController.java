@@ -123,7 +123,8 @@ public class MafMutationController {
     public ApiResponse<OncoplottDto> getOncoplot(
             @RequestParam(defaultValue = "cfDNA") String source,
             @RequestParam(required = false) List<String> cancerType,
+            @RequestParam(required = false) List<String> gene,
             @RequestParam(defaultValue = "20") int limit) {
-        return ApiResponse.success(duckDbService.getOncoplottData(source, cancerType, limit));
+        return ApiResponse.success(duckDbService.getOncoplottData(source, cancerType, gene, limit));
     }
 }

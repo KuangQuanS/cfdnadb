@@ -2006,17 +2006,17 @@ public class DuckDbService {
      * Genes are ordered by the number of distinct samples mutated (descending).
      * Samples are ordered by total mutation count (descending).
      */
-    public OncoplottDto getOncoplottData(String source, List<String> cancerTypes, int geneLimit) {
+    public OncoplottDto getOncoplottData(String source, List<String> cancerTypes, List<String> selectedGenes, int geneLimit) {
         if (isTcga(source)) {
-            return getOncoplottDataFromTcga(cancerTypes, geneLimit);
+            return getOncoplottDataFromTcga(cancerTypes, selectedGenes, geneLimit);
         }
         if (isGeo(source) || isPrivate(source) || isPublic(source)) {
-            return getOncoplottDataFromMafTable(source, cancerTypes, geneLimit);
+            return getOncoplottDataFromMafTable(source, cancerTypes, selectedGenes, geneLimit);
         }
-        return getOncoplottDataFromPanFiles(cancerTypes, geneLimit);
+        return getOncoplottDataFromPanFiles(cancerTypes, selectedGenes, geneLimit);
     }
 
-    private OncoplottDto getOncoplottDataFromMafTable(String source, List<String> cancerTypes, int geneLimit) {
+    private OncoplottDto getOncoplottDataFromMafTable(String source, List<String> cancerTypes, List<String> selectedGenes, int geneLimit) {
         if (!mafDatabaseAvailable()) {
             return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
         }
@@ -2030,6 +2030,10 @@ public class DuckDbService {
         List<String> requested = normalizeFilterValues(cancerTypes);
         List<String> normalizedCancerTypes = normalizeOncoplotCancerTypesForMaf(source, requested);
         int limit = Math.max(5, Math.min(geneLimit, 50));
+        List<String> normalizedGenes = normalizeOncoplotGenes(selectedGenes);
+        String geneFilterClause = normalizedGenes.isEmpty()
+                ? ""
+                : "        AND LOWER(hugo_symbol) IN (" + String.join(",", Collections.nCopies(normalizedGenes.size(), "?")) + ")\n";
 
         List<String> rowPredicates = new ArrayList<>();
         if (geoFromPublic) {
@@ -2071,9 +2075,10 @@ public class DuckDbService {
                 "        SELECT hugo_symbol, COUNT(DISTINCT tumor_sample_barcode) AS nsamp\n" +
                 "        FROM raw\n" +
                 "        WHERE hugo_symbol IS NOT NULL AND hugo_symbol <> ''\n" +
+                geneFilterClause +
                 "        GROUP BY hugo_symbol\n" +
                 "        ORDER BY nsamp DESC, hugo_symbol ASC\n" +
-                "        LIMIT " + limit + "\n" +
+                (normalizedGenes.isEmpty() ? "        LIMIT " + limit + "\n" : "") +
                 "    )\n" +
                 "),\n" +
                 "best AS (\n" +
@@ -2114,6 +2119,7 @@ public class DuckDbService {
 
                 idx = 1;
                 for (String cancerType : normalizedCancerTypes) stmt.setString(idx++, cancerType);
+                for (String gene : normalizedGenes) stmt.setString(idx++, gene);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         String gene = rs.getString("hugo_symbol");
@@ -2131,11 +2137,7 @@ public class DuckDbService {
             return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
         }
 
-        List<String> genes = geneCounts.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
-                        .thenComparing(Map.Entry.comparingByKey()))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+        List<String> genes = orderOncoplotGenes(geneCounts, normalizedGenes);
 
         List<String> samples = sampleCounts.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
@@ -2156,13 +2158,45 @@ public class DuckDbService {
         return cancerTypes;
     }
 
+    private List<String> normalizeOncoplotGenes(List<String> genes) {
+        return normalizeFilterValues(genes).stream()
+                .map(value -> value.toLowerCase(Locale.ROOT))
+                .distinct()
+                .limit(30)
+                .collect(Collectors.toList());
+    }
+
+    private List<String> orderOncoplotGenes(Map<String, Long> geneCounts, List<String> normalizedGenes) {
+        if (normalizedGenes.isEmpty()) {
+            return geneCounts.entrySet().stream()
+                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
+                            .thenComparing(Map.Entry.comparingByKey()))
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+        }
+        Map<String, String> matchedByLower = new LinkedHashMap<>();
+        for (String gene : geneCounts.keySet()) {
+            matchedByLower.putIfAbsent(gene.toLowerCase(Locale.ROOT), gene);
+        }
+        List<String> ordered = new ArrayList<>();
+        for (String wanted : normalizedGenes) {
+            String matched = matchedByLower.get(wanted);
+            if (matched != null) ordered.add(matched);
+        }
+        return ordered;
+    }
+
     /**
      * Queries oncoplot data directly from clinical_data.txt + mutations_data.txt via DuckDB.
      * JOINs on Tumor_Sample_Barcode to filter mutations by cancer cohort.
      */
-    private OncoplottDto getOncoplottDataFromPanFiles(List<String> cancerTypes, int geneLimit) {
+    private OncoplottDto getOncoplottDataFromPanFiles(List<String> cancerTypes, List<String> selectedGenes, int geneLimit) {
         List<String> requested = normalizeFilterValues(cancerTypes);
         int limit = Math.max(5, Math.min(geneLimit, 50));
+        List<String> normalizedGenes = normalizeOncoplotGenes(selectedGenes);
+        String geneFilterClause = normalizedGenes.isEmpty()
+                ? ""
+                : "        AND LOWER(Hugo_Symbol) IN (" + String.join(",", Collections.nCopies(normalizedGenes.size(), "?")) + ")\n";
 
         // Map frontend cancer names to CancerType values in clinical_data.txt
         List<String> panTypes = requested.stream()
@@ -2206,9 +2240,10 @@ public class DuckDbService {
                 "        SELECT Hugo_Symbol, COUNT(DISTINCT Tumor_Sample_Barcode) AS nsamp\n" +
                 "        FROM raw\n" +
                 "        WHERE Hugo_Symbol IS NOT NULL AND Hugo_Symbol <> ''\n" +
+                geneFilterClause +
                 "        GROUP BY Hugo_Symbol\n" +
                 "        ORDER BY nsamp DESC, Hugo_Symbol ASC\n" +
-                "        LIMIT " + limit + "\n" +
+                (normalizedGenes.isEmpty() ? "        LIMIT " + limit + "\n" : "") +
                 "    )\n" +
                 "),\n" +
                 "best AS (\n" +
@@ -2247,6 +2282,7 @@ public class DuckDbService {
 
             idx = 1;
             for (String t : panTypes) stmt.setString(idx++, t);
+            for (String gene : normalizedGenes) stmt.setString(idx++, gene);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     String gene   = rs.getString("hugo_symbol");
@@ -2263,11 +2299,7 @@ public class DuckDbService {
             return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
         }
 
-        List<String> genes = geneCounts.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
-                        .thenComparing(Map.Entry.comparingByKey()))
-                .map(Map.Entry::getKey)
-                .collect(java.util.stream.Collectors.toList());
+        List<String> genes = orderOncoplotGenes(geneCounts, normalizedGenes);
 
         List<String> samples = sampleCounts.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
@@ -2282,7 +2314,7 @@ public class DuckDbService {
      * TCGA oncoplot: uses the tcga_maf table in maf.duckdb, filtered by sample barcodes
      * read from the per-cancer TCGA matrix files (since cancer_type is not populated in DB).
      */
-    private OncoplottDto getOncoplottDataFromTcga(List<String> cancerTypes, int geneLimit) {
+    private OncoplottDto getOncoplottDataFromTcga(List<String> cancerTypes, List<String> selectedGenes, int geneLimit) {
         if (!mafDatabaseAvailable()) {
             return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
         }
@@ -2290,6 +2322,10 @@ public class DuckDbService {
         String table = TCGA_MAF_TABLE;
         List<String> requested = normalizeFilterValues(cancerTypes);
         int limit = Math.max(5, Math.min(geneLimit, 50));
+        List<String> normalizedGenes = normalizeOncoplotGenes(selectedGenes);
+        String geneFilterClause = normalizedGenes.isEmpty()
+                ? ""
+                : "        AND LOWER(hugo_symbol) IN (" + String.join(",", Collections.nCopies(normalizedGenes.size(), "?")) + ")\n";
 
         String whereFragment;
         List<String> bindValues;
@@ -2327,9 +2363,10 @@ public class DuckDbService {
                 "        SELECT hugo_symbol, COUNT(DISTINCT tumor_sample_barcode) AS nsamp\n" +
                 "        FROM raw\n" +
                 "        WHERE hugo_symbol IS NOT NULL AND hugo_symbol <> ''\n" +
+                geneFilterClause +
                 "        GROUP BY hugo_symbol\n" +
                 "        ORDER BY nsamp DESC, hugo_symbol ASC\n" +
-                "        LIMIT " + limit + "\n" +
+                (normalizedGenes.isEmpty() ? "        LIMIT " + limit + "\n" : "") +
                 "    )\n" +
                 "),\n" +
                 "best AS (\n" +
@@ -2372,6 +2409,7 @@ public class DuckDbService {
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 int idx = 1;
                 for (String v : bindValues) stmt.setString(idx++, v);
+                for (String gene : normalizedGenes) stmt.setString(idx++, gene);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         String gene   = rs.getString("hugo_symbol");
@@ -2389,11 +2427,7 @@ public class DuckDbService {
             return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
         }
 
-        List<String> genes = geneCounts.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
-                        .thenComparing(Map.Entry.comparingByKey()))
-                .map(Map.Entry::getKey)
-                .collect(java.util.stream.Collectors.toList());
+        List<String> genes = orderOncoplotGenes(geneCounts, normalizedGenes);
 
         List<String> samples = sampleCounts.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
