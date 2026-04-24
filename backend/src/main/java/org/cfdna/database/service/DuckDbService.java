@@ -2021,17 +2021,31 @@ public class DuckDbService {
             return new OncoplottDto(List.of(), List.of(), List.of(), Map.of(), Map.of());
         }
 
-        String table = resolveMafTable(source);
+        // GEO data is now distributed only as the pre-aggregated GEO_{Cancer}_all_mutations.txt
+        // files under {cancer}/public/stats/, which import into public_maf (and the lowercase
+        // public_maf_view). The legacy per-sample geo_maf path is empty in production, so route
+        // GEO oncoplot queries through the public view filtered by source_dataset='GEO'.
+        boolean geoFromPublic = isGeo(source);
+        String table = geoFromPublic ? "public_maf_view" : resolveMafTable(source);
         List<String> requested = normalizeFilterValues(cancerTypes);
         List<String> normalizedCancerTypes = normalizeOncoplotCancerTypesForMaf(source, requested);
         int limit = Math.max(5, Math.min(geneLimit, 50));
 
-        String cancerWhere = normalizedCancerTypes.isEmpty()
+        List<String> rowPredicates = new ArrayList<>();
+        if (geoFromPublic) {
+            rowPredicates.add("source_dataset = 'GEO'");
+        }
+        if (!normalizedCancerTypes.isEmpty()) {
+            rowPredicates.add("cancer_type IN (" +
+                    String.join(",", Collections.nCopies(normalizedCancerTypes.size(), "?")) + ")");
+        }
+        String cancerWhere = rowPredicates.isEmpty()
                 ? ""
-                : "WHERE cancer_type IN (" + String.join(",", Collections.nCopies(normalizedCancerTypes.size(), "?")) + ")\n";
-        String sampleWhere = normalizedCancerTypes.isEmpty()
-                ? "WHERE tumor_sample_barcode IS NOT NULL AND TRIM(tumor_sample_barcode) <> ''\n"
-                : cancerWhere + "AND tumor_sample_barcode IS NOT NULL AND TRIM(tumor_sample_barcode) <> ''\n";
+                : "WHERE " + String.join(" AND ", rowPredicates) + "\n";
+
+        List<String> samplePredicates = new ArrayList<>(rowPredicates);
+        samplePredicates.add("tumor_sample_barcode IS NOT NULL AND TRIM(tumor_sample_barcode) <> ''");
+        String sampleWhere = "WHERE " + String.join(" AND ", samplePredicates) + "\n";
 
         String sql =
                 "WITH raw AS (\n" +
@@ -4098,13 +4112,20 @@ public class DuckDbService {
     /** List PDF plots (not in gene subfolders) for a cancer + source. */
     public List<CancerAssetDto> getStatisticsPlots(String cancer, String source) {
         String validated = validateCancer(cancer);
+        // GEO PDFs (oncoplot/spectrum/summary) live alongside the public aggregates at
+        // {cancer}/public/stats/GEO_{Cancer}_*.pdf and are indexed under source='public'.
+        // Map the public-facing source='geo' to that storage location.
+        boolean geoFromPublic = isGeo(source);
+        String storageSource = geoFromPublic ? "public" : source;
         String sql = "SELECT title, file_name, size_bytes FROM statistics_asset_index " +
-                "WHERE cancer_type = ? AND source = ? AND asset_type = 'statistics_plot' ORDER BY file_name ASC";
+                "WHERE cancer_type = ? AND source = ? AND asset_type = 'statistics_plot'" +
+                (geoFromPublic ? " AND file_name LIKE 'GEO\\_%' ESCAPE '\\'" : "") +
+                " ORDER BY file_name ASC";
         List<CancerAssetDto> plots = new ArrayList<>();
         try (Connection connection = openMafConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, validated);
-            statement.setString(2, source);
+            statement.setString(2, storageSource);
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
                     String fileName = rs.getString("file_name");
@@ -4127,12 +4148,16 @@ public class DuckDbService {
     /** Serve a specific statistics plot PDF file. */
     public CancerAssetResource loadStatisticsPlot(String cancer, String source, String fileName) {
         String validated = validateCancer(cancer);
+        boolean geoFromPublic = isGeo(source);
+        String storageSource = geoFromPublic ? "public" : source;
         String sql = "SELECT file_path, size_bytes FROM statistics_asset_index " +
-                "WHERE cancer_type = ? AND source = ? AND asset_type = 'statistics_plot' AND file_name = ? LIMIT 1";
+                "WHERE cancer_type = ? AND source = ? AND asset_type = 'statistics_plot' AND file_name = ?" +
+                (geoFromPublic ? " AND file_name LIKE 'GEO\\_%' ESCAPE '\\'" : "") +
+                " LIMIT 1";
         try (Connection connection = openMafConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, validated);
-            statement.setString(2, source);
+            statement.setString(2, storageSource);
             statement.setString(3, fileName);
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) {
