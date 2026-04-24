@@ -91,7 +91,7 @@ async function parseXlsxToText(file: File) {
 
 const BROWSE_SOURCES = [
   { source: "cfDNA", label: "Internal Data" },
-  { source: "geo", label: "GEO" },
+  { source: "Public", label: "Public Cohorts" },
   { source: "tcga", label: "TCGA" },
 ] as const;
 
@@ -102,7 +102,7 @@ const SOURCE_LABELS: Record<string, string> = Object.fromEntries(
 function toBrowsePlotSource(source: string) {
   if (source === "cfDNA") return "private";
   if (source === "tcga") return "tcga";
-  return "geo";
+  return "Public";
 }
 
 function getPlotDescription(asset: CancerAsset) {
@@ -273,8 +273,8 @@ export function BrowsePage() {
     if (activeSource === "cfDNA") {
       return "Internal Data uses the internal cohort statistics plots and internal mutation rows for the interactive oncoplot.";
     }
-    if (activeSource === "geo") {
-      return "GEO uses GEO statistics plots and GEO mutation rows for the interactive oncoplot.";
+    if (activeSource === "Public") {
+      return "Public Cohorts uses aggregated statistics plots and mutation rows from external public datasets (e.g. GEO) for the interactive oncoplot.";
     }
     if (activeSource === "tcga") {
       return "TCGA uses its independent oncoplot and cohort summary plots for the selected cancer type.";

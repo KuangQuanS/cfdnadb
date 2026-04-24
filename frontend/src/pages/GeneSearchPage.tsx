@@ -12,11 +12,10 @@ import { formatNumber } from "../utils/format";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 10;
-const DATA_SOURCE_OPTIONS = ["private", "GEO", "Public"] as const;
+const DATA_SOURCE_OPTIONS = ["private", "Public"] as const;
 const DATA_SOURCE_LABELS: Record<string, string> = {
   private: "Internal Data",
-  GEO: "GEO",
-  Public: "Public Aggregates",
+  Public: "Public Cohorts",
 };
 
 const HARDCODED_CHROMOSOMES = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","X","Y"];
@@ -189,7 +188,7 @@ export function GeneSearchPage() {
         <div className="maf-hero-copy">
           <span className="maf-eyebrow">Mutation Workbench</span>
           <h2>Gene Search</h2>
-          <p>Search mutation calls in a gene-centric table. Use the Data Source filter to switch between Internal Data, GEO, and TCGA datasets.</p>
+          <p>Search mutation calls in a gene-centric table. Use the Data Source filter to combine Internal Data and Public Cohorts as needed.</p>
         </div>
 
         <div className="detail-card maf-search-card">

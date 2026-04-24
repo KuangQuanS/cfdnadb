@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { PageLoader } from "./PageLoader";
 import headerBgPng from "../assets/background_original.png";
+import siteLogoPng from "../assets/cfDNAlogo.png";
 
 const navItems = [
   { to: "/", label: "Home" },
@@ -111,7 +112,9 @@ export function AppShell({ children }: PropsWithChildren) {
         }}
       >
         <div className="header-container">
-          <div className="title-area" aria-hidden="true" />
+          <Link to="/" className="header-brand" aria-label="cfDNAdb home">
+            <img src={siteLogoPng} alt="cfDNAdb" className="header-brand-logo" />
+          </Link>
           <nav className="site-nav">
             {navItems.slice(0, 2).map((item) => (
               <NavLink
