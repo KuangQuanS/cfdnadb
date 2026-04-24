@@ -24,8 +24,8 @@ export function GeneSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const dataSources = searchParams.getAll("dataSource");
-  // both or neither selected → cfDNA (union); single → that source
-  const source = dataSources.length === 1 ? dataSources[0] : "cfDNA";
+  // none selected defaults to Internal Data; selecting both queries the combined cfDNA view.
+  const source = dataSources.length === 0 ? "private" : dataSources.length === 1 ? dataSources[0] : "cfDNA";
   const gene = searchParams.get("gene") ?? "";
   const cancerTypes = searchParams.getAll("cancerType");
   const chromosomes = searchParams.getAll("chromosome");

@@ -705,7 +705,7 @@ public class MafDuckDbImportService {
                             "'' AS location " +
                             "FROM public_maf");
 
-            // VIEW that unions private cfDNA + GEO for "all cfDNA" queries
+            // VIEW that unions Internal Data + Public Cohorts for combined cfDNA queries.
             statement.execute("DROP VIEW IF EXISTS all_cfdna_maf");
             statement.execute(
                     "CREATE VIEW all_cfdna_maf AS " +
@@ -719,10 +719,9 @@ public class MafDuckDbImportService {
                             "SELECT cancer_type, chromosome, start_position, end_position, " +
                             "reference_allele, tumor_seq_allele2, tumor_sample_barcode, " +
                             "hugo_symbol, variant_classification, variant_type, " +
-                            "'' AS transcript, '' AS exon, aa_change_refgene AS aa_change, " +
-                            "functional_region, '' AS exonic_function, " +
-                            "'' AS gene_refgene, gene_detail_refgene, aa_change_refgene, '' AS location, '' AS tx_change " +
-                            "FROM geo_maf");
+                            "transcript, exon, aa_change, functional_region, exonic_function, " +
+                            "gene_refgene, gene_detail_refgene, aa_change_refgene, location, tx_change " +
+                            "FROM public_maf_view");
         }
     }
 

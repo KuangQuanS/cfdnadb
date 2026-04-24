@@ -1119,6 +1119,10 @@ public class DuckDbService {
         return "Public".equalsIgnoreCase(source);
     }
 
+    private boolean isCombinedCfdna(String source) {
+        return "cfDNA".equalsIgnoreCase(source);
+    }
+
     /** Return the SELECT fragment for detail columns that may not exist in every MAF table. */
     private String mafDetailColumns(String source) {
         if (isGeo(source)) {
@@ -1209,6 +1213,12 @@ public class DuckDbService {
         List<String> normalized = normalizeFilterValues(cancerTypes);
         if (isTcga(source) || isGeo(source) || isPublic(source)) {
             return normalized;
+        }
+        if (isCombinedCfdna(source)) {
+            return normalized.stream()
+                    .flatMap(value -> java.util.stream.Stream.of(CANCER_TO_CFDNA_TYPE.getOrDefault(value, value), value))
+                    .distinct()
+                    .collect(Collectors.toList());
         }
         return normalized.stream()
                 .map(value -> CANCER_TO_CFDNA_TYPE.getOrDefault(value, value))
@@ -1939,6 +1949,7 @@ public class DuckDbService {
         return !isTcga(source)
                 && !isGeo(source)
                 && !isPublic(source)
+                && !isCombinedCfdna(source)
                 && !hasGene
                 && !hasSample
                 && chromosomes.isEmpty()
