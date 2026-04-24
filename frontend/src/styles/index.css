@@ -2371,7 +2371,7 @@ button, input, select { font: inherit; }
   display: grid;
   grid-template-columns: 240px 190px minmax(0, 1fr);
   gap: 18px;
-  align-items: end;
+  align-items: start;
 }
 
 .statistics-toolbar-field,
