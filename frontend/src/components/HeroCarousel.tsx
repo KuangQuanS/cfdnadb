@@ -433,7 +433,6 @@ export function HeroCarousel() {
                   className="gdc-search-input"
                 />
                 <button type="submit" className="gdc-search-submit">Search</button>
-                <Link to="/gene-search" className="gdc-search-link">Advanced search</Link>
               </div>
             </form>
           </div>
