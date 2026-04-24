@@ -217,14 +217,14 @@ export function BrowsePage() {
         .map((token) => token.trim())
         .filter(Boolean)
     )).length;
-    setGeneError(count > MAX_ONCOPLOT_GENES ? `最多支持 ${MAX_ONCOPLOT_GENES} 个基因。` : null);
+    setGeneError(count > MAX_ONCOPLOT_GENES ? `Up to ${MAX_ONCOPLOT_GENES} genes are supported.` : null);
   }, []);
 
   const onFileChange = useCallback(async (file: File | null) => {
     if (!file) return;
     const extension = file.name.split(".").pop()?.toLowerCase();
     if (!extension || !["txt", "csv", "xlsx"].includes(extension)) {
-      setGeneError("仅支持 txt、csv、xlsx 文件。");
+      setGeneError("Only txt, csv, and xlsx files are supported.");
       return;
     }
     try {
@@ -236,7 +236,7 @@ export function BrowsePage() {
       }
       onGeneInputChange(content);
     } catch (_error) {
-      setGeneError("解析文件失败，请检查文件内容格式。");
+      setGeneError("Failed to parse the file. Please verify the file format.");
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -311,10 +311,10 @@ export function BrowsePage() {
                 className="statistics-gene-text-input"
                 value={geneInput}
                 onChange={(event) => onGeneInputChange(event.target.value)}
-                placeholder="输入基因（逗号/空格/换行分隔）"
+                placeholder="Enter genes separated by commas, spaces, or new lines"
               />
               <button type="button" className="statistics-gene-upload-btn" onClick={() => fileInputRef.current?.click()}>
-                上传文件
+                Upload file
               </button>
               <input
                 ref={fileInputRef}
@@ -325,7 +325,7 @@ export function BrowsePage() {
               />
             </div>
             <span className="statistics-gene-upload-hint">
-              {parsedGenes.length > 0 ? `已输入 ${parsedGenes.length} 个基因` : "未输入时默认展示 Top 40"}
+              {parsedGenes.length > 0 ? `${parsedGenes.length} genes entered` : "No input provided: showing Top 40 by default"}
             </span>
             {geneError ? <p className="statistics-gene-error">{geneError}</p> : null}
           </div>
@@ -346,7 +346,7 @@ export function BrowsePage() {
             <h3 className="stat-pdf-title">Oncoplot</h3>
             <p className="statistics-panel-note">
               {parsedGenes.length > 0
-                ? `Selected genes in ${formatCohortLabel(cancer)} / ${selectedLabel} (最多 ${MAX_ONCOPLOT_GENES} 个). Each column is a sample, each row is a gene, and cells are colored by the most severe mutation class observed.`
+                ? `Selected genes in ${formatCohortLabel(cancer)} / ${selectedLabel} (up to ${MAX_ONCOPLOT_GENES}). Each column is a sample, each row is a gene, and cells are colored by the most severe mutation class observed.`
                 : `Top ${DEFAULT_ONCOPLOT_LIMIT} most frequently mutated genes across all samples in ${formatCohortLabel(cancer)} / ${selectedLabel}. Each column is a sample, each row is a gene, and cells are colored by the most severe mutation class observed.`}
             </p>
           </div>
