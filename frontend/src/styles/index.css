@@ -2426,7 +2426,8 @@ button, input, select { font: inherit; }
 
 .statistics-gene-textarea {
   min-height: 44px;
-  max-height: 96px;
+  height: 44px;
+  max-height: 120px;
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #cfd7e6;
@@ -2435,6 +2436,7 @@ button, input, select { font: inherit; }
   color: #253851;
   font-weight: 600;
   line-height: 1.4;
+  overflow-y: auto;
   resize: vertical;
   outline: none;
 }
