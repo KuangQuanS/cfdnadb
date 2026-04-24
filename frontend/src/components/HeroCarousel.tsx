@@ -57,21 +57,43 @@ function formatRingLabel(name: string, value: string) {
   return `${label}\n${value}`;
 }
 
+type BodyCalloutConfig = {
+  id: string;
+  label: string;
+  side: "left" | "right";
+  labelTopPct: number;
+  labelXPct?: number;
+  pointXPct: number;
+  pointYPct: number;
+  browseKey: string;
+};
+
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", topPct: 16, anchorPct: 51, browseKey: "HeadAndNeck", alwaysShow: false },
-  { id: "Lung", label: "Lung", side: "left", topPct: 26, anchorPct: 43, browseKey: "Lung", alwaysShow: true },
-  { id: "Liver", label: "Liver", side: "left", topPct: 35, anchorPct: 43, browseKey: "Liver", alwaysShow: true },
-  { id: "Kidney", label: "Kidney", side: "left", topPct: 41, anchorPct: 45, browseKey: "Kidney", alwaysShow: false },
-  { id: "Endometrial", label: "Endometrial", side: "left", topPct: 50, anchorPct: 48, browseKey: "Endometrial", alwaysShow: false },
-  { id: "Bladder", label: "Bladder", side: "left", topPct: 54, anchorPct: 50, browseKey: "Bladder", alwaysShow: false },
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 15, labelXPct: 15, pointXPct: 50, pointYPct: 15, browseKey: "HeadAndNeck" },
+  { id: "Lung", label: "Lung", side: "left", labelTopPct: 25, pointXPct: 42, pointYPct: 25, browseKey: "Lung" },
+  { id: "Liver", label: "Liver", side: "left", labelTopPct: 34.8, pointXPct: 45, pointYPct: 34.8, browseKey: "Liver" },
+  { id: "Kidney", label: "Kidney", side: "left", labelTopPct: 44, pointXPct: 43.7, pointYPct: 40.8, browseKey: "Kidney" },
+  { id: "Endometrial", label: "Endometrial", side: "left", labelTopPct: 54, pointXPct: 48, pointYPct: 50.5, browseKey: "Endometrial" },
+  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 67, pointXPct: 49, pointYPct: 54.5, browseKey: "Bladder" },
   /* ── right side (top → bottom) ── */
-  { id: "Breast", label: "Breast", side: "right", topPct: 28, anchorPct: 59, browseKey: "Breast", alwaysShow: true },
-  { id: "Gastric", label: "Gastric", side: "right", topPct: 34, anchorPct: 54, browseKey: "Gastric", alwaysShow: false },
-  { id: "Pancreatic", label: "Pancreas", side: "right", topPct: 38, anchorPct: 48, browseKey: "Pancreatic", alwaysShow: true },
-  { id: "Colorectal", label: "Colorectal", side: "right", topPct: 47, anchorPct: 56, browseKey: "Colorectal", alwaysShow: true },
-  { id: "Ovarian", label: "Ovarian", side: "right", topPct: 51, anchorPct: 53, browseKey: "Ovarian", alwaysShow: false },
-] as const;
+  { id: "Breast", label: "Breast", side: "right", labelTopPct: 26, pointXPct: 58.1, pointYPct: 28, browseKey: "Breast" },
+  { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 35.5, pointXPct: 54.6, pointYPct: 35.5, browseKey: "Gastric" },
+  { id: "Pancreatic", label: "Pancreas", side: "right", labelTopPct: 44, pointXPct: 48.5, pointYPct: 38.5, browseKey: "Pancreatic" },
+  { id: "Colorectal", label: "Colorectal", side: "right", labelTopPct: 55, pointXPct: 58.5, pointYPct: 47, browseKey: "Colorectal" },
+  { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 66, pointXPct: 52.2, pointYPct: 52.4, browseKey: "Ovarian" },
+] as const satisfies readonly BodyCalloutConfig[];
+
+function getLabelCenterX(cfg: BodyCalloutConfig) {
+  return cfg.labelXPct ?? (cfg.side === "left" ? 14 : 86);
+}
+
+function buildCalloutPolyline(cfg: BodyCalloutConfig) {
+  const labelCenterX = getLabelCenterX(cfg);
+  const labelEdgeX = cfg.side === "left" ? labelCenterX + 10 : labelCenterX - 10;
+  const elbowX = labelEdgeX + (cfg.pointXPct - labelEdgeX) * 0.62;
+  return `${labelEdgeX},${cfg.labelTopPct} ${elbowX},${cfg.labelTopPct} ${elbowX},${cfg.pointYPct} ${cfg.pointXPct},${cfg.pointYPct}`;
+}
 
 type HeroRingEntry = {
   id: string;
@@ -339,13 +361,7 @@ export function HeroCarousel() {
     () => ringEntries.reduce((sum, entry) => sum + entry.mutationCount, 0),
     [ringEntries],
   );
-  const visibleCallouts = useMemo(
-    () => ALL_CALLOUTS.filter((entry) => {
-      if (entry.alwaysShow) return true;
-      return (countMap[entry.id] ?? 0) > 0;
-    }),
-    [countMap],
-  );
+  const visibleCallouts = ALL_CALLOUTS;
   const annotatedRingEntries = useMemo(
     () => ringEntries.map(({ id, label, annotatedCount }) => ({ id, label, value: annotatedCount, browseKey: id })),
     [ringEntries],
@@ -443,34 +459,28 @@ export function HeroCarousel() {
             <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" />
 
             {visibleCallouts.map((cfg) => (
-              <button
-                key={cfg.id}
-                type="button"
-                className={`body-callout body-callout--${cfg.side}`}
-                style={{ top: `${cfg.topPct}%`, "--anchor-x": `${cfg.anchorPct}%` } as CSSProperties}
-                onClick={() => goToBrowse(cfg.browseKey)}
-                aria-label={`Browse ${cfg.label} cohort`}
-              >
-                {cfg.side === "left" ? (
-                  <>
-                    <div className="callout-label">
-                      <strong>{cfg.label}</strong>
-                      <span>{formatNumber(countMap[cfg.id] ?? 0)}</span>
-                    </div>
-                    <div className="callout-stem" />
-                    <div className="callout-dot" />
-                  </>
-                ) : (
-                  <>
-                    <div className="callout-dot" />
-                    <div className="callout-stem" />
-                    <div className="callout-label">
-                      <strong>{cfg.label}</strong>
-                      <span>{formatNumber(countMap[cfg.id] ?? 0)}</span>
-                    </div>
-                  </>
-                )}
-              </button>
+              <div key={cfg.id} className="body-callout">
+                <svg className="callout-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline points={buildCalloutPolyline(cfg)} />
+                </svg>
+
+                <div
+                  className="callout-dot"
+                  style={{ left: `${cfg.pointXPct}%`, top: `${cfg.pointYPct}%` } as CSSProperties}
+                  aria-hidden="true"
+                />
+
+                <button
+                  type="button"
+                  className={`callout-label callout-label--${cfg.side}`}
+                  style={{ top: `${cfg.labelTopPct}%`, left: `${getLabelCenterX(cfg)}%` } as CSSProperties}
+                  onClick={() => goToBrowse(cfg.browseKey)}
+                  aria-label={`Browse ${cfg.label} cohort`}
+                >
+                  <strong>{cfg.label}</strong>
+                  <span>{formatNumber(countMap[cfg.id] ?? 0)}</span>
+                </button>
+              </div>
             ))}
             <Link to="/browse" className="body-map-note">Discover Cohort</Link>
           </div>
