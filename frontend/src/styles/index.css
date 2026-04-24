@@ -2955,7 +2955,7 @@ button, input, select { font: inherit; }
   top: 6px;
   right: 10px;
   z-index: 3;
-  max-width: min(85%, 1280px);
+  max-width: min(48%, 720px);
   justify-content: flex-start;
   flex-wrap: nowrap;
   padding: 8px 14px;
