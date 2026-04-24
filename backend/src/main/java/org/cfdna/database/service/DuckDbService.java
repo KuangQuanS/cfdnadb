@@ -1923,6 +1923,14 @@ public class DuckDbService {
                                 normalizedVariantClasses,
                                 normalizedVariantTypes)
                                 ? countMafSummarySamplesFromInventory(conn, source, cancerTypes)
+                                : shouldUseCombinedCfdnaSampleCountForMafSummary(
+                                source,
+                                hasGene,
+                                hasSample,
+                                normalizedChromosomes,
+                                normalizedVariantClasses,
+                                normalizedVariantTypes)
+                                ? countMafSummarySamplesFromInventory(conn, source, cancerTypes) + countPublicMafSummarySamples(conn, cancerTypes)
                                 : rs.getLong("total_samples");
                         return new MafSummaryDto(
                                 source,
@@ -1957,6 +1965,20 @@ public class DuckDbService {
                 && variantTypes.isEmpty();
     }
 
+    private boolean shouldUseCombinedCfdnaSampleCountForMafSummary(String source,
+                                                                   boolean hasGene,
+                                                                   boolean hasSample,
+                                                                   List<String> chromosomes,
+                                                                   List<String> variantClasses,
+                                                                   List<String> variantTypes) {
+        return isCombinedCfdna(source)
+                && !hasGene
+                && !hasSample
+                && chromosomes.isEmpty()
+                && variantClasses.isEmpty()
+                && variantTypes.isEmpty();
+    }
+
     private long countMafSummarySamplesFromInventory(Connection connection, String source, List<String> cancerTypes) throws SQLException {
         List<String> inventoryCancers = normalizeMafCancerFiltersForSampleInventory(cancerTypes);
         if (inventoryCancers.isEmpty()) {
@@ -1968,6 +1990,23 @@ public class DuckDbService {
                 "AND NULLIF(TRIM(sample_id), '') IS NOT NULL";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             bindListParams(statement, 1, inventoryCancers);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next() ? rs.getLong("total_samples") : 0;
+            }
+        }
+    }
+
+    private long countPublicMafSummarySamples(Connection connection, List<String> cancerTypes) throws SQLException {
+        List<String> publicCancers = normalizeFilterValues(cancerTypes);
+        List<String> conditions = new ArrayList<>();
+        conditions.add("NULLIF(TRIM(tumor_sample_barcode), '') IS NOT NULL");
+        if (!publicCancers.isEmpty()) {
+            conditions.add("cancer_type IN (" + String.join(",", Collections.nCopies(publicCancers.size(), "?")) + ")");
+        }
+        String sql = "SELECT COUNT(DISTINCT tumor_sample_barcode) AS total_samples FROM public_maf_view WHERE " +
+                String.join(" AND ", conditions);
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            bindListParams(statement, 1, publicCancers);
             try (ResultSet rs = statement.executeQuery()) {
                 return rs.next() ? rs.getLong("total_samples") : 0;
             }

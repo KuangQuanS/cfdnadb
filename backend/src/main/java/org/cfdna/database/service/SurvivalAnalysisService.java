@@ -357,8 +357,9 @@ public class SurvivalAnalysisService {
                     "MeDiff",
                     "cfMethDB methylation by cancer type",
                     "Cancer Type",
-                    "Methylation difference (MeDiff)",
+                    "Tumor-minus-normal DNA methylation β-value difference (Δβ)",
                     "value",
+                    false,
                     false);
         } catch (Exception ex) {
             throw new RuntimeException("cfMethDbMethylation failed: " + ex.getMessage(), ex);
@@ -378,8 +379,9 @@ public class SurvivalAnalysisService {
                     "methylation_value",
                     "cfOmics methylation by cancer type",
                     "Cancer Type",
-                    "Methylation value",
+                    "DNA methylation β value",
                     "value",
+                    false,
                     false);
         } catch (Exception ex) {
             throw new RuntimeException("cfOmicsMethylation failed: " + ex.getMessage(), ex);
@@ -399,8 +401,9 @@ public class SurvivalAnalysisService {
                     "FPKM",
                     "CTC expression by cancer type",
                     "Cancer Type",
-                    "FPKM expression (log scale)",
-                    "log",
+                    "log1p(FPKM expression)",
+                    "value",
+                    false,
                     true);
         } catch (Exception ex) {
             throw new RuntimeException("ctcExpression failed: " + ex.getMessage(), ex);
@@ -418,7 +421,8 @@ public class SurvivalAnalysisService {
                                       String xLabel,
                                       String yLabel,
                                       String yScale,
-                                      boolean floorForLogScale) throws Exception {
+                                      boolean floorForLogScale,
+                                      boolean log1pTransform) throws Exception {
         VafResult res = new VafResult();
         res.cohort = source;
         res.gene = gene;
@@ -451,6 +455,10 @@ public class SurvivalAnalysisService {
                     double value = rs.getDouble("value");
                     if (rs.wasNull() || cancerType == null || cancerType.isBlank()) continue;
                     if (floorForLogScale && value <= 0.0) value = 0.01;
+                    if (log1pTransform) {
+                        if (value < 0.0) continue;
+                        value = Math.log1p(value);
+                    }
                     bucketed.computeIfAbsent(cancerType, key -> new ArrayList<>()).add(value);
                 }
             }
