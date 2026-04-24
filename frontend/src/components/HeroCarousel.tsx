@@ -7,8 +7,7 @@ import { getCancerSummary } from "../api/client";
 import { DEFAULT_GENE } from "../constants/cfdna";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
-import humanBodyImg from "../assets/human_body_new.png";
-import siteLogoPng from "../assets/cfDNAlogo.png";
+import humanBodyImg from "../assets/humanbody_gpt.png";
 import "../styles/home.css";
 
 const MOCK_COHORTS: CancerSummary[] = [
@@ -195,7 +194,7 @@ function buildHeroSunburstOption(
         top: 0,
         right: 0,
         bottom: 0,
-        radius: ["52%", "88%"],
+        radius: ["49%", "94%"],
         center: ["50%", "50%"],
         startAngle: 180,
         sort: undefined,
@@ -281,7 +280,6 @@ function HeroRingChart({
           }}
         />
       </div>
-      <p className="gdc-overview-chart-caption">{caption}</p>
     </article>
   );
 }
@@ -408,20 +406,18 @@ export function HeroCarousel() {
   return (
     <section className="gdc-hero">
       <div className="gdc-hero-inner">
-
         <div className="gdc-col-left">
-          <h1 className="gdc-title">
-            Welcome to <img src={siteLogoPng} alt="cfDNAdb" className="gdc-title-logo" />
-          </h1>
+          <h1 className="gdc-title">Welcome to <span>cfDNAdb</span></h1>
+          <div className="gdc-title-rule" aria-hidden="true" />
           <div className="gdc-subtitle">
             <p>
               cfDNAdb represents a comprehensive plasma cell-free DNA somatic mutation resource encompassing {formatNumber(INTRO_TOTAL_SAMPLES)} curated samples across major cancer cohorts, including breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies.
             </p>
             <p>
-              The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising {formatNumber(INTRO_TOTAL_FILES)} data files and {formatNumber(INTRO_TOTAL_MUTATIONS)} imported mutation records.
+              The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising {formatNumber(INTRO_TOTAL_FILES)} data files, functional annotations, and {formatNumber(INTRO_TOTAL_MUTATIONS)} imported mutation records.
             </p>
             <p>
-              The platform provides anatomical browsing, sample exploration, gene-oriented querying, cohort statistics, visualization modules, and download workflows to support cross-cohort comparison and biomarker-focused liquid biopsy research.
+              The platform provides anatomical browsing, sample exploration, gene-oriented querying, cohort statistics, visualization modules, and download workflows to support cross-cohort comparison, cohort-level interpretation, and biomarker-focused liquid biopsy research.
             </p>
           </div>
 
@@ -477,6 +473,7 @@ export function HeroCarousel() {
                 )}
               </button>
             ))}
+            <div className="body-map-note">Discover Cohort</div>
           </div>
         </div>
 
