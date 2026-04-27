@@ -132,10 +132,9 @@ button, input, select { font: inherit; }
   background-color: #061f44;
   background-image:
     linear-gradient(
-      90deg,
-      rgba(3, 19, 46, 0.88) 0%,
-      rgba(5, 31, 70, 0.76) 48%,
-      rgba(4, 20, 48, 0.9) 100%
+      0deg,
+      rgba(4, 23, 54, 0.86) 0%,
+      rgba(4, 23, 54, 0.86) 100%
     ),
     var(--header-bg-image, none);
   background-size: cover;
