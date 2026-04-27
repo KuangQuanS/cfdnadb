@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PropsWithChildren } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PropsWithChildren } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { PageLoader } from "./PageLoader";
 import headerBgPng from "../assets/background_original.png";
@@ -107,9 +107,11 @@ export function AppShell({ children }: PropsWithChildren) {
 
       <header
         className="site-header"
-        style={{
-          backgroundImage: `url(${headerBgPng})`
-        }}
+        style={
+          {
+            "--header-bg-image": `url(${headerBgPng})`
+          } as CSSProperties
+        }
       >
         <div className="header-container">
           <Link to="/" className="header-brand" aria-label="cfDNAdb home">
