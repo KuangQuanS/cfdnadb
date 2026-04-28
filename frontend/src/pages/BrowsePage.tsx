@@ -339,6 +339,7 @@ export function BrowsePage() {
                 placeholder="Enter genes separated by commas, spaces, or new lines"
                 rows={1}
               />
+              <span className="statistics-gene-or">OR</span>
               <button type="button" className="statistics-gene-upload-btn" onClick={() => fileInputRef.current?.click()}>
                 Upload file
               </button>
