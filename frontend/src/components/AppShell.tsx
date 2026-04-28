@@ -33,7 +33,7 @@ function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
         onClick={dismiss}
         aria-haspopup="menu"
       >
-        Gene Search
+        Tools
         <svg className="nav-caret" viewBox="0 0 12 8" aria-hidden="true">
           <path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
