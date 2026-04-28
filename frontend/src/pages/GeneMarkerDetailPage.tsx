@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getGeneNcbiSummary, getMafGeneDetail, getMafSampleSuggestions, queryMafGeneMutations } from "../api/client";
+import type { MafMutation } from "../types/api";
 import { IgvBrowser } from "../components/IgvBrowser";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
@@ -31,6 +32,66 @@ const EMPTY_FILTERS: AppliedFilters = {
   variantClass: [],
   variantType: [],
 };
+
+function escapeCsvCell(value: unknown) {
+  const raw = value == null ? "" : String(value);
+  return /[",\n]/.test(raw) ? `"${raw.replace(/"/g, "\"\"")}"` : raw;
+}
+
+function downloadMutationRowsCsv(rows: MafMutation[], geneSymbol: string, source: SourceKey) {
+  const headers = [
+    "Gene",
+    "Transcript",
+    "Cancer",
+    "Sample Barcode",
+    "Chromosome",
+    "Start Position",
+    "End Position",
+    "Reference Allele",
+    "Tumor Seq Allele",
+    "Class",
+    "Type",
+    "Functional Region",
+    "Exonic Function",
+    "Exon",
+    "AA Change",
+  ];
+  const lines = [
+    headers.join(","),
+    ...rows.map((row) =>
+      [
+        row.hugoSymbol,
+        row.transcript,
+        formatCohortLabel(row.cancerType),
+        row.tumorSampleBarcode,
+        formatChromosome(row.chromosome),
+        row.startPosition,
+        row.endPosition,
+        row.referenceAllele,
+        row.tumorSeqAllele2,
+        row.variantClassification,
+        row.variantType,
+        row.functionalRegion,
+        row.exonicFunction,
+        row.exon,
+        row.aaChange,
+      ]
+        .map(escapeCsvCell)
+        .join(","),
+    ),
+  ];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const safeGene = geneSymbol.replace(/[^\w.-]+/g, "_");
+  const fileName = `mutation_records_${safeGene || "gene"}_${source.toLowerCase()}.csv`;
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+}
 
 export function GeneMarkerDetailPage() {
   const { geneSymbol = "" } = useParams();
@@ -395,16 +456,21 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
               {formatNumber(totalElements)} rows for {geneSymbol}
             </p>
           </div>
-          <label className="maf-page-size-field">
-            <span>Rows per page</span>
-            <select value={pageSize} onChange={(event) => changePageSize(Number(event.target.value))}>
-              {PAGE_SIZE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div style={{ display: "flex", alignItems: "end", gap: 10 }}>
+            <button className="button-secondary" type="button" disabled={rows.length === 0} onClick={() => downloadMutationRowsCsv(rows, geneSymbol, source)}>
+              Download CSV
+            </button>
+            <label className="maf-page-size-field">
+              <span>Rows per page</span>
+              <select value={pageSize} onChange={(event) => changePageSize(Number(event.target.value))}>
+                {PAGE_SIZE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
 
         {dataQ.isLoading ? <p className="panel-note">Loading mutation records...</p> : null}
