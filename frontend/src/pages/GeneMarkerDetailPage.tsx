@@ -188,6 +188,7 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
   const deferredSampleInput = useDeferredValue(sampleInput.trim());
   const sampleAutocompleteRef = useRef<HTMLLabelElement>(null);
   const [showSampleSuggestions, setShowSampleSuggestions] = useState(false);
+  const [downloading, setDownloading] = useState<"page" | "all" | null>(null);
 
   const sampleSuggestionsQ = useQuery({
     queryKey: ["maf-sample-suggestions", source, deferredSampleInput],
@@ -314,6 +315,49 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
     setSelectedClass("");
     setSelectedType("");
     setPage(1);
+  };
+
+  const baseMutationFilters = useMemo(
+    () => ({
+      source,
+      sample: applied.sample || undefined,
+      cancerType: applied.cancerType,
+      chromosome: applied.chromosome,
+      variantClass: applied.variantClass,
+      variantType: applied.variantType,
+    }),
+    [applied, source],
+  );
+
+  const handleDownloadCurrentPage = () => {
+    if (rows.length === 0) return;
+    setDownloading("page");
+    try {
+      downloadMutationRowsCsv(rows, geneSymbol, source);
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleDownloadAllRows = async () => {
+    if (totalElements === 0) return;
+    setDownloading("all");
+    try {
+      const batchSize = 500;
+      const total = Math.max(1, Math.ceil(totalElements / batchSize));
+      const allRows: MafMutation[] = [];
+      for (let current = 1; current <= total; current += 1) {
+        const pageData = await queryMafGeneMutations(geneSymbol, {
+          ...baseMutationFilters,
+          page: current,
+          size: batchSize,
+        });
+        allRows.push(...pageData.content);
+      }
+      downloadMutationRowsCsv(allRows, `${geneSymbol}_all`, source);
+    } finally {
+      setDownloading(null);
+    }
   };
 
   return (
@@ -456,9 +500,12 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
               {formatNumber(totalElements)} rows for {geneSymbol}
             </p>
           </div>
-          <div style={{ display: "flex", alignItems: "end", gap: 10 }}>
-            <button className="button-secondary" type="button" disabled={rows.length === 0} onClick={() => downloadMutationRowsCsv(rows, geneSymbol, source)}>
-              Download CSV
+          <div style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <button className="button-secondary" type="button" disabled={rows.length === 0 || downloading != null} onClick={handleDownloadCurrentPage}>
+              {downloading === "page" ? "Downloading..." : "Download This Page"}
+            </button>
+            <button className="button-secondary" type="button" disabled={totalElements === 0 || downloading != null} onClick={handleDownloadAllRows}>
+              {downloading === "all" ? "Downloading..." : "Download All"}
             </button>
             <label className="maf-page-size-field">
               <span>Rows per page</span>
