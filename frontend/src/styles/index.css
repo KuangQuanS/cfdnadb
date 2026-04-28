@@ -2453,6 +2453,15 @@ button, input, select { font: inherit; }
   gap: 8px;
 }
 
+.statistics-gene-or {
+  display: inline-flex;
+  align-items: center;
+  color: #6a7891;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
 .statistics-gene-textarea {
   min-height: 44px;
   height: 44px;
