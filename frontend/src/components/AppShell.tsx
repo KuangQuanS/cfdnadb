@@ -175,19 +175,6 @@ export function AppShell({ children }: PropsWithChildren) {
           </div>
         </div>
 
-        <div className="footer-citation">
-          <div className="footer-citation-inner">
-            <h4>Citation</h4>
-            <p>
-              Lee Lab. cfdnadb: a multi-cohort somatic variant database for circulating cell-free DNA research.
-              Kunming Medical University. 2025. <a href="https://leelab.kmmu.edu.cn/cfdnadb/">https://leelab.kmmu.edu.cn/cfdnadb/</a>
-            </p>
-            <p className="footer-terms">
-              Academic and non-commercial research use only. Variant calls are computational predictions and have not been individually validated — perform appropriate validation before reporting findings in a clinical context.
-            </p>
-          </div>
-        </div>
-
         <div className="footer-bottom">
           <div className="footer-bottom-inner">
             <span>
