@@ -15,6 +15,9 @@ import { formatCohortLabel } from "../utils/cohortLabels";
 
 const MAX_ONCOPLOT_GENES = 30;
 const DEFAULT_ONCOPLOT_LIMIT = 40;
+const GENE_INPUT_EXAMPLES = [
+  ["TTN", "MUC12", "OBSCN", "HRNR", "EPPK1"],
+];
 
 async function inflateRaw(data: Uint8Array) {
   const stream = new DecompressionStream("deflate-raw");
@@ -226,6 +229,15 @@ export function BrowsePage() {
     target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
   }, []);
 
+  const fillGeneExample = useCallback((example: string[]) => {
+    const nextValue = example.join(", ");
+    onGeneInputChange(nextValue);
+    if (geneInputRef.current) {
+      syncGeneInputHeight(geneInputRef.current);
+      geneInputRef.current.focus();
+    }
+  }, [onGeneInputChange, syncGeneInputHeight]);
+
   const onFileChange = useCallback(async (file: File | null) => {
     if (!file) return;
     const extension = file.name.split(".").pop()?.toLowerCase();
@@ -337,6 +349,25 @@ export function BrowsePage() {
                 className="statistics-gene-hidden-file"
                 onChange={(event) => void onFileChange(event.target.files?.[0] ?? null)}
               />
+            </div>
+            <div className="statistics-gene-examples" aria-label="Gene input examples">
+              <span className="statistics-gene-examples-label">Example:</span>
+              <div className="statistics-gene-examples-list">
+                {GENE_INPUT_EXAMPLES.map((example) => {
+                  const text = example.join(", ");
+                  return (
+                    <button
+                      key={text}
+                      type="button"
+                      className="statistics-gene-example-btn"
+                      onClick={() => fillGeneExample(example)}
+                      title="Click to fill"
+                    >
+                      {text}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             {geneError ? <p className="statistics-gene-error">{geneError}</p> : null}
           </div>
