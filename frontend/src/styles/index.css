@@ -3730,43 +3730,6 @@ button, input, select { font: inherit; }
   font-size: 0.72rem;
   letter-spacing: 0.04em;
 }
-.footer-citation {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 18px 28px;
-}
-.footer-citation-inner {
-  max-width: 1440px;
-  margin: 0 auto;
-  display: grid;
-  gap: 8px;
-}
-.footer-citation-inner h4 {
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  margin: 0;
-}
-.footer-citation-inner p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.82rem;
-  line-height: 1.55;
-}
-.footer-citation-inner a {
-  color: rgba(255, 255, 255, 0.8);
-  text-decoration: underline;
-  text-decoration-color: rgba(255, 255, 255, 0.3);
-}
-.footer-citation-inner a:hover {
-  color: #fff;
-  text-decoration-color: rgba(255, 255, 255, 0.8);
-}
-.footer-terms {
-  color: rgba(255, 255, 255, 0.5) !important;
-  font-size: 0.78rem !important;
-}
 .footer-col address {
   font-style: normal;
   color: rgba(255,255,255,0.6);
