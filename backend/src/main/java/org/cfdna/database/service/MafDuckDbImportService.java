@@ -54,7 +54,7 @@ public class MafDuckDbImportService {
     private static final List<String> CANCERS = List.of(
             "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
             "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
-            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor", "Cell_Line");
+            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor");
     private static final List<String> REQUIRED_AGGREGATE_COLUMNS = List.of(
             "Chr", "Start", "End", "Ref", "Alt",
             "Func.refGene", "Gene.refGene", "ExonicFunc.refGene",

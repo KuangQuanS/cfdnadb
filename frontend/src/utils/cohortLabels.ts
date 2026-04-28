@@ -1,8 +1,8 @@
 const COHORT_LABELS: Record<string, string> = {
   Benign_Tumor: "Benign Tumor",
   NGY: "Benign Tumor",
-  Cell_Line: "Cell Line",
-  Experiment: "Cell Line",
+  Cell_Line: "Gastric",
+  Experiment: "Gastric",
   HeadAndNeck: "Head & Neck",
   Head_and_neck: "Head & Neck",
   CRC: "Colorectal",

@@ -139,14 +139,15 @@ class CfDnaEndpointsIntegrationTest {
         mockMvc.perform(get("/api/v1/maf-mutations/filter-options")
                         .param("source", "private"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.cancerTypes", hasItem("Cell_Line")))
+                .andExpect(jsonPath("$.data.cancerTypes", hasItem("Gastric")))
                 .andExpect(jsonPath("$.data.cancerTypes", hasItem("Benign_Tumor")))
                 .andExpect(jsonPath("$.data.cancerTypes", not(hasItem("Experiment"))))
+                .andExpect(jsonPath("$.data.cancerTypes", not(hasItem("Cell_Line"))))
                 .andExpect(jsonPath("$.data.cancerTypes", not(hasItem("NGY"))));
 
         mockMvc.perform(get("/api/v1/maf-mutations/oncoplot")
                         .param("source", "private")
-                        .param("cancerType", "Cell_Line")
+                        .param("cancerType", "Gastric")
                         .param("limit", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.genes", hasItem("TTN")))
@@ -202,7 +203,7 @@ class CfDnaEndpointsIntegrationTest {
             for (String cancer : new String[]{
                     "Colorectal", "Liver", "Pancreatic", "Bladder", "Cervical",
                     "Endometrial", "Esophageal", "Gastric", "HeadAndNeck",
-                    "Kidney", "Ovarian", "Thyroid", "Benign_Tumor", "Cell_Line"}) {
+                    "Kidney", "Ovarian", "Thyroid", "Benign_Tumor"}) {
                 createEmptyCancer(root.resolve(cancer));
             }
             return root;
