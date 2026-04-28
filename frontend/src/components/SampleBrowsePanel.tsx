@@ -355,27 +355,6 @@ export function SampleBrowsePanel({
         </div>
       </FilterSection>
 
-      <FilterSection title="Mutation Filters">
-        <label className="browse-field">
-          <span>Carrier Gene</span>
-          <input
-            value={draft.gene}
-            onChange={(event) => updateFilters((previous) => ({ ...previous, gene: event.target.value.toUpperCase() }))}
-            placeholder="e.g. TP53"
-          />
-        </label>
-        <label className="browse-field">
-          <span>Minimum Variants</span>
-          <input
-            type="number"
-            min={0}
-            value={draft.minVariants}
-            onChange={(event) => updateFilters((previous) => ({ ...previous, minVariants: event.target.value }))}
-            placeholder="0"
-          />
-        </label>
-      </FilterSection>
-
       <FilterSection title="File Availability">
         <label className="browse-samples-check">
           <input
