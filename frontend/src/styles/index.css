@@ -2506,6 +2506,42 @@ button, input, select { font: inherit; }
   color: #c0392b;
 }
 
+.statistics-gene-examples {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.statistics-gene-examples-label {
+  font-weight: 600;
+  color: #2d4368;
+}
+
+.statistics-gene-examples-list {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.statistics-gene-example-btn {
+  border: 1px solid #9ebce5;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #1f66b3;
+  font-weight: 700;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.statistics-gene-example-btn:hover {
+  border-color: #5f93cf;
+  background: #ecf5ff;
+}
+
 .statistics-source-tabs {
   display: flex;
   gap: 10px;
