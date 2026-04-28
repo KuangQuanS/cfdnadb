@@ -2677,7 +2677,7 @@ button, input, select { font: inherit; }
 }
 
 .browse-pdf-card {
-  width: min(100%, 1060px);
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -2746,7 +2746,7 @@ button, input, select { font: inherit; }
 .browse-pdf-card--summary .statistics-inline-pdf--stat .statistics-inline-pdf-page canvas,
 .browse-pdf-card--spectrum .statistics-inline-pdf--stat .statistics-inline-pdf-page canvas,
 .browse-pdf-card--titv .statistics-inline-pdf--stat .statistics-inline-pdf-page canvas {
-  max-width: min(100%, 980px);
+  max-width: 100%;
 }
 
 .stat-pdf-card--featured .statistics-inline-pdf--stat .statistics-inline-pdf-page canvas {
