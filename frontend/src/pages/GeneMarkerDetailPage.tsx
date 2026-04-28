@@ -182,14 +182,13 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
 
   const [sampleInput, setSampleInput] = useState("");
   const [selectedCancer, setSelectedCancer] = useState("");
-  const [displayCancer, setDisplayCancer] = useState("");
   const [selectedChromosome, setSelectedChromosome] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const deferredSampleInput = useDeferredValue(sampleInput.trim());
   const sampleAutocompleteRef = useRef<HTMLLabelElement>(null);
   const [showSampleSuggestions, setShowSampleSuggestions] = useState(false);
-  const [downloading, setDownloading] = useState<"all" | null>(null);
+  const [downloading, setDownloading] = useState<"all" | "page" | null>(null);
 
   const sampleSuggestionsQ = useQuery({
     queryKey: ["maf-sample-suggestions", source, deferredSampleInput],
@@ -208,11 +207,6 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
-
-  useEffect(() => {
-    const nextCancer = applied.cancerType[0] ?? "";
-    setDisplayCancer(nextCancer);
-  }, [applied.cancerType]);
 
   const summaryQ = useQuery({
     queryKey: ["maf-gene-detail", source, geneSymbol, applied],
@@ -317,20 +311,9 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
     setApplied(EMPTY_FILTERS);
     setSampleInput("");
     setSelectedCancer("");
-    setDisplayCancer("");
     setSelectedChromosome("");
     setSelectedClass("");
     setSelectedType("");
-    setPage(1);
-  };
-
-  const handleDisplayCancerChange = (nextCancer: string) => {
-    setDisplayCancer(nextCancer);
-    setSelectedCancer(nextCancer);
-    setApplied((prev) => ({
-      ...prev,
-      cancerType: nextCancer ? [nextCancer] : [],
-    }));
     setPage(1);
   };
 
@@ -362,6 +345,16 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
         allRows.push(...pageData.content);
       }
       downloadMutationRowsCsv(allRows, `${geneSymbol}_all`, source);
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleDownloadCurrentPageRows = () => {
+    if (rows.length === 0) return;
+    setDownloading("page");
+    try {
+      downloadMutationRowsCsv(rows, `${geneSymbol}_page_${currentPage}`, source);
     } finally {
       setDownloading(null);
     }
@@ -508,17 +501,9 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <label className="maf-page-size-field" style={{ minWidth: 180 }}>
-              <span>Display cancer</span>
-              <select value={displayCancer} onChange={(event) => handleDisplayCancerChange(event.target.value)} disabled={downloading != null}>
-                <option value="">All cancers</option>
-                {derivedCancerTypes.map((option) => (
-                  <option key={option} value={option}>
-                    {formatCohortLabel(option)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <button className="button-secondary" type="button" disabled={rows.length === 0 || downloading != null} onClick={handleDownloadCurrentPageRows}>
+              {downloading === "page" ? "Downloading..." : "Download This Page"}
+            </button>
             <button className="button-secondary" type="button" disabled={totalElements === 0 || downloading != null} onClick={handleDownloadAllRows}>
               {downloading === "all" ? "Downloading..." : "Download All"}
             </button>
