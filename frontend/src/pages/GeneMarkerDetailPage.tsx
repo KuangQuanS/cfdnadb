@@ -189,8 +189,7 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
   const deferredSampleInput = useDeferredValue(sampleInput.trim());
   const sampleAutocompleteRef = useRef<HTMLLabelElement>(null);
   const [showSampleSuggestions, setShowSampleSuggestions] = useState(false);
-  const [downloading, setDownloading] = useState<"cancer" | "all" | null>(null);
-  const [downloadCancer, setDownloadCancer] = useState("");
+  const [downloading, setDownloading] = useState<"all" | null>(null);
 
   const sampleSuggestionsQ = useQuery({
     queryKey: ["maf-sample-suggestions", source, deferredSampleInput],
@@ -346,35 +345,6 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
     }),
     [applied, source],
   );
-
-  const handleDownloadByCancer = async () => {
-    if (!downloadCancer) return;
-    setDownloading("cancer");
-    try {
-      const batchSize = 500;
-      const countSeed = await queryMafGeneMutations(geneSymbol, {
-        ...baseMutationFilters,
-        cancerType: [downloadCancer],
-        page: 1,
-        size: 1,
-      });
-      const totalElementsByCancer = countSeed.totalElements ?? 0;
-      const total = Math.max(1, Math.ceil(totalElementsByCancer / batchSize));
-      const filteredRows: MafMutation[] = [];
-      for (let current = 1; current <= total; current += 1) {
-        const pageData = await queryMafGeneMutations(geneSymbol, {
-          ...baseMutationFilters,
-          cancerType: [downloadCancer],
-          page: current,
-          size: batchSize,
-        });
-        filteredRows.push(...pageData.content);
-      }
-      downloadMutationRowsCsv(filteredRows, `${geneSymbol}_${downloadCancer}`, source);
-    } finally {
-      setDownloading(null);
-    }
-  };
 
   const handleDownloadAllRows = async () => {
     if (totalElements === 0) return;
@@ -549,20 +519,6 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
                 ))}
               </select>
             </label>
-            <label className="maf-page-size-field" style={{ minWidth: 180 }}>
-              <span>Download cancer</span>
-              <select value={downloadCancer} onChange={(event) => setDownloadCancer(event.target.value)} disabled={downloading != null}>
-                <option value="">Select cancer</option>
-                {derivedCancerTypes.map((option) => (
-                  <option key={option} value={option}>
-                    {formatCohortLabel(option)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="button-secondary" type="button" disabled={!downloadCancer || downloading != null} onClick={handleDownloadByCancer}>
-              {downloading === "cancer" ? "Downloading..." : "Download by Cancer"}
-            </button>
             <button className="button-secondary" type="button" disabled={totalElements === 0 || downloading != null} onClick={handleDownloadAllRows}>
               {downloading === "all" ? "Downloading..." : "Download All"}
             </button>
