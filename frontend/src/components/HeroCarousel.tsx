@@ -40,7 +40,7 @@ const INTRO_TOTAL_MUTATIONS = 48403074;
 const COHORT_DISPLAY_LABELS: Record<string, string> = {
   HeadAndNeck: "Head & Neck",
   Benign_Tumor: "Benign Tumor",
-  Cell_Line: "Cell Line",
+  Cell_Line: "Gastric",
 };
 
 function formatCohortLabel(cancer: string) {

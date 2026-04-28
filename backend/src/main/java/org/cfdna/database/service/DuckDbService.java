@@ -76,7 +76,7 @@ public class DuckDbService {
     private static final List<String> CANCERS = List.of(
             "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
             "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
-            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor", "Cell_Line");
+            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor");
     private static final List<String> REQUIRED_MULTIANNO_COLUMNS = List.of(
             "Chr",
             "Start",
@@ -1015,16 +1015,15 @@ public class DuckDbService {
             Map.entry("Thyroid",     "Thyriod"),  // typo preserved from source data
             Map.entry("Brain",       "Brain"),
             Map.entry("Benign_Tumor", "NGY"),
-            Map.entry("Cell_Line",    "Experiment"),
             Map.entry("NGY",          "NGY"),
-            Map.entry("Experiment",   "Experiment")
+            Map.entry("Experiment",   "Gastric")
     );
 
     private static final Map<String, String> CFDNA_TYPE_TO_CLIENT_CANCER = Map.ofEntries(
             Map.entry("NGY", "Benign_Tumor"),
             Map.entry("Benign_Tumor", "Benign_Tumor"),
-            Map.entry("Experiment", "Cell_Line"),
-            Map.entry("Cell_Line", "Cell_Line")
+            Map.entry("Experiment", "Gastric"),
+            Map.entry("Cell_Line", "Gastric")
     );
 
     /**
@@ -1088,12 +1087,12 @@ public class DuckDbService {
             Map.entry("Thyroid",     List.of("CFDNA_Thyriod")),
             Map.entry("Brain",       List.of("CFDNA_Brain")),
             Map.entry("Benign_Tumor", List.of("CFDNA_Benign_Tumor")),
-            Map.entry("Cell_Line",    List.of("CFDNA_Cell_Line"))
+            Map.entry("Cell_Line",    List.of("CFDNA_Gastric"))
     );
     private static final Map<String, String> VAF_CANCER_TYPE_ALIASES = Map.ofEntries(
             Map.entry("Colonrector", "Colorectal"),
             Map.entry("Endometrium", "Endometrial"),
-            Map.entry("Experiment", "Cell_Line"),
+            Map.entry("Experiment", "Gastric"),
             Map.entry("Head_and_Neck", "HeadAndNeck"),
             Map.entry("NGY", "Benign_Tumor"),
             Map.entry("Pdac", "Pancreatic"),
