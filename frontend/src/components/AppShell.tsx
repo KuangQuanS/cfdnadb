@@ -147,43 +147,13 @@ export function AppShell({ children }: PropsWithChildren) {
       <main className={`page-content${showLoader ? " page-content-loading" : ""}`}>{children}</main>
 
       <footer className="site-footer">
-        <div className="footer-main">
-          <div className="footer-brand">
-            <p className="footer-logo">ctDNAdb</p>
-            <p>
-              A curated academic database of somatic mutations identified from plasma cell-free DNA across multiple cancer cohorts. Built to support liquid biopsy research, biomarker discovery, and cross-cohort comparative genomics.
-            </p>
-            <p className="footer-badges">
-              <span className="footer-badge">cfDNA</span>
-              <span className="footer-badge">Somatic variants</span>
-              <span className="footer-badge">Liquid biopsy</span>
-              <span className="footer-badge">Open access</span>
-            </p>
-          </div>
-
-          <div className="footer-col">
-            <h4>Institution</h4>
-            <address>
-              Lee Laboratory<br />
-              Kunming Medical University<br />
-              Kunming, Yunnan, China<br />
-              <br />
-              <a href="https://leelab.kmmu.edu.cn/cfdnadb/" style={{ color: "rgba(255,255,255,0.6)" }}>
-                leelab.kmmu.edu.cn
-              </a>
-            </address>
-          </div>
-        </div>
-
         <div className="footer-bottom">
           <div className="footer-bottom-inner">
             <span>
-              &copy; {new Date().getFullYear()} ctDNAdb &mdash; Lee Laboratory, Kunming Medical University.
+              &copy; 2026 ctDNAdb &mdash; Lee Laboratory, Kunming Medical University.
             </span>
             <span>
-              <Link to="/downloads">Data access</Link>
-              &nbsp;&middot;&nbsp;
-              <Link to="/help">Help</Link>
+              Contact Us: <a href="mailto:lijie@kmmu.edu.cn" style={{ color: "rgba(255,255,255,0.8)" }}>lijie@kmmu.edu.cn</a>
             </span>
           </div>
         </div>
