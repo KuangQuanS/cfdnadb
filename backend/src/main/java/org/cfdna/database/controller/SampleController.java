@@ -61,7 +61,7 @@ public class SampleController {
     @PostMapping(value = "/download", produces = "application/zip")
     public ResponseEntity<StreamingResponseBody> downloadSamples(@RequestBody SampleDownloadRequestDto request) {
         String fileType = request.getFileType() == null ? "files" : request.getFileType().trim().toLowerCase();
-        String fileName = "cfdnadb_" + fileType + "_samples_" + LocalDate.now() + ".zip";
+        String fileName = "ctdnadb_" + fileType + "_samples_" + LocalDate.now() + ".zip";
         StreamingResponseBody body = outputStream -> duckDbService.writeSampleDownloadZip(request, outputStream);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")

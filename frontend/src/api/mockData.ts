@@ -680,6 +680,12 @@ export const statisticsOverviewMock: StatisticsOverview = {
   topGenes: statisticsTopGenesMock
 };
 
+export const sourceDistributionMock: LabelCount[] = [
+  { label: "private", count: 5410 },
+  { label: "public", count: 2174 },
+  { label: "tcga", count: 1411 },
+];
+
 export const vafDistributionMock: VafDistribution[] = [
   { cancerType: "Breast", values: [0.43, 0.42, 0.44, 0.51, 0.45, 0.47, 0.41, 0.46, 0.43, 0.48], sampleCount: 10 },
   { cancerType: "Lung", values: [0.44, 0.45, 0.43, 0.47, 0.50, 0.42, 0.46, 0.49, 0.44, 0.48], sampleCount: 10 },

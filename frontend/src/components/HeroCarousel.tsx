@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import { Link, useNavigate } from "react-router-dom";
-import { getCancerSummary } from "../api/client";
+import { getCancerSummary, getSourceDistribution } from "../api/client";
 import { DEFAULT_GENE } from "../constants/cfdna";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
@@ -37,6 +37,14 @@ const INTRO_TOTAL_SAMPLES = 3293;
 const INTRO_TOTAL_FILES = 8995;
 const INTRO_TOTAL_MUTATIONS = 48403074;
 
+const SOURCE_RING_ORDER = ["internal", "public", "tcga"] as const;
+
+const SOURCE_RING_LABELS: Record<typeof SOURCE_RING_ORDER[number], { label: string; browseSource: string }> = {
+  internal: { label: "Internal Data", browseSource: "cfDNA" },
+  public: { label: "Public Cohorts", browseSource: "Public" },
+  tcga: { label: "TCGA", browseSource: "tcga" },
+};
+
 const COHORT_DISPLAY_LABELS: Record<string, string> = {
   HeadAndNeck: "Head & Neck",
   Benign_Tumor: "Benign Tumor",
@@ -55,6 +63,14 @@ function formatRingLabel(name: string, value: string) {
         ? name.split(/\s+/).join("\n")
         : name;
   return `${label}\n${value}`;
+}
+
+function normalizeSourceKey(source: string): typeof SOURCE_RING_ORDER[number] | "" {
+  const normalized = source.trim().toLowerCase();
+  if (normalized === "private" || normalized === "internal" || normalized === "cfdna") return "internal";
+  if (normalized === "public" || normalized === "geo") return "public";
+  if (normalized === "tcga") return "tcga";
+  return "";
 }
 
 type BodyCalloutConfig = {
@@ -309,7 +325,9 @@ function HeroRingChart({
 export function HeroCarousel() {
   const navigate = useNavigate();
   const cancerQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary, staleTime: 5 * 60_000 });
+  const sourceQuery = useQuery({ queryKey: ["source-distribution", "all"], queryFn: () => getSourceDistribution(), staleTime: 5 * 60_000 });
   const cohorts = cancerQuery.data?.length ? cancerQuery.data : MOCK_COHORTS;
+  const sourceDistribution = sourceQuery.data ?? [];
   const countMap = useMemo(
     () => Object.fromEntries(cohorts.map((c) => [c.cancer, c.sampleCount])),
     [cohorts],
@@ -341,17 +359,34 @@ export function HeroCarousel() {
     () => ringEntries.reduce((sum, entry) => sum + entry.sampleCount, 0),
     [ringEntries],
   );
-  const totalFiles = useMemo(
-    () => ringEntries.reduce((sum, entry) => sum + entry.fileCount, 0),
-    [ringEntries],
-  );
   const sampleRingEntries = useMemo(
     () => ringEntries.map(({ id, label, sampleCount }) => ({ id, label, value: sampleCount, browseKey: id === "Healthy" ? "" : id })),
     [ringEntries],
   );
-  const fileRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, fileCount }) => ({ id, label, value: fileCount, browseKey: id === "Healthy" ? "" : id })),
-    [ringEntries],
+  const sourceRingEntries = useMemo(
+    () => {
+      const counts = new Map<typeof SOURCE_RING_ORDER[number], number>(SOURCE_RING_ORDER.map((source) => [source, 0]));
+      for (const item of sourceDistribution) {
+        const key = normalizeSourceKey(item.label);
+        if (key) {
+          counts.set(key, (counts.get(key) ?? 0) + item.count);
+        }
+      }
+      return SOURCE_RING_ORDER.map((source) => {
+        const config = SOURCE_RING_LABELS[source];
+        return {
+          id: source,
+          label: config.label,
+          value: counts.get(source) ?? 0,
+          browseKey: `source:${config.browseSource}`,
+        };
+      }).filter((entry) => entry.value > 0);
+    },
+    [sourceDistribution],
+  );
+  const totalSourceFiles = useMemo(
+    () => sourceRingEntries.reduce((sum, entry) => sum + entry.value, 0),
+    [sourceRingEntries],
   );
   const totalAnnotated = useMemo(
     () => ringEntries.reduce((sum, entry) => sum + entry.annotatedCount, 0),
@@ -382,10 +417,10 @@ export function HeroCarousel() {
       },
       {
         id: "files",
-        title: "Data files",
-        total: totalFiles,
-        entries: fileRingEntries,
-        caption: "Imported mutation and cohort-level source files.",
+        title: "Source files",
+        total: totalSourceFiles,
+        entries: sourceRingEntries,
+        caption: "Mounted source files grouped by Internal Data, Public Cohorts, and TCGA.",
         palette: RING_PALETTES.files,
       },
       {
@@ -405,7 +440,7 @@ export function HeroCarousel() {
         palette: RING_PALETTES.mutations,
       },
     ],
-    [annotatedRingEntries, mutationRingEntries, fileRingEntries, sampleRingEntries, totalAnnotated, totalMutations, totalFiles, totalSamples],
+    [annotatedRingEntries, mutationRingEntries, sampleRingEntries, sourceRingEntries, totalAnnotated, totalMutations, totalSamples, totalSourceFiles],
   );
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -419,15 +454,23 @@ export function HeroCarousel() {
     navigate(`/browse?cancer=${encodeURIComponent(browseKey)}&source=cfDNA`);
   };
 
+  const goToOverviewSlice = (browseKey: string) => {
+    if (browseKey.startsWith("source:")) {
+      navigate(`/browse?source=${encodeURIComponent(browseKey.slice("source:".length))}`);
+      return;
+    }
+    goToBrowse(browseKey);
+  };
+
   return (
     <section className="gdc-hero">
       <div className="gdc-hero-inner">
         <div className="gdc-col-left">
-          <h1 className="gdc-title">Welcome to <span>cfDNAdb</span></h1>
+          <h1 className="gdc-title">Welcome to <span>ctDNAdb</span></h1>
           <div className="gdc-title-rule" aria-hidden="true" />
           <div className="gdc-subtitle">
             <p>
-              cfDNAdb represents a comprehensive plasma cell-free DNA somatic mutation resource encompassing {formatNumber(INTRO_TOTAL_SAMPLES)} curated samples across major cancer cohorts, including breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies.
+              ctDNAdb represents a comprehensive plasma circulating tumor DNA somatic mutation resource encompassing {formatNumber(INTRO_TOTAL_SAMPLES)} curated samples across major cancer cohorts, including breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies.
             </p>
             <p>
               The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising {formatNumber(INTRO_TOTAL_FILES)} data files, functional annotations, and {formatNumber(INTRO_TOTAL_MUTATIONS)} imported mutation records.
@@ -497,7 +540,7 @@ export function HeroCarousel() {
                   entries={card.entries}
                   caption={card.caption}
                   palette={card.palette}
-                  onSliceClick={goToBrowse}
+                  onSliceClick={goToOverviewSlice}
                 />
               ))}
             </div>

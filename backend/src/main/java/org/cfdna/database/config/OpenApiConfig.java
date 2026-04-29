@@ -14,13 +14,12 @@ public class OpenApiConfig {
     public OpenAPI cfdnaOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("cfDNA Database API")
-                        .description("Public API for the cfDNA academic database prototype.")
+                        .title("ctDNAdb API")
+                        .description("Public API for the ctDNAdb academic database prototype.")
                         .version("v1")
-                        .contact(new Contact().name("cfDNA Database Team")))
+                        .contact(new Contact().name("ctDNAdb Team")))
                 .externalDocs(new ExternalDocumentation()
                         .description("Project notes")
                         .url("https://example.org/cfdna"));
     }
 }
-

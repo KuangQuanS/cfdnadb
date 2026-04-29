@@ -3607,14 +3607,19 @@ public class DuckDbService {
     }
 
     public List<LabelCountDto> getSourceDistribution(String cancer) {
-        String validatedCancer = validateCancer(cancer);
-        String sql = "SELECT source, COUNT(*) AS cnt FROM cohort_file_index " +
-                "WHERE cancer_type = ? AND source IN ('private', 'public', 'tcga', 'geo') AND category IN ('multianno', 'vcf') " +
-                "GROUP BY source ORDER BY source ASC";
+        String validatedCancer = cancer == null || cancer.isBlank() ? null : validateCancer(cancer);
+        StringBuilder sql = new StringBuilder("SELECT source, COUNT(*) AS cnt FROM cohort_file_index " +
+                "WHERE source IN ('private', 'public', 'tcga', 'geo') AND category IN ('multianno', 'vcf', 'mutations')");
+        if (validatedCancer != null) {
+            sql.append(" AND cancer_type = ?");
+        }
+        sql.append(" GROUP BY source ORDER BY source ASC");
         List<LabelCountDto> results = new ArrayList<>();
         try (Connection connection = openMafConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, validatedCancer);
+             PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            if (validatedCancer != null) {
+                statement.setString(1, validatedCancer);
+            }
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
                     results.add(new LabelCountDto(rs.getString("source"), rs.getLong("cnt")));
@@ -3622,7 +3627,7 @@ public class DuckDbService {
             }
             return results;
         } catch (SQLException exception) {
-            throw new IllegalStateException("Failed to load source distribution for " + validatedCancer, exception);
+            throw new IllegalStateException("Failed to load source distribution for " + (validatedCancer == null ? "all cancers" : validatedCancer), exception);
         }
     }
 

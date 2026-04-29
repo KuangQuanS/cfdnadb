@@ -18,8 +18,8 @@ export function HelpPage() {
     <div className="page-stack help-page">
       <SectionHeader
         eyebrow="Help"
-        title="Using cfDNAdb"
-        description="A practical guide to browsing cohorts, querying genes, reading statistics, running survival views, and downloading mounted files from cfDNAdb."
+        title="Using ctDNAdb"
+        description="A practical guide to browsing cohorts, querying genes, reading statistics, running survival views, and downloading mounted files from ctDNAdb."
       />
 
       <div className="help-layout">
@@ -35,12 +35,12 @@ export function HelpPage() {
         <article className="detail-card prose-block help-article">
           <section id="orientation">
             <p className="section-eyebrow">Orientation</p>
-            <h3>What cfDNAdb is built for</h3>
+            <h3>What ctDNAdb is built for</h3>
             <figure className="help-flowchart">
-              <img src={tutorialFlowchart} alt="cfDNAdb tutorial workflow flowchart" />
+              <img src={tutorialFlowchart} alt="ctDNAdb tutorial workflow flowchart" />
             </figure>
             <p>
-              cfDNAdb is a plasma somatic mutation database organized around cohorts, genes, samples, and downloadable analysis files.
+              ctDNAdb is a plasma somatic mutation database organized around cohorts, genes, samples, and downloadable analysis files.
               The database brings together Internal Data cohorts, GEO-derived public cfDNA cohorts, TCGA reference mutation data, and healthy
               VCF files so that users can move from a broad cohort overview to a concrete file download without leaving the application.
             </p>

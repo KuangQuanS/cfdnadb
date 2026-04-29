@@ -44,6 +44,7 @@ import {
   exonicDistributionMock,
   chromDistributionMock,
   statisticsOverviewMock,
+  sourceDistributionMock,
   sampleBurdenMock,
   vafDistributionMock
 } from "./mockData";
@@ -60,6 +61,7 @@ function resolveMock(path: string): unknown {
   if (path.startsWith("/api/v1/downloads")) return downloadsMock;
   if (path.startsWith("/api/v1/summary/cancers")) return cancerSummaryMock;
   if (path.startsWith("/api/v1/statistics/overview")) return statisticsOverviewMock;
+  if (path.startsWith("/api/v1/cohort/source-distribution")) return sourceDistributionMock;
   if (path.startsWith("/api/v1/variants/func-distribution")) return funcDistributionMock;
   if (path.startsWith("/api/v1/variants/exonic-distribution")) return exonicDistributionMock;
   if (path.startsWith("/api/v1/variants/chrom-distribution")) return chromDistributionMock;
@@ -389,9 +391,11 @@ export function getCohortFiles(cancer: string, source?: string, category?: strin
   return requestLive<CohortFile[]>(`/api/v1/cohort/files?${params.toString()}`);
 }
 
-export function getSourceDistribution(cancer: string) {
-  const params = new URLSearchParams({ cancer });
-  return requestLive<LabelCount[]>(`/api/v1/cohort/source-distribution?${params.toString()}`);
+export function getSourceDistribution(cancer?: string) {
+  const params = new URLSearchParams();
+  if (cancer) params.set("cancer", cancer);
+  const query = params.toString();
+  return request<LabelCount[]>(`/api/v1/cohort/source-distribution${query ? `?${query}` : ""}`);
 }
 
 export interface SampleBrowseFilters {
@@ -441,7 +445,7 @@ export async function downloadSampleFiles(fileType: string, samples: SampleSelec
 
   const disposition = response.headers.get("content-disposition") ?? "";
   const fileNameMatch = disposition.match(/filename=\"([^\"]+)\"/i);
-  const fileName = fileNameMatch?.[1] ?? `cfdnadb_${fileType}_samples.zip`;
+  const fileName = fileNameMatch?.[1] ?? `ctdnadb_${fileType}_samples.zip`;
   return {
     blob: await response.blob(),
     fileName

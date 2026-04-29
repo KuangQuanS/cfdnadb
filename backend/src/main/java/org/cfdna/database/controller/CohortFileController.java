@@ -35,7 +35,7 @@ public class CohortFileController {
     }
 
     @GetMapping("/source-distribution")
-    public ApiResponse<List<LabelCountDto>> getSourceDistribution(@RequestParam String cancer) {
+    public ApiResponse<List<LabelCountDto>> getSourceDistribution(@RequestParam(required = false) String cancer) {
         return ApiResponse.success(duckDbService.getSourceDistribution(cancer));
     }
 

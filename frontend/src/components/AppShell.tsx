@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type CSSProperties, type PropsWithChildren
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { PageLoader } from "./PageLoader";
 import headerBgPng from "../assets/background_original.png";
-import siteLogoPng from "../assets/cfDNAlogo.png";
 
 const navItems = [
   { to: "/", label: "Home" },
@@ -114,8 +113,8 @@ export function AppShell({ children }: PropsWithChildren) {
         }
       >
         <div className="header-container">
-          <Link to="/" className="header-brand" aria-label="cfDNAdb home">
-            <img src={siteLogoPng} alt="cfDNAdb" className="header-brand-logo" />
+          <Link to="/" className="header-brand" aria-label="ctDNAdb home">
+            <span className="header-brand-text">ctDNAdb</span>
           </Link>
           <nav className="site-nav">
             {navItems.slice(0, 2).map((item) => (
@@ -149,7 +148,7 @@ export function AppShell({ children }: PropsWithChildren) {
       <footer className="site-footer">
         <div className="footer-main">
           <div className="footer-brand">
-            <p className="footer-logo">cfdnadb</p>
+            <p className="footer-logo">ctDNAdb</p>
             <p>
               A curated academic database of somatic mutations identified from plasma cell-free DNA across multiple cancer cohorts. Built to support liquid biopsy research, biomarker discovery, and cross-cohort comparative genomics.
             </p>
@@ -178,7 +177,7 @@ export function AppShell({ children }: PropsWithChildren) {
         <div className="footer-bottom">
           <div className="footer-bottom-inner">
             <span>
-              &copy; {new Date().getFullYear()} cfdnadb &mdash; Lee Laboratory, Kunming Medical University.
+              &copy; {new Date().getFullYear()} ctDNAdb &mdash; Lee Laboratory, Kunming Medical University.
             </span>
             <span>
               <Link to="/downloads">Data access</Link>

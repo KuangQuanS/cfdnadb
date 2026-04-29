@@ -289,7 +289,7 @@ export function SampleBrowsePanel({
         item.availableFiles.join("; ")
       ].map(escapeCsvCell).join(","))
     ];
-    downloadBlob(new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" }), "cfdnadb_selected_samples.csv");
+    downloadBlob(new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" }), "ctdnadb_selected_samples.csv");
   };
 
   const handleBatchDownload = async () => {
