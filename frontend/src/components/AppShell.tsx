@@ -153,7 +153,9 @@ export function AppShell({ children }: PropsWithChildren) {
               &copy; 2026 ctDNAdb &mdash; Lee Laboratory, Kunming Medical University.
             </span>
             <span>
-              Contact Us: <a href="mailto:lijie@kmmu.edu.cn" style={{ color: "rgba(255,255,255,0.8)" }}>lijie@kmmu.edu.cn</a>
+              <a href="mailto:lijie@kmmu.edu.cn" style={{ color: "rgba(255,255,255,0.8)" }}>Contact Us</a>
+              &nbsp;&middot;&nbsp;
+              <a href="https://leelab.kmmu.edu.cn/leelabindex/" style={{ color: "rgba(255,255,255,0.8)" }} target="_blank" rel="noopener noreferrer">LabIndex</a>
             </span>
           </div>
         </div>
