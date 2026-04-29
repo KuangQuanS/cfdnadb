@@ -1,4 +1,4 @@
-import { type CSSProperties, type FormEvent, useMemo } from "react";
+import { type CSSProperties, type FormEvent, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
@@ -326,6 +326,7 @@ function HeroRingChart({
 
 export function HeroCarousel() {
   const navigate = useNavigate();
+  const [previewImage, setPreviewImage] = useState<{ src: string; title: string } | null>(null);
   const cancerQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary, staleTime: 5 * 60_000 });
   const sourceQuery = useQuery({ queryKey: ["source-distribution", "all"], queryFn: () => getSourceDistribution(), staleTime: 5 * 60_000 });
   const cohorts = cancerQuery.data?.length ? cancerQuery.data : MOCK_COHORTS;
@@ -464,6 +465,19 @@ export function HeroCarousel() {
     goToBrowse(browseKey);
   };
 
+  useEffect(() => {
+    if (!previewImage) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPreviewImage(null);
+      }
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [previewImage]);
+
   return (
     <>
       <section className="gdc-hero">
@@ -542,14 +556,24 @@ export function HeroCarousel() {
               <p className="section-eyebrow">Overview</p>
             </div>
             <div className="gdc-overview-media-grid">
-              <a className="gdc-overview-media gdc-overview-media--tutorial" href={tutorialImg} target="_blank" rel="noreferrer">
+              <button
+                type="button"
+                className="gdc-overview-media gdc-overview-media--tutorial"
+                onClick={() => setPreviewImage({ src: tutorialImg, title: "Tutorial" })}
+                aria-label="Preview tutorial image"
+              >
                 <span>Tutorial</span>
                 <img src={tutorialImg} alt="ctDNAdb tutorial workflow" />
-              </a>
-              <a className="gdc-overview-media gdc-overview-media--pipeline" href={indexMutectImg} target="_blank" rel="noreferrer">
+              </button>
+              <button
+                type="button"
+                className="gdc-overview-media gdc-overview-media--pipeline"
+                onClick={() => setPreviewImage({ src: indexMutectImg, title: "Pipeline" })}
+                aria-label="Preview pipeline image"
+              >
                 <span>Pipeline</span>
                 <img src={indexMutectImg} alt="ctDNAdb mutation analysis workflow" />
-              </a>
+              </button>
             </div>
           </article>
 
@@ -573,6 +597,17 @@ export function HeroCarousel() {
           </article>
         </div>
       </section>
+
+      {previewImage ? (
+        <div className="gdc-lightbox" role="dialog" aria-modal="true" aria-label={`${previewImage.title} preview`} onClick={() => setPreviewImage(null)}>
+          <button type="button" className="gdc-lightbox-close" onClick={() => setPreviewImage(null)} aria-label="Close preview">
+            Close
+          </button>
+          <div className="gdc-lightbox-frame">
+            <img src={previewImage.src} alt={`${previewImage.title} preview`} />
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
