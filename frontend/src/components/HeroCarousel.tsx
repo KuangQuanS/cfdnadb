@@ -9,6 +9,7 @@ import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/humanbody_gpt.png";
 import indexMutectImg from "../assets/index_mutect.png";
+import tutorialImg from "../assets/tutorial.png";
 import "../styles/home.css";
 
 const MOCK_COHORTS: CancerSummary[] = [
@@ -537,11 +538,23 @@ export function HeroCarousel() {
       <section className="gdc-stat-section">
         <div className="gdc-stat-inner">
           <article className="gdc-index-card">
-            <img src={indexMutectImg} alt="ctDNAdb data overview workflow" className="gdc-index-img" />
+            <div className="gdc-card-head">
+              <p className="section-eyebrow">Overview</p>
+            </div>
+            <div className="gdc-overview-media-grid">
+              <a className="gdc-overview-media gdc-overview-media--tutorial" href={tutorialImg} target="_blank" rel="noreferrer">
+                <span>Tutorial</span>
+                <img src={tutorialImg} alt="ctDNAdb tutorial workflow" />
+              </a>
+              <a className="gdc-overview-media gdc-overview-media--pipeline" href={indexMutectImg} target="_blank" rel="noreferrer">
+                <span>Pipeline</span>
+                <img src={indexMutectImg} alt="ctDNAdb mutation analysis workflow" />
+              </a>
+            </div>
           </article>
 
-          <div className="gdc-stat-panel">
-            <div className="gdc-stat-heading">
+          <article className="gdc-stat-card">
+            <div className="gdc-card-head">
               <p className="section-eyebrow">Statistics</p>
             </div>
             <div className="gdc-overview-grid">
@@ -557,7 +570,7 @@ export function HeroCarousel() {
                 />
               ))}
             </div>
-          </div>
+          </article>
         </div>
       </section>
     </>
