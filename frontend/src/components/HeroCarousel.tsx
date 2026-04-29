@@ -8,6 +8,7 @@ import { DEFAULT_GENE } from "../constants/cfdna";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/humanbody_gpt.png";
+import indexMutectImg from "../assets/index_mutect.png";
 import "../styles/home.css";
 
 const MOCK_COHORTS: CancerSummary[] = [
@@ -463,74 +464,91 @@ export function HeroCarousel() {
   };
 
   return (
-    <section className="gdc-hero">
-      <div className="gdc-hero-inner">
-        <div className="gdc-col-left">
-          <h1 className="gdc-title">Welcome to <span>ctDNAdb</span></h1>
-          <div className="gdc-title-rule" aria-hidden="true" />
-          <div className="gdc-subtitle">
-            <p>
-              ctDNAdb represents a comprehensive plasma circulating tumor DNA somatic mutation resource encompassing {formatNumber(INTRO_TOTAL_SAMPLES)} curated samples across major cancer cohorts, including breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies.
-            </p>
-            <p>
-              The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising {formatNumber(INTRO_TOTAL_FILES)} data files, functional annotations, and {formatNumber(INTRO_TOTAL_MUTATIONS)} imported mutation records.
-            </p>
-            <p>
-              The platform provides anatomical browsing, sample exploration, gene-oriented querying, cohort statistics, visualization modules, and download workflows to support cross-cohort comparison, cohort-level interpretation, and biomarker-focused liquid biopsy research.
-            </p>
+    <>
+      <section className="gdc-hero">
+        <div className="gdc-hero-inner gdc-hero-inner--intro">
+          <div className="gdc-col-left">
+            <h1 className="gdc-title">Welcome to <span>ctDNAdb</span></h1>
+            <p className="gdc-hero-tagline">A circulating tumor DNA somatic mutation database for cancer cohort discovery</p>
+            <div className="gdc-title-rule" aria-hidden="true" />
+            <div className="gdc-subtitle">
+              <p>
+                ctDNAdb represents a comprehensive plasma circulating tumor DNA somatic mutation resource encompassing {formatNumber(INTRO_TOTAL_SAMPLES)} curated samples across major cancer cohorts, including breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies.
+              </p>
+              <p>
+                The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising {formatNumber(INTRO_TOTAL_FILES)} data files, functional annotations, and {formatNumber(INTRO_TOTAL_MUTATIONS)} imported mutation records.
+              </p>
+              <p>
+                The platform provides anatomical browsing, sample exploration, gene-oriented querying, cohort statistics, visualization modules, and download workflows to support cross-cohort comparison, cohort-level interpretation, and biomarker-focused liquid biopsy research.
+              </p>
+            </div>
+
+            <div className="gdc-search-dock gdc-search-dock--inline">
+              <form className="gdc-hero-search" onSubmit={handleSearch}>
+                <div className="gdc-search-row">
+                  <input
+                    name="gene"
+                    type="text"
+                    defaultValue={DEFAULT_GENE}
+                    placeholder="HGNC symbol, e.g. TP53"
+                    aria-label="Enter gene symbol"
+                    className="gdc-search-input"
+                  />
+                  <button type="submit" className="gdc-search-submit">Search</button>
+                </div>
+              </form>
+            </div>
           </div>
 
-          <div className="gdc-search-dock gdc-search-dock--inline">
-            <form className="gdc-hero-search" onSubmit={handleSearch}>
-              <div className="gdc-search-row">
-                <input
-                  name="gene"
-                  type="text"
-                  defaultValue={DEFAULT_GENE}
-                  placeholder="HGNC symbol, e.g. TP53"
-                  aria-label="Enter gene symbol"
-                  className="gdc-search-input"
-                />
-                <button type="submit" className="gdc-search-submit">Search</button>
-              </div>
-            </form>
+          <div className="gdc-col-middle">
+            <div className="body-map">
+              <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" />
+
+              {visibleCallouts.map((cfg) => (
+                <div key={cfg.id} className="body-callout">
+                  <svg className="callout-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline points={buildCalloutPolyline(cfg)} />
+                  </svg>
+
+                  <div
+                    className="callout-dot"
+                    style={{ left: `${cfg.pointXPct}%`, top: `${cfg.pointYPct}%` } as CSSProperties}
+                    aria-hidden="true"
+                  />
+
+                  <button
+                    type="button"
+                    className={`callout-label callout-label--${cfg.side}`}
+                    style={{ top: `${cfg.labelTopPct}%`, left: `${getLabelCenterX(cfg)}%` } as CSSProperties}
+                    onClick={() => goToBrowse(cfg.browseKey)}
+                    aria-label={`Browse ${cfg.label} cohort`}
+                  >
+                    <strong>{cfg.label}</strong>
+                    <span>{formatNumber(countMap[cfg.id] ?? 0)}</span>
+                  </button>
+                </div>
+              ))}
+              <Link to="/browse" className="body-map-note">Discover Cohort</Link>
+            </div>
           </div>
         </div>
+      </section>
 
-        <div className="gdc-col-middle">
-          <div className="body-map">
-            <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" />
+      <section className="gdc-stat-section">
+        <div className="gdc-stat-inner">
+          <article className="gdc-index-card">
+            <img src={indexMutectImg} alt="ctDNAdb data overview workflow" className="gdc-index-img" />
+            <div className="gdc-index-overlay">
+              <h2>Overview</h2>
+              <p>Curated ctDNA mutation cohorts, cancer types, sample sources, and downstream analysis modules.</p>
+            </div>
+          </article>
 
-            {visibleCallouts.map((cfg) => (
-              <div key={cfg.id} className="body-callout">
-                <svg className="callout-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  <polyline points={buildCalloutPolyline(cfg)} />
-                </svg>
-
-                <div
-                  className="callout-dot"
-                  style={{ left: `${cfg.pointXPct}%`, top: `${cfg.pointYPct}%` } as CSSProperties}
-                  aria-hidden="true"
-                />
-
-                <button
-                  type="button"
-                  className={`callout-label callout-label--${cfg.side}`}
-                  style={{ top: `${cfg.labelTopPct}%`, left: `${getLabelCenterX(cfg)}%` } as CSSProperties}
-                  onClick={() => goToBrowse(cfg.browseKey)}
-                  aria-label={`Browse ${cfg.label} cohort`}
-                >
-                  <strong>{cfg.label}</strong>
-                  <span>{formatNumber(countMap[cfg.id] ?? 0)}</span>
-                </button>
-              </div>
-            ))}
-            <Link to="/browse" className="body-map-note">Discover Cohort</Link>
-          </div>
-        </div>
-
-        <div className="gdc-col-right">
-          <div className="gdc-side-rail">
+          <div className="gdc-stat-panel">
+            <div className="gdc-stat-heading">
+              <p className="section-eyebrow">Statistics</p>
+              <h2>Database coverage at a glance</h2>
+            </div>
             <div className="gdc-overview-grid">
               {overviewCards.map((card) => (
                 <HeroRingChart
@@ -546,8 +564,7 @@ export function HeroCarousel() {
             </div>
           </div>
         </div>
-
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
