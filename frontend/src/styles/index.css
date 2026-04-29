@@ -170,6 +170,7 @@ button, input, select { font: inherit; }
   transform: translateY(-50%);
   display: flex;
   align-items: center;
+  width: clamp(170px, 14vw, 260px);
   text-decoration: none;
 }
 
@@ -182,16 +183,7 @@ button, input, select { font: inherit; }
   height: auto;
   display: block;
   object-fit: contain;
-  filter: brightness(0) invert(1) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
-}
-
-.header-brand-text {
-  color: #ffffff;
-  font-size: clamp(1.85rem, 2.8vw, 3rem);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0;
-  text-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.22));
 }
 
 .title-stack {

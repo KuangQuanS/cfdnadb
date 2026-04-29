@@ -384,7 +384,7 @@ export function HeroCarousel() {
     },
     [sourceDistribution],
   );
-  const totalSourceFiles = useMemo(
+  const totalSourceSamples = useMemo(
     () => sourceRingEntries.reduce((sum, entry) => sum + entry.value, 0),
     [sourceRingEntries],
   );
@@ -417,10 +417,10 @@ export function HeroCarousel() {
       },
       {
         id: "files",
-        title: "Source files",
-        total: totalSourceFiles,
+        title: "Source samples",
+        total: totalSourceSamples,
         entries: sourceRingEntries,
-        caption: "Mounted source files grouped by Internal Data, Public Cohorts, and TCGA.",
+        caption: "Curated samples grouped by Internal Data, Public Cohorts, and TCGA.",
         palette: RING_PALETTES.files,
       },
       {
@@ -440,7 +440,7 @@ export function HeroCarousel() {
         palette: RING_PALETTES.mutations,
       },
     ],
-    [annotatedRingEntries, mutationRingEntries, sampleRingEntries, sourceRingEntries, totalAnnotated, totalMutations, totalSamples, totalSourceFiles],
+    [annotatedRingEntries, mutationRingEntries, sampleRingEntries, sourceRingEntries, totalAnnotated, totalMutations, totalSamples, totalSourceSamples],
   );
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {

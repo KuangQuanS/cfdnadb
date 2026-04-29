@@ -3608,8 +3608,8 @@ public class DuckDbService {
 
     public List<LabelCountDto> getSourceDistribution(String cancer) {
         String validatedCancer = cancer == null || cancer.isBlank() ? null : validateCancer(cancer);
-        StringBuilder sql = new StringBuilder("SELECT source, COUNT(*) AS cnt FROM cohort_file_index " +
-                "WHERE source IN ('private', 'public', 'tcga', 'geo') AND category IN ('multianno', 'vcf', 'mutations')");
+        StringBuilder sql = new StringBuilder("SELECT source, COUNT(*) AS cnt FROM sample_inventory " +
+                "WHERE source IN ('private', 'public', 'tcga', 'geo')");
         if (validatedCancer != null) {
             sql.append(" AND cancer_type = ?");
         }
