@@ -48,9 +48,14 @@ button, input, select { font: inherit; }
 
 /* Base Layout */
 .app-shell {
+  width: 100%;
+  max-width: 1920px;
   min-height: 100vh;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
+  background: var(--bg-soft);
+  box-shadow: 0 0 0 1px rgba(180, 188, 202, 0.45);
 }
 
 .page-content-loading {
