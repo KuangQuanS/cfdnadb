@@ -130,7 +130,6 @@ export function SampleBrowsePanel({
   compact = false,
   eyebrow = "Filtered Multianno Export",
   title = "Select samples, inspect summaries, and export annotated files",
-  description = "Filter by cohort, source, mutation burden, or carrier gene, then select samples for file export.",
   mode = "browse"
 }: SampleBrowsePanelProps) {
   const availableColumns = COLUMN_OPTIONS.filter((item) => mode !== "downloads" || item.key !== "topGenes");
@@ -389,7 +388,6 @@ export function SampleBrowsePanel({
             <div className="browse-samples-hero-copy">
               <p className="section-eyebrow">{eyebrow}</p>
               <h2>{title}</h2>
-              <p>{description}</p>
             </div>
             <div className="browse-samples-hero-metrics">
               <MetricTile label="Matching Samples" value={formatNumber(samplesQuery.data?.totalElements ?? 0)} />
@@ -477,7 +475,6 @@ export function SampleBrowsePanel({
             <div className="browse-samples-hero-copy">
               <p className="section-eyebrow">{eyebrow}</p>
               <h2>{title}</h2>
-              <p>{description}</p>
             </div>
             <div className="browse-samples-hero-metrics">
               <MetricTile label="Matching Samples" value={formatNumber(samplesQuery.data?.totalElements ?? 0)} />
@@ -590,7 +587,6 @@ export function SampleBrowsePanel({
                 <div className="downloads-filtered-sidebar-copy">
                   <p className="section-eyebrow">{eyebrow}</p>
                   <h3>{title}</h3>
-                  <p className="browse-summary-line">{description}</p>
                   {activeTags.length > 0 && (
                     <div className="browse-active-filters browse-active-filters--embedded browse-active-filters--sidebar">
                       <span className="browse-filters-label">Active filters</span>
@@ -605,7 +601,6 @@ export function SampleBrowsePanel({
               ) : null}
               <div className="browse-panel-header">
                 <h3>Filters</h3>
-                <p className="browse-summary-line">Define which samples enter the filtered file export.</p>
               </div>
               <div className="browse-samples-top-filter-grid">
                 {filterSections}

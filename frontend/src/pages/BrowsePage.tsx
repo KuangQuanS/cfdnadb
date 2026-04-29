@@ -108,23 +108,6 @@ function toBrowsePlotSource(source: string) {
   return "Public";
 }
 
-function getPlotDescription(asset: CancerAsset) {
-  const kind = getPlotKind(asset);
-  if (kind === "oncoplot") {
-    return "Oncoplot summarizes recurrent mutated genes and their alteration patterns across samples in the selected cohort.";
-  }
-  if (kind === "titv") {
-    return "Ti/Tv plot shows base-substitution composition and transition/transversion balance for the selected cohort.";
-  }
-  if (kind === "spectrum") {
-    return "Spectrum plot breaks mutations into trinucleotide contexts so you can inspect substitution signatures within the cohort.";
-  }
-  if (kind === "summary") {
-    return "Summary plot combines mutation-class burden, variant-type composition, and top altered genes into one cohort-level overview.";
-  }
-  return "Summary PDF generated from maftools for the selected cohort and source.";
-}
-
 function getPlotKind(asset: CancerAsset) {
   const key = `${asset.title} ${asset.fileName}`.toLowerCase();
   if (key.includes("oncplot") || key.includes("oncoplot") || key.includes("waterfall")) return "oncoplot";
@@ -149,7 +132,6 @@ function BrowsePlotCard({ asset, className = "" }: { asset: CancerAsset; classNa
     <article className={`stat-pdf-card stat-pdf-card--${plotKind}${className ? ` ${className}` : ""}`}>
       <div className="statistics-panel-header">
         <h3 className="stat-pdf-title">{asset.title}</h3>
-        <p className="statistics-panel-note">{getPlotDescription(asset)}</p>
       </div>
       <div className="statistics-pdf-shell">
         <InlinePdfPage
@@ -281,25 +263,11 @@ export function BrowsePage() {
     [summaryPlotAssets]
   );
 
-  const sourceSummary = useMemo(() => {
-    if (activeSource === "cfDNA") {
-      return "Internal Data uses the internal cohort statistics plots and internal mutation rows for the interactive oncoplot.";
-    }
-    if (activeSource === "Public") {
-      return "Public Cohorts uses aggregated statistics plots and mutation rows from external public datasets (e.g. GEO) for the interactive oncoplot.";
-    }
-    if (activeSource === "tcga") {
-      return "TCGA uses its independent oncoplot and cohort summary plots for the selected cancer type.";
-    }
-    return "";
-  }, [activeSource]);
-
   return (
     <div className="page-stack statistics-page">
       <SectionHeader
         eyebrow="Browse"
         title="Cohort browser"
-        description="Browse each cohort through oncoplots and maftools summary plots. This page is cohort-centric rather than sample-centric."
       />
 
       <section className="detail-card statistics-toolbar-card">
@@ -378,7 +346,6 @@ export function BrowsePage() {
           <strong>
             {formatCohortLabel(cancer)} {activeSource ? `| ${selectedLabel}` : ""}
           </strong>
-          <p>{sourceSummary}</p>
         </div>
       </section>
 
@@ -387,11 +354,6 @@ export function BrowsePage() {
         <article className="stat-pdf-card stat-pdf-card--oncoplot statistics-oncoplot-card">
           <div className="statistics-panel-header">
             <h3 className="stat-pdf-title">Oncoplot</h3>
-            <p className="statistics-panel-note">
-              {parsedGenes.length > 0
-                ? `Selected genes in ${formatCohortLabel(cancer)} / ${selectedLabel} (up to ${MAX_ONCOPLOT_GENES}). Each column is a sample, each row is a gene, and cells are colored by the most severe mutation class observed.`
-                : `Top ${DEFAULT_ONCOPLOT_LIMIT} most frequently mutated genes across all samples in ${formatCohortLabel(cancer)} / ${selectedLabel}. Each column is a sample, each row is a gene, and cells are colored by the most severe mutation class observed.`}
-            </p>
           </div>
           {geneError ? <p className="panel-note" style={{ color: "#c0392b" }}>{geneError}</p> : null}
           {oncoplottQ.isLoading ? <p className="panel-note">Loading oncoplot data...</p> : null}
@@ -413,9 +375,6 @@ export function BrowsePage() {
               {formatCohortLabel(cancer)} | {selectedLabel}
             </p>
             <h2>Summary Plots</h2>
-            <p className="statistics-section-copy">
-              These maftools summary views describe mutation spectrum, substitution bias, and overall cohort composition.
-            </p>
           </div>
 
           {plotsQ.isLoading ? <p className="panel-note">Loading plots...</p> : null}

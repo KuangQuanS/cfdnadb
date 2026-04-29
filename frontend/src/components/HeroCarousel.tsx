@@ -538,16 +538,11 @@ export function HeroCarousel() {
         <div className="gdc-stat-inner">
           <article className="gdc-index-card">
             <img src={indexMutectImg} alt="ctDNAdb data overview workflow" className="gdc-index-img" />
-            <div className="gdc-index-overlay">
-              <h2>Overview</h2>
-              <p>Curated ctDNA mutation cohorts, cancer types, sample sources, and downstream analysis modules.</p>
-            </div>
           </article>
 
           <div className="gdc-stat-panel">
             <div className="gdc-stat-heading">
               <p className="section-eyebrow">Statistics</p>
-              <h2>Database coverage at a glance</h2>
             </div>
             <div className="gdc-overview-grid">
               {overviewCards.map((card) => (
