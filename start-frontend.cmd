@@ -11,4 +11,4 @@ if not exist "%FRONTEND_DIR%\package.json" (
 )
 
 cd /d "%FRONTEND_DIR%"
-call npm.cmd run dev -- --host 127.0.0.1 --port 5173
+call npm.cmd run dev -- --host 127.0.0.1 --port 7173
