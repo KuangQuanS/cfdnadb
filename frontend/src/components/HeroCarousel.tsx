@@ -25,10 +25,10 @@ const MOCK_COHORTS: CancerSummary[] = [
 ];
 
 const RING_PALETTES = {
-  sourceSamples: ["#183a63", "#24517f", "#346b9d", "#4f86b8", "#74a2cc", "#9bbddc", "#c5d7e7", "#e0eaf3"],
-  cancerSamples: ["#1f4c78", "#2e6496", "#467fab", "#6599bf", "#8ab5d2", "#b0ccdf", "#d0e0eb", "#8fa9c0"],
-  annotated: ["#1f5f48", "#36805f", "#53a079", "#79b794", "#a1ccae", "#c5ddc9", "#dfebdf", "#809c8b"],
-  mutations: ["#175842", "#2d7555", "#48906b", "#67aa82", "#8cc29e", "#b6d7c0", "#d7eadb", "#71927f"],
+  sourceSamples: ["#173b68", "#1f5f9f", "#2d87c7", "#48abd7", "#7dc9df", "#a7dce8", "#ccecf1", "#e6f4f7"],
+  cancerSamples: ["#1a4f7a", "#2370a8", "#3c92c7", "#63afd8", "#90c9e3", "#b8ddea", "#d8edf2", "#9fb9cc"],
+  annotated: ["#176146", "#21845f", "#36a77c", "#58c194", "#87d4b0", "#b7e3c9", "#d9f0df", "#8da895"],
+  mutations: ["#0f5a43", "#187552", "#2f9468", "#4eb27f", "#7bcc9d", "#aadfbd", "#d5f0db", "#e4bd57"],
 } as const;
 
 const OTHER_SLICE_COLOR = "#cfd6dd";
@@ -553,7 +553,7 @@ export function HeroCarousel() {
         <div className="gdc-stat-inner">
           <article className="gdc-index-card">
             <div className="gdc-card-head">
-              <p className="section-eyebrow">Overview</p>
+              <p className="section-eyebrow">Detail</p>
             </div>
             <div className="gdc-overview-media-grid">
               <button
