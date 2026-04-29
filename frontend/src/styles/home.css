@@ -34,8 +34,7 @@
 }
 
 .gdc-hero-inner {
-  width: calc(100% - 64px);
-  max-width: 1840px;
+  width: min(1500px, calc(100% - 220px));
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(390px, 0.9fr) minmax(430px, 0.9fr) minmax(520px, 1.12fr);
@@ -53,7 +52,6 @@
 }
 
 @media (min-width: 1201px) and (max-width: 1920px) {
-  .gdc-hero-inner,
   .portal-section-inner {
     width: calc(100% - 56px);
   }
@@ -61,8 +59,7 @@
 
 @media (min-width: 1921px) {
   .gdc-hero-inner {
-    width: calc(100% - 112px);
-    max-width: 1808px;
+    width: min(1500px, calc(100% - 220px));
     grid-template-columns: minmax(520px, 0.95fr) minmax(560px, 0.9fr) minmax(620px, 0.85fr);
     gap: clamp(46px, 3vw, 88px);
   }
@@ -849,6 +846,10 @@
 
 /* ---- Responsive ---- */
 @media (max-width: 1500px) {
+  .gdc-hero-inner {
+    width: calc(100% - 180px);
+  }
+
   .gdc-stat-inner {
     width: calc(100% - 180px);
     grid-template-columns: minmax(320px, 0.68fr) minmax(620px, 1.32fr);
