@@ -7,7 +7,7 @@ import { getCancerSummary, getSourceDistribution } from "../api/client";
 import { DEFAULT_GENE } from "../constants/cfdna";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
-import humanBodyImg from "../assets/humanbody_gpt.png";
+import humanBodyImg from "../assets/body_simple_nohand.png";
 import indexMutectImg from "../assets/index_mutect.png";
 import tutorialImg from "../assets/tutorial.png";
 import "../styles/home.css";
