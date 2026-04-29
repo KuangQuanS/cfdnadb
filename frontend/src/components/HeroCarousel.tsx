@@ -23,10 +23,10 @@ const MOCK_COHORTS: CancerSummary[] = [
 ];
 
 const RING_PALETTES = {
-  samples: ["#26456e", "#3e6a9a", "#5a8ab8", "#7ba5c9", "#9fbddb", "#c2d2e5", "#dde6ef", "#8fa2b8"],
-  files: ["#1f5f48", "#36805f", "#53a079", "#79b794", "#a1ccae", "#c5ddc9", "#dfebdf", "#809c8b"],
-  annotated: ["#5f2440", "#82405f", "#a3627b", "#be8596", "#d3aab6", "#e3cbd3", "#efdee3", "#9c7786"],
-  mutations: ["#7d3b0f", "#a25821", "#c47b3c", "#d79f62", "#e5bf89", "#eed4ac", "#f4e2c6", "#a47c5a"],
+  sourceSamples: ["#183a63", "#24517f", "#346b9d", "#4f86b8", "#74a2cc", "#9bbddc", "#c5d7e7", "#e0eaf3"],
+  cancerSamples: ["#1f4c78", "#2e6496", "#467fab", "#6599bf", "#8ab5d2", "#b0ccdf", "#d0e0eb", "#8fa9c0"],
+  annotated: ["#1f5f48", "#36805f", "#53a079", "#79b794", "#a1ccae", "#c5ddc9", "#dfebdf", "#809c8b"],
+  mutations: ["#175842", "#2d7555", "#48906b", "#67aa82", "#8cc29e", "#b6d7c0", "#d7eadb", "#71927f"],
 } as const;
 
 const OTHER_SLICE_COLOR = "#cfd6dd";
@@ -408,20 +408,20 @@ export function HeroCarousel() {
   const overviewCards = useMemo(
     () => [
       {
-        id: "samples",
-        title: "Samples",
-        total: totalSamples,
-        entries: sampleRingEntries,
-        caption: "Cohort distribution of curated plasma samples.",
-        palette: RING_PALETTES.samples,
-      },
-      {
-        id: "files",
+        id: "source-samples",
         title: "Source samples",
         total: totalSourceSamples,
         entries: sourceRingEntries,
         caption: "Curated samples grouped by Internal Data, Public Cohorts, and TCGA.",
-        palette: RING_PALETTES.files,
+        palette: RING_PALETTES.sourceSamples,
+      },
+      {
+        id: "cancer-samples",
+        title: "Cancer samples",
+        total: totalSamples,
+        entries: sampleRingEntries,
+        caption: "Cancer cohort distribution of curated plasma samples.",
+        palette: RING_PALETTES.cancerSamples,
       },
       {
         id: "annotated",

@@ -3625,6 +3625,17 @@ public class DuckDbService {
                     results.add(new LabelCountDto(rs.getString("source"), rs.getLong("cnt")));
                 }
             }
+            if (validatedCancer == null) {
+                long healthyVcfCount = countHealthyVcfFiles();
+                if (healthyVcfCount > 0) {
+                    long privateCount = results.stream()
+                            .filter(item -> "private".equalsIgnoreCase(item.getLabel()))
+                            .mapToLong(LabelCountDto::getCount)
+                            .sum();
+                    results.removeIf(item -> "private".equalsIgnoreCase(item.getLabel()));
+                    results.add(new LabelCountDto("private", privateCount + healthyVcfCount));
+                }
+            }
             return results;
         } catch (SQLException exception) {
             throw new IllegalStateException("Failed to load source distribution for " + (validatedCancer == null ? "all cancers" : validatedCancer), exception);

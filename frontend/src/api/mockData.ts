@@ -681,7 +681,7 @@ export const statisticsOverviewMock: StatisticsOverview = {
 };
 
 export const sourceDistributionMock: LabelCount[] = [
-  { label: "private", count: 1864 },
+  { label: "private", count: 2003 },
   { label: "public", count: 1004 },
   { label: "tcga", count: 425 },
 ];
