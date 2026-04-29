@@ -191,14 +191,9 @@
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 16px;
+  gap: 18px;
   min-height: 720px;
-  overflow: hidden;
-  border: 1px solid rgba(178, 190, 207, 0.9);
-  border-radius: 8px;
-  background: rgba(248, 251, 255, 0.92);
-  box-shadow: 0 22px 54px rgba(23, 36, 70, 0.14);
-  padding: 22px;
+  overflow: visible;
 }
 
 .gdc-card-head {
@@ -214,9 +209,13 @@
 .gdc-overview-media-grid {
   display: grid;
   grid-template-rows: minmax(240px, 0.42fr) minmax(320px, 0.58fr);
-  gap: 16px;
+  gap: 0;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(190, 204, 224, 0.86);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
 }
 
 .gdc-overview-media {
@@ -225,26 +224,26 @@
   align-items: center;
   justify-content: center;
   min-height: 0;
-  padding: 18px 16px;
+  padding: 18px 18px;
   overflow: hidden;
-  border: 1px solid rgba(197, 210, 228, 0.88);
-  border-radius: 8px;
-  background: #ffffff;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: inherit;
   cursor: zoom-in;
   font: inherit;
   text-decoration: none;
 }
 
+.gdc-overview-media + .gdc-overview-media {
+  border-top: 1px solid rgba(209, 220, 234, 0.9);
+}
+
 .gdc-overview-media:hover,
 .gdc-overview-media:focus-visible {
   text-decoration: none;
   outline: none;
-  border-color: rgba(65, 115, 176, 0.62);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.75),
-    0 16px 34px rgba(23, 36, 70, 0.13);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .gdc-overview-media img {
@@ -280,6 +279,13 @@
 .gdc-stat-card .gdc-overview-grid {
   height: 100%;
   min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .gdc-lightbox {
@@ -956,11 +962,6 @@
   .gdc-stat-inner {
     width: calc(100% - 32px);
     gap: 24px;
-  }
-
-  .gdc-index-card,
-  .gdc-stat-card {
-    padding: 16px;
   }
 
   .gdc-lightbox {

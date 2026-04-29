@@ -420,10 +420,10 @@ export function HeroCarousel() {
       },
       {
         id: "cancer-samples",
-        title: "Cancer samples",
+        title: "Sample categories",
         total: totalSamples,
         entries: sampleRingEntries,
-        caption: "Cancer cohort distribution of curated plasma samples.",
+        caption: "Curated plasma samples grouped by cohort category.",
         palette: RING_PALETTES.cancerSamples,
       },
       {
