@@ -155,7 +155,7 @@ export function AppShell({ children }: PropsWithChildren) {
             <span>
               <a href="mailto:lijie@kmmu.edu.cn" style={{ color: "rgba(255,255,255,0.8)" }}>Contact Us</a>
               &nbsp;&middot;&nbsp;
-              <a href="https://leelab.kmmu.edu.cn/leelabindex/" style={{ color: "rgba(255,255,255,0.8)" }} target="_blank" rel="noopener noreferrer">LabIndex</a>
+              <a href="https://leelab.kmmu.edu.cn/leelabindex/" style={{ color: "rgba(255,255,255,0.8)" }} target="_blank" rel="noopener noreferrer">Lee Lab</a>
             </span>
           </div>
         </div>
