@@ -34,7 +34,7 @@
 }
 
 .gdc-hero-inner {
-  width: min(1680px, calc(100vw - 24px));
+  width: min(2560px, calc(100vw - 24px));
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(390px, 0.9fr) minmax(430px, 0.9fr) minmax(520px, 1.12fr);
@@ -49,6 +49,22 @@
   .gdc-hero-inner,
   .portal-section-inner {
     width: calc(100vw - 56px);
+  }
+}
+
+@media (min-width: 1921px) {
+  .gdc-hero-inner {
+    width: min(2560px, calc(100vw - 112px));
+    grid-template-columns: minmax(520px, 0.95fr) minmax(560px, 0.9fr) minmax(620px, 0.85fr);
+    gap: clamp(46px, 3vw, 88px);
+  }
+
+  .gdc-col-left {
+    margin-left: 0;
+  }
+
+  .gdc-col-right {
+    margin-right: 0;
   }
 }
 
