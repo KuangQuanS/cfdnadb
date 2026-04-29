@@ -579,7 +579,7 @@ export function HeroCarousel() {
 
           <article className="gdc-stat-card">
             <div className="gdc-card-head">
-              <p className="section-eyebrow">Statistics</p>
+              <p className="section-eyebrow">Statistic</p>
             </div>
             <div className="gdc-overview-grid">
               {overviewCards.map((card) => (

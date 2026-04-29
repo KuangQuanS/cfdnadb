@@ -191,7 +191,7 @@
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 18px;
+  gap: 24px;
   min-height: 720px;
   overflow: visible;
 }
@@ -200,25 +200,35 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+}
+
+.gdc-card-head::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(31, 95, 159, 0.28), rgba(31, 95, 159, 0));
 }
 
 .gdc-card-head .section-eyebrow {
   margin: 0;
   color: #1f5f9f;
-  font-size: 1.05rem;
+  font-size: 1.08rem;
+  text-transform: none;
   letter-spacing: 0;
 }
 
 .gdc-overview-media-grid {
   display: grid;
   grid-template-rows: minmax(240px, 0.42fr) minmax(320px, 0.58fr);
-  gap: 0;
+  gap: 12px;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
-  border: 1px solid rgba(190, 204, 224, 0.86);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.62);
+  overflow: visible;
+  padding: 8px;
+  border: 1px solid rgba(190, 204, 224, 0.78);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.44);
 }
 
 .gdc-overview-media {
@@ -230,8 +240,11 @@
   padding: 0;
   overflow: hidden;
   border: 0;
-  border-radius: 0;
-  background: transparent;
+  border-radius: 7px;
+  background: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px rgba(205, 218, 234, 0.7),
+    0 8px 24px rgba(23, 36, 70, 0.06);
   color: inherit;
   cursor: zoom-in;
   font: inherit;
@@ -239,14 +252,16 @@
 }
 
 .gdc-overview-media + .gdc-overview-media {
-  border-top: 1px solid rgba(209, 220, 234, 0.9);
+  border-top: 0;
 }
 
 .gdc-overview-media:hover,
 .gdc-overview-media:focus-visible {
   text-decoration: none;
   outline: none;
-  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(116, 154, 202, 0.76),
+    0 14px 30px rgba(23, 36, 70, 0.12);
 }
 
 .gdc-overview-media img {
