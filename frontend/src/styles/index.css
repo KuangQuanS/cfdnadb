@@ -2393,6 +2393,13 @@ button, input, select { font: inherit; }
   gap: 32px;
 }
 
+.statistics-page .statistics-oncoplot-card,
+.statistics-page .statistics-section-block {
+  width: min(100%, 1320px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .statistics-toolbar-card {
   padding: 18px 0 0;
   display: grid;
@@ -2659,6 +2666,7 @@ button, input, select { font: inherit; }
 }
 
 .statistics-pdf-layout--browse {
+  width: 100%;
   justify-items: center;
 }
 
@@ -2669,7 +2677,7 @@ button, input, select { font: inherit; }
 .statistics-pdf-stack {
   display: grid;
   gap: 24px;
-  width: 100%;
+  width: min(100%, 1240px);
   justify-items: center;
 }
 
@@ -2732,7 +2740,7 @@ button, input, select { font: inherit; }
 }
 
 .browse-pdf-card {
-  width: 100%;
+  width: min(100%, 1240px);
   margin: 0 auto;
 }
 
@@ -2963,6 +2971,9 @@ button, input, select { font: inherit; }
 
 .statistics-oncoplot-card {
   overflow: hidden;
+  width: min(100%, 1320px);
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .waterfall-chart-wrap {
@@ -8271,9 +8282,11 @@ button:disabled:hover {
    ============================================================ */
 .survival-page {
   gap: 18px;
+  max-width: 1320px;
 }
 
 .survival-shell {
+  width: 100%;
   padding: 0;
   overflow: hidden;
   border: none;
@@ -8521,6 +8534,7 @@ button:disabled:hover {
 }
 
 .survival-results {
+  width: 100%;
   padding: 0;
   overflow: hidden;
   border: 1px solid #d8e1ef;
