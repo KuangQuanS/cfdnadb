@@ -210,6 +210,10 @@ function boxOption(result: OmicsResult, title: string): EChartsOption {
   };
 }
 
+function hasBoxGroups(result: OmicsResult | undefined) {
+  return Boolean(result && Object.keys(result.groups ?? {}).length > 0);
+}
+
 export function VafAnalysisPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryGene = (searchParams.get("gene") ?? DEFAULT_GENE).trim() || DEFAULT_GENE;
@@ -249,15 +253,15 @@ export function VafAnalysisPage() {
   const totalRecords = entries.reduce((sum, entry) => sum + entry.recordCount, 0);
   const totalSamples = entries.reduce((sum, entry) => sum + entry.sampleCount, 0);
   const cfMethOpt = useMemo(
-    () => (cfMethQ.data ? boxOption(cfMethQ.data, `${cfMethQ.data.gene} cfMethDB methylation across cancer types`) : null),
+    () => (hasBoxGroups(cfMethQ.data) ? boxOption(cfMethQ.data!, `${cfMethQ.data!.gene} cfMethDB methylation across cancer types`) : null),
     [cfMethQ.data]
   );
   const cfOmicsMethOpt = useMemo(
-    () => (cfOmicsMethQ.data ? boxOption(cfOmicsMethQ.data, `${cfOmicsMethQ.data.gene} cfOmics methylation across cancer types`) : null),
+    () => (hasBoxGroups(cfOmicsMethQ.data) ? boxOption(cfOmicsMethQ.data!, `${cfOmicsMethQ.data!.gene} cfOmics methylation across cancer types`) : null),
     [cfOmicsMethQ.data]
   );
   const ctcExprOpt = useMemo(
-    () => (ctcExprQ.data ? boxOption(ctcExprQ.data, `${ctcExprQ.data.gene} CTC expression across cancer types`) : null),
+    () => (hasBoxGroups(ctcExprQ.data) ? boxOption(ctcExprQ.data!, `${ctcExprQ.data!.gene} CTC expression across cancer types`) : null),
     [ctcExprQ.data]
   );
 
