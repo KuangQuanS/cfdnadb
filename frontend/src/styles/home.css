@@ -46,9 +46,9 @@
 }
 
 .gdc-hero-inner--intro {
-  grid-template-columns: minmax(0, 1.24fr) minmax(520px, 0.76fr);
-  gap: clamp(48px, 5vw, 110px);
-  align-items: center;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 0.9fr) minmax(520px, 1.12fr);
+  gap: clamp(30px, 2.2vw, 48px);
+  align-items: start;
 }
 
 @media (min-width: 1201px) and (max-width: 1920px) {
@@ -73,7 +73,7 @@
   }
 
   .gdc-hero-inner--intro {
-    grid-template-columns: minmax(0, 1.28fr) minmax(560px, 0.72fr);
+    grid-template-columns: minmax(520px, 0.95fr) minmax(560px, 0.9fr) minmax(620px, 0.85fr);
   }
 }
 
@@ -189,7 +189,7 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 24px;
-  min-height: 720px;
+  min-height: 680px;
   overflow: visible;
 }
 
