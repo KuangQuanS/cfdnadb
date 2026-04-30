@@ -48,7 +48,7 @@
 .gdc-hero-inner--intro {
   grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 0.9fr) minmax(520px, 1.12fr);
   gap: clamp(30px, 2.2vw, 48px);
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (min-width: 1201px) and (max-width: 1920px) {
@@ -86,7 +86,7 @@
   display: grid;
   gap: 20px;
   align-content: start;
-  min-height: 620px;
+  min-height: 688px;
   margin-left: 2%;
   padding: 42px 20px 18px 0;
   max-width: 760px;
@@ -136,8 +136,8 @@
 .gdc-subtitle {
   margin: 0;
   color: #43567a;
-  font-size: clamp(1rem, 1.08vw, 1.14rem);
-  line-height: 1.9;
+  font-size: clamp(0.9rem, 0.92vw, 1rem);
+  line-height: 1.72;
   max-width: 980px;
   display: grid;
   gap: 16px;
@@ -153,15 +153,17 @@
 .gdc-col-middle {
   display: flex;
   justify-content: flex-end;
-  align-items: flex-start;
+  align-items: stretch;
   min-width: 0;
-  padding-left: clamp(8px, 1.5vw, 28px);
+  min-height: 688px;
+  padding-left: clamp(20px, 2.2vw, 44px);
 }
 
 .body-map {
   position: relative;
   width: min(100%, 640px);
   height: 688px;
+  margin-left: clamp(14px, 1.5vw, 34px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -315,6 +317,7 @@
 .gdc-stat-card {
   border-left: 0;
   padding-left: 0;
+  min-height: 688px;
 }
 
 .gdc-lightbox {
