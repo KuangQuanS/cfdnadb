@@ -47,10 +47,10 @@ const SOURCE_RING_LABELS: Record<typeof SOURCE_RING_ORDER[number], { label: stri
 };
 
 const HERO_ACTIONS = [
-  { label: "Gene Search", desc: "Explore variants & cohorts by gene", to: "/gene-search", icon: "gene" },
-  { label: "Survival Analysis", desc: "Evaluate prognostic value of mutations", to: "/survival", icon: "survival" },
-  { label: "Downloads", desc: "Get full variant & clinical datasets", to: "/downloads", icon: "download" },
-  { label: "Tutorials", desc: "Learn how to use ctDNAdb effectively", to: "/help", icon: "tutorial" },
+  { label: "Gene Search", to: "/gene-search", icon: "gene" },
+  { label: "Survival Analysis", to: "/survival", icon: "survival" },
+  { label: "Downloads", to: "/downloads", icon: "download" },
+  { label: "Tutorials", to: "/help", icon: "tutorial" },
 ] as const;
 
 type HeroActionIcon = typeof HERO_ACTIONS[number]["icon"];
@@ -539,7 +539,6 @@ export function HeroCarousel() {
                   </div>
                   <div className="gdc-hero-action-card-content">
                     <span className="gdc-hero-action-card-title">{action.label}</span>
-                    <span className="gdc-hero-action-card-desc">{action.desc}</span>
                   </div>
                 </Link>
               ))}

@@ -59,15 +59,11 @@ export function DownloadsPage() {
       <SectionHeader
         eyebrow="Download"
         title="Aggregate and filtered downloads"
-        description="Choose between mounted cohort-level outputs and filtered multianno export from selected samples."
       />
 
       <section className="detail-card downloads-mode-card">
         <div className="statistics-panel-header">
           <h3 className="stat-pdf-title">Download mode</h3>
-          <p className="statistics-panel-note">
-            Switch between the complete mounted file table and the filtered sample export workflow.
-          </p>
         </div>
         <div className="downloads-mode-switch">
           <button
@@ -92,9 +88,6 @@ export function DownloadsPage() {
           <article className="stat-pdf-card downloads-table-card">
             <div className="statistics-panel-header">
               <h3 className="stat-pdf-title">Whole-cohort file table</h3>
-              <p className="statistics-panel-note">
-                Download the mounted cohort-level outputs already present on disk, including multianno summaries and pan-cancer aggregates.
-              </p>
             </div>
             <div className="statistics-pdf-shell downloads-table-shell">
               {filesQuery.isLoading && <p className="panel-note">Scanning available files...</p>}
@@ -152,7 +145,6 @@ export function DownloadsPage() {
             mode="downloads"
             eyebrow="Filtered export"
             title="Filter samples and export matching files"
-            description="Use the top filter bar to narrow Internal Data and GEO samples, then review the table and export the selected mounted files as a zip."
           />
         </section>
       ) : null}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type PropsWithChildren } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { PageLoader } from "./PageLoader";
-import headerBgPng from "../assets/background_original.png";
+import headerBgPng from "../assets/background.jpg";
 import siteLogoPng from "../assets/ctDNAdb-logo.png";
 
 const navItems = [

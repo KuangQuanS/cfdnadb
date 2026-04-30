@@ -108,14 +108,6 @@ export function GeneSearchPage() {
     [dataSources, cancerTypes, chromosomes, variantClasses, variantTypes]
   );
 
-  const pagePreview = useMemo(
-    () => ({
-      geneCount: rows.length,
-      variantCount: rows.reduce((sum, row) => sum + row.totalVariants, 0)
-    }),
-    [rows]
-  );
-
   const mutateSearchParams = (mutator: (params: URLSearchParams) => void) => {
     const next = new URLSearchParams();
     for (const value of dataSources) next.append("dataSource", value);
@@ -189,7 +181,6 @@ export function GeneSearchPage() {
         <div className="maf-hero-copy">
           <span className="maf-eyebrow">Mutation Workbench</span>
           <h2>Gene Search</h2>
-          <p>Search mutation calls in a gene-centric table. Use the Data Source filter to combine Internal Data and Public Cohorts as needed.</p>
         </div>
 
         <div className="detail-card maf-search-card">
@@ -262,17 +253,14 @@ export function GeneSearchPage() {
         <SummaryCard
           label="Matched Variants"
           value={summaryQ.isLoading ? "..." : formatNumber(summary?.totalVariants ?? 0)}
-          helper="Current filtered result size"
         />
         <SummaryCard
           label="Matched Samples"
           value={summaryQ.isLoading ? "..." : formatNumber(summary?.totalSamples ?? 0)}
-          helper={gene || activeFilters.length > 0 ? "Distinct matching samples" : "Non-Healthy internal samples"}
         />
         <SummaryCard
           label="Matched Genes"
           value={summaryQ.isLoading ? "..." : formatNumber(summary?.totalGenes ?? 0)}
-          helper="One row per gene below"
         />
         <SummaryCard
           label={isCfDNA ? "Cancer Cohorts" : "Variant Classes"}
@@ -281,7 +269,6 @@ export function GeneSearchPage() {
               ? formatNumber(filterQ.data?.cancerTypes.length ?? 0)
               : formatNumber(filterQ.data?.variantClassifications.length ?? 0)
           }
-          helper="Available in current source"
         />
       </section>
 
@@ -299,11 +286,6 @@ export function GeneSearchPage() {
             </span>
           ))}
         </div>
-        {rows.length > 0 ? (
-          <p className="maf-preview-text">
-            Current page preview: {formatNumber(pagePreview.geneCount)} genes covering {formatNumber(pagePreview.variantCount)} filtered variants on this page.
-          </p>
-        ) : null}
       </section>
 
       <section className="maf-results-panel">
@@ -314,16 +296,6 @@ export function GeneSearchPage() {
               Showing {totalElements === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + pageSize, totalElements)} of{" "}
               {formatNumber(totalElements)} genes
             </p>
-          </div>
-          <div className="maf-results-hint">
-            Click any gene to open its sample-level mutation detail page.
-            {isCfDNA ? (
-              <span className="maf-results-hint-tip">
-                {cancerTypes.length === 1
-                  ? `Lollipop plots will be filtered to ${formatCohortLabel(cancerTypes[0])}.`
-                  : "Detail pages include lollipop plots across all cohorts."}
-              </span>
-            ) : null}
           </div>
         </div>
 
@@ -655,18 +627,15 @@ function PreviewValue({
 
 function SummaryCard({
   label,
-  value,
-  helper
+  value
 }: {
   label: string;
   value: string;
-  helper: string;
 }) {
   return (
     <div className="maf-summary-card">
       <span>{label}</span>
       <strong>{value}</strong>
-      <p>{helper}</p>
     </div>
   );
 }

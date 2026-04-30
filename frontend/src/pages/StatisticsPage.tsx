@@ -653,22 +653,12 @@ function RidgelinePlot({ data }: { data: VafDistribution[] }) {
   );
 }
 
-function StatScope({
-  children,
-}: {
-  children: string;
-}) {
-  return <span className="statistics-private-card-scope">{children}</span>;
-}
-
 function KpiTile({
   label,
   value,
-  hint,
 }: {
   label: string;
   value: number;
-  hint?: string;
 }) {
   return (
     <div className="statistics-private-kpi-tile">
@@ -676,7 +666,6 @@ function KpiTile({
       <strong className="statistics-private-kpi-value">
         {formatNumber(value)}
       </strong>
-      {hint ? <span className="statistics-private-kpi-hint">{hint}</span> : null}
     </div>
   );
 }
@@ -758,9 +747,6 @@ export function StatisticsPage() {
         title={isPublic
           ? "Mutational Landscape of Public Cohort Aggregates"
           : "Mutational Landscape of the Internal Data Liquid-Biopsy Database"}
-        description={isPublic
-          ? "Aggregated somatic mutation counts from public liquid-biopsy datasets (e.g. GEO) curated per cancer cohort."
-          : "A database-wide visual summary of somatic mutations curated from the full internal liquid-biopsy sample collection across all indexed cancer cohorts."}
       />
 
       <section className="detail-card statistics-private-toolbar-card">
@@ -814,21 +800,18 @@ export function StatisticsPage() {
       </section>
 
       <section className="statistics-private-kpis">
-        <KpiTile label="Samples" value={totalSamples} hint="Unique barcodes" />
+        <KpiTile label="Samples" value={totalSamples} />
         <KpiTile
           label="Variants"
           value={totalVariants}
-          hint="Annotated mutation calls"
         />
         <KpiTile
           label="Mutated Genes"
           value={totalGenes}
-          hint="Distinct Hugo symbols"
         />
         <KpiTile
           label="Cancer Cohorts"
           value={isPublic ? (publicCohort ? 1 : publicCohorts.length) : cancerCohorts.length}
-          hint={isPublic ? "Public datasets" : "With somatic data"}
         />
       </section>
 
@@ -842,7 +825,6 @@ export function StatisticsPage() {
             <header className="statistics-private-card-header">
               <div className="statistics-private-card-header-row">
                 <p className="section-eyebrow">Cohort Composition</p>
-                <StatScope>sample-level</StatScope>
               </div>
               <h3>Sample Distribution Across Cohorts</h3>
             </header>
@@ -861,7 +843,6 @@ export function StatisticsPage() {
           <header className="statistics-private-card-header">
             <div className="statistics-private-card-header-row">
               <p className="section-eyebrow">Functional Region</p>
-              <StatScope>variant-level</StatScope>
             </div>
             <h3>Variant Distribution by Genomic Region</h3>
           </header>
@@ -879,7 +860,6 @@ export function StatisticsPage() {
           <header className="statistics-private-card-header">
             <div className="statistics-private-card-header-row">
               <p className="section-eyebrow">Exonic Consequence</p>
-              <StatScope>variant-level</StatScope>
             </div>
             <h3>Coding Consequence Composition</h3>
           </header>
@@ -897,7 +877,6 @@ export function StatisticsPage() {
           <header className="statistics-private-card-header">
             <div className="statistics-private-card-header-row">
               <p className="section-eyebrow">Chromosomal Distribution</p>
-              <StatScope>variant-level</StatScope>
             </div>
             <h3>Variant Counts per Chromosome</h3>
           </header>
@@ -920,7 +899,6 @@ export function StatisticsPage() {
             <header className="statistics-private-card-header">
               <div className="statistics-private-card-header-row">
                 <p className="section-eyebrow">VAF Analysis</p>
-                <StatScope>sample-level</StatScope>
               </div>
               <h3>VAF Distribution by Cancer Type</h3>
             </header>

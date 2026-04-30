@@ -750,10 +750,6 @@ export function SurvivalAnalysisPage() {
           <div className="survival-masthead-copy">
             <p className="survival-masthead-eyebrow">Survival Plots</p>
             <h1>Kaplan-Meier survival and VAF distribution</h1>
-            <p>
-              Investigate mutation-associated survival separation and variant allele frequency patterns across TCGA cohorts.
-              Select one gene, one cohort, and the plot families you want to render in the workspace below.
-            </p>
           </div>
         </div>
 
@@ -811,7 +807,6 @@ export function SurvivalAnalysisPage() {
 
             <div className="survival-control-block survival-control-block--dataset">
               <p className="section-eyebrow">Datasets Selection</p>
-              <p className="survival-block-note">Choose one TCGA cohort as the current analysis dataset.</p>
               <select
                 className="survival-cohort-list"
                 size={8}
@@ -829,7 +824,6 @@ export function SurvivalAnalysisPage() {
             <div className="survival-control-block survival-action">
               <div className="survival-action-copy">
                 <p className="section-eyebrow">Run Analysis</p>
-                <p>Render survival curves and VAF comparisons for the current gene and cohort.</p>
               </div>
               <button
                 type="button"

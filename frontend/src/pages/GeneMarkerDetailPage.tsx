@@ -102,9 +102,6 @@ export function GeneMarkerDetailPage() {
         <div className="maf-hero-copy">
           <span className="maf-eyebrow">Gene Detail</span>
           <h2>{geneSymbol}</h2>
-          <p>
-            Sample-level mutation records for <strong>{geneSymbol}</strong> across Internal Data and TCGA sources.
-          </p>
         </div>
         <div className="maf-detail-actions">
           <Link className="button-secondary inline-button gene-detail-primary-action" to={`/survival?gene=${encodeURIComponent(geneSymbol)}`}>
@@ -116,7 +113,6 @@ export function GeneMarkerDetailPage() {
             </span>
             <span className="gene-survival-cta-label">
               <span className="gene-survival-cta-title">Survival Analysis</span>
-              <span className="gene-survival-cta-sub">Kaplan–Meier for {geneSymbol}</span>
             </span>
             <span className="gene-survival-cta-arrow" aria-hidden="true">→</span>
           </Link>
@@ -474,13 +470,6 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
         <div className="maf-results-header">
           <div>
             <h3>Genome Browser</h3>
-            <p>
-              Interactive mutation map for <strong>{geneSymbol}</strong> on hg38.
-              {applied.cancerType.length > 0 ? ` Filtered to ${applied.cancerType.map(formatCohortLabel).join(", ")}.` : ""}
-            </p>
-          </div>
-          <div className="maf-results-hint">
-            {isCfDNA ? "Each track is a cancer cohort." : "Each track is a cancer type."} Hover mutations for details.
           </div>
         </div>
 
