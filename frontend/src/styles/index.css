@@ -8438,6 +8438,27 @@ button:disabled:hover {
   font-weight: 700;
 }
 
+.vaf-omics-results {
+  margin-top: 22px;
+}
+
+.vaf-omics-results .vaf-omics-plots {
+  grid-template-columns: 1fr;
+}
+
+.vaf-omics-results .survival-plot-card {
+  border-left: none;
+}
+
+.vaf-omics-results .survival-plot-card + .survival-plot-card {
+  border-top: 1px solid #e4ebf4;
+}
+
+.vaf-omics-results .survival-chart-frame--omics {
+  width: min(100%, 980px);
+  aspect-ratio: 1.55 / 1;
+}
+
 @media (max-width: 900px) {
   .help-layout {
     grid-template-columns: 1fr;
