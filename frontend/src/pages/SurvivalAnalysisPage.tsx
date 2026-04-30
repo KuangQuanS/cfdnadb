@@ -745,11 +745,10 @@ export function SurvivalAnalysisPage() {
 
   return (
     <div className="page-stack survival-page">
-      <section className="detail-card survival-shell">
+      <section className="survival-shell">
         <div className="survival-masthead">
           <div className="survival-masthead-copy">
-            <p className="survival-masthead-eyebrow">Survival Plots</p>
-            <h1>Kaplan-Meier survival and VAF distribution</h1>
+            <h1>Survival analysis</h1>
           </div>
         </div>
 
@@ -757,10 +756,7 @@ export function SurvivalAnalysisPage() {
 
         <section className="survival-controls survival-workspace">
           <div className="survival-controls-header">
-            <p className="section-eyebrow">Analysis Controls</p>
-            <h2>
-              Configure gene, cohort, and output plots for <span>{formatCohortLabel(cohort)}</span>
-            </h2>
+            <h2>{formatCohortLabel(cohort)} analysis controls</h2>
           </div>
 
           <div className="survival-controls-grid">
@@ -806,7 +802,7 @@ export function SurvivalAnalysisPage() {
             </div>
 
             <div className="survival-control-block survival-control-block--dataset">
-              <p className="section-eyebrow">Datasets Selection</p>
+              <p className="section-eyebrow">Dataset</p>
               <select
                 className="survival-cohort-list"
                 size={8}
@@ -842,10 +838,9 @@ export function SurvivalAnalysisPage() {
         </section>
       </section>
 
-      <section className="detail-card survival-results">
+      <section className="survival-results">
         <div className="survival-masthead-copy">
-          <p className="section-eyebrow">TCGA Survival</p>
-          <h2>TCGA {formatCohortLabel(cohort)} survival and allele frequency views</h2>
+          <h2>TCGA {formatCohortLabel(cohort)}</h2>
         </div>
 
         <section className="survival-plots">
@@ -853,7 +848,6 @@ export function SurvivalAnalysisPage() {
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <p className="section-eyebrow">Kaplan-Meier</p>
                 <h3>Mutation status survival</h3>
               </div>
               <div className="survival-plot-actions">
@@ -887,7 +881,6 @@ export function SurvivalAnalysisPage() {
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <p className="section-eyebrow">Kaplan-Meier</p>
                 <h3>Mutation type survival</h3>
               </div>
               <div className="survival-plot-actions">
@@ -921,7 +914,6 @@ export function SurvivalAnalysisPage() {
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <p className="section-eyebrow">Variant Allele Frequency</p>
                 <h3>VAF by main stage</h3>
               </div>
               <div className="survival-plot-actions">
@@ -948,7 +940,6 @@ export function SurvivalAnalysisPage() {
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <p className="section-eyebrow">Variant Allele Frequency</p>
                 <h3>VAF by mutation type</h3>
               </div>
               <div className="survival-plot-actions">
@@ -974,10 +965,9 @@ export function SurvivalAnalysisPage() {
         </section>
       </section>
 
-      <section className="detail-card survival-results survival-results--omics">
+      <section className="survival-results survival-results--omics">
         <div className="survival-masthead-copy">
-          <p className="section-eyebrow">Methylation and CTC</p>
-          <h2>Methylation and CTC distribution views</h2>
+          <h2>Methylation and CTC</h2>
         </div>
 
         <section className="survival-plots">
@@ -985,7 +975,6 @@ export function SurvivalAnalysisPage() {
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <p className="section-eyebrow">Methylation Database</p>
                 <h3>cfMethDB methylation</h3>
               </div>
               <div className="survival-plot-actions">
@@ -1012,7 +1001,6 @@ export function SurvivalAnalysisPage() {
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <p className="section-eyebrow">Methylation Database</p>
                 <h3>cfOmics methylation</h3>
               </div>
               <div className="survival-plot-actions">
@@ -1039,7 +1027,6 @@ export function SurvivalAnalysisPage() {
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <p className="section-eyebrow">CTC Database</p>
                 <h3>CTC FPKM expression</h3>
               </div>
               <div className="survival-plot-actions">
