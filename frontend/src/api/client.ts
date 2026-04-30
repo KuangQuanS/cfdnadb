@@ -20,6 +20,7 @@ import type {
   StudyDetail,
   StatisticsOverview,
   VafDistribution,
+  VafBodyMap,
   VisualizationSummary,
   VcfDemo,
   CancerAsset,
@@ -142,6 +143,11 @@ export function getStatisticsOverview() {
 
 export function getVafDistribution() {
   return request<VafDistribution[]>("/api/v1/statistics/vaf-distribution");
+}
+
+export function getVafBodyMap(gene: string) {
+  const params = new URLSearchParams({ gene });
+  return requestLive<VafBodyMap>(`/api/v1/vaf/bodymap?${params.toString()}`);
 }
 
 export function getStatisticsPublicOverview(cancer?: string) {

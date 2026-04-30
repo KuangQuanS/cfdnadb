@@ -179,6 +179,24 @@ export interface VcfDemo {
   sampleSourceDistribution: LabelCount[];
 }
 
+export interface VafBodyMapEntry {
+  cohort: string;
+  cancerType: string;
+  organKey: string;
+  meanVaf: number;
+  medianVaf: number;
+  minVaf: number;
+  maxVaf: number;
+  recordCount: number;
+  sampleCount: number;
+}
+
+export interface VafBodyMap {
+  gene: string;
+  entries: VafBodyMapEntry[];
+  maxMeanVaf: number;
+}
+
 export interface CancerSummary {
   cancer: string;
   sampleCount: number;

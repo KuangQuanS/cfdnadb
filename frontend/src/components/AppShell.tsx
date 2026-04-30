@@ -53,6 +53,13 @@ function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
         >
           Survival Analysis
         </NavLink>
+        <NavLink
+          to="/vaf-analysis"
+          onClick={dismiss}
+          className={({ isActive }) => `site-nav-dropdown-link${isActive ? " active" : ""}`}
+        >
+          VAF Analysis
+        </NavLink>
       </div>
     </div>
   );
@@ -60,7 +67,10 @@ function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
 
 export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
-  const geneMenuActive = location.pathname.startsWith("/gene-search") || location.pathname.startsWith("/survival");
+  const geneMenuActive =
+    location.pathname.startsWith("/gene-search") ||
+    location.pathname.startsWith("/survival") ||
+    location.pathname.startsWith("/vaf-analysis");
   const [routeLoading, setRouteLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const firstRenderRef = useRef(true);

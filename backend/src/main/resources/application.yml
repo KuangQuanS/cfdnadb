@@ -36,6 +36,7 @@ app:
   tcga-igv-file: ${APP_TCGA_IGV_FILE:/400T/cfdnaweb/tcga_maf.txt}
   pan-cancer-dir: ${APP_PAN_CANCER_DIR:/400T/cfdnaweb/statistics/oncoplot/pan_cancer}
   vaf-data-dir: ${APP_VAF_DATA_DIR:/400T/cfdnadb/MAF_all/PDF/PAN_cancer/cfDNA_VAF}
+  vaf-gene-root-dir: ${APP_VAF_GENE_ROOT_DIR:/400T/cfdnadb}
   healthy-vcf-dir: ${APP_HEALTHY_VCF_DIR:/400T/cfdnadb/Healthy/Vcf}
   tcga-dir: ${APP_TCGA_DIR:/400T/cfDNAweb/tcga}
   maf-import:

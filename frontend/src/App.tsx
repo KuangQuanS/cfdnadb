@@ -12,6 +12,7 @@ const DownloadsPage = lazy(() => import("./pages/DownloadsPage").then((module) =
 const StatisticsPage = lazy(() => import("./pages/StatisticsPage").then((module) => ({ default: module.StatisticsPage })));
 const HelpPage = lazy(() => import("./pages/HelpPage").then((module) => ({ default: module.HelpPage })));
 const SurvivalAnalysisPage = lazy(() => import("./pages/SurvivalAnalysisPage").then((module) => ({ default: module.SurvivalAnalysisPage })));
+const VafAnalysisPage = lazy(() => import("./pages/VafAnalysisPage").then((module) => ({ default: module.VafAnalysisPage })));
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/gene-search/:geneSymbol" element={<GeneMarkerDetailPage />} />
           <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="/survival" element={<SurvivalAnalysisPage />} />
+          <Route path="/vaf-analysis" element={<VafAnalysisPage />} />
           <Route path="/studies/:id" element={<StudyDetailPage />} />
           <Route path="/downloads" element={<DownloadsPage />} />
           <Route path="/help" element={<HelpPage />} />
