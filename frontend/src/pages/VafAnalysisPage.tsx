@@ -5,6 +5,7 @@ import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import { getVafBodyMap } from "../api/client";
 import { SectionHeader } from "../components/SectionHeader";
+import { OrganIcon } from "../components/icons/OrganIcon";
 import type { VafBodyMapEntry } from "../types/api";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "")) as string;
@@ -342,7 +343,7 @@ export function VafAnalysisPage() {
                     style={style}
                     title={entry ? `${node.label}: mean VAF ${formatVaf(entry.meanVaf)} (${entry.sampleCount} samples)` : `${node.label}: no data`}
                   >
-                    <span className="vaf-cohort-code">{node.code}</span>
+                    <OrganIcon organ={node.organKey} className="vaf-cohort-icon" />
                     <strong>{entry?.cancerType ?? node.label}</strong>
                     <small>{entry ? formatVaf(entry.meanVaf) : "No data"}</small>
                   </div>
