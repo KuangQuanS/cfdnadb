@@ -1,4 +1,4 @@
-import { type CSSProperties, type FormEvent, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, type FormEvent, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
@@ -8,8 +8,6 @@ import { DEFAULT_GENE } from "../constants/cfdna";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/body_simple_nohand.png";
-import indexMutectImg from "../assets/index_mutect.png";
-import tutorialImg from "../assets/tutorial.png";
 import "../styles/home.css";
 
 const MOCK_COHORTS: CancerSummary[] = [
@@ -326,7 +324,6 @@ function HeroRingChart({
 
 export function HeroCarousel() {
   const navigate = useNavigate();
-  const [previewImage, setPreviewImage] = useState<{ src: string; title: string } | null>(null);
   const cancerQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary, staleTime: 5 * 60_000 });
   const sourceQuery = useQuery({ queryKey: ["source-distribution", "all"], queryFn: () => getSourceDistribution(), staleTime: 5 * 60_000 });
   const cohorts = cancerQuery.data?.length ? cancerQuery.data : MOCK_COHORTS;
@@ -465,149 +462,57 @@ export function HeroCarousel() {
     goToBrowse(browseKey);
   };
 
-  useEffect(() => {
-    if (!previewImage) return;
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setPreviewImage(null);
-      }
-    };
-
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [previewImage]);
-
   return (
-    <>
-      <section className="gdc-hero">
-        <div className="gdc-hero-inner gdc-hero-inner--intro">
-          <div className="gdc-col-left">
-            <h1 className="gdc-title">Welcome to <span>ctDNAdb</span></h1>
-            <p className="gdc-hero-tagline">A circulating tumor DNA somatic mutation database for cancer cohort discovery</p>
-            <div className="gdc-title-rule" aria-hidden="true" />
-            <div className="gdc-subtitle">
-              <p>
-                ctDNAdb represents a comprehensive plasma circulating tumor DNA somatic mutation resource encompassing {formatNumber(INTRO_TOTAL_SAMPLES)} curated samples across major cancer cohorts, including breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies.
-              </p>
-              <p>
-                The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising {formatNumber(INTRO_TOTAL_FILES)} data files, functional annotations, and {formatNumber(INTRO_TOTAL_MUTATIONS)} imported mutation records.
-              </p>
-              <p>
-                The platform provides anatomical browsing, sample exploration, gene-oriented querying, cohort statistics, visualization modules, and download workflows to support cross-cohort comparison, cohort-level interpretation, and biomarker-focused liquid biopsy research.
-              </p>
-            </div>
-
-            <div className="gdc-search-dock gdc-search-dock--inline">
-              <form className="gdc-hero-search" onSubmit={handleSearch}>
-                <div className="gdc-search-row">
-                  <input
-                    name="gene"
-                    type="text"
-                    defaultValue={DEFAULT_GENE}
-                    placeholder="HGNC symbol, e.g. TP53"
-                    aria-label="Enter gene symbol"
-                    className="gdc-search-input"
-                  />
-                  <button type="submit" className="gdc-search-submit">Search</button>
-                </div>
-              </form>
-            </div>
+    <section className="gdc-hero">
+      <div className="gdc-hero-inner gdc-hero-inner--intro">
+        <div className="gdc-col-left">
+          <h1 className="gdc-title">Welcome to <span>ctDNAdb</span></h1>
+          <div className="gdc-title-rule" aria-hidden="true" />
+          <div className="gdc-subtitle">
+            <p>ctDNAdb represents a comprehensive plasma circulating tumor DNA somatic mutation resource encompassing {formatNumber(INTRO_TOTAL_SAMPLES)} curated samples across major cancer cohorts, including breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies.</p>
+            <p>The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising {formatNumber(INTRO_TOTAL_FILES)} data files, functional annotations, and {formatNumber(INTRO_TOTAL_MUTATIONS)} imported mutation records.</p>
+            <p>The platform provides anatomical browsing, sample exploration, gene-oriented querying, cohort statistics, visualization modules, and download workflows to support cross-cohort comparison, cohort-level interpretation, and biomarker-focused liquid biopsy research.</p>
           </div>
-
-          <div className="gdc-col-middle">
-            <div className="body-map">
-              <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" />
-
-              {visibleCallouts.map((cfg) => (
-                <div key={cfg.id} className="body-callout">
-                  <svg className="callout-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    <polyline points={buildCalloutPolyline(cfg)} />
-                  </svg>
-
-                  <div
-                    className="callout-dot"
-                    style={{ left: `${cfg.pointXPct}%`, top: `${cfg.pointYPct}%` } as CSSProperties}
-                    aria-hidden="true"
-                  />
-
-                  <button
-                    type="button"
-                    className={`callout-label callout-label--${cfg.side}`}
-                    style={{ top: `${cfg.labelTopPct}%`, left: `${getLabelCenterX(cfg)}%` } as CSSProperties}
-                    onClick={() => goToBrowse(cfg.browseKey)}
-                    aria-label={`Browse ${cfg.label} cohort`}
-                  >
-                    <strong>{cfg.label}</strong>
-                    <span>{formatNumber(countMap[cfg.id] ?? 0)}</span>
-                  </button>
-                </div>
-              ))}
-              <Link to="/browse" className="body-map-note">Discover Cohort</Link>
-            </div>
+          <div className="gdc-search-dock gdc-search-dock--inline">
+            <form className="gdc-hero-search" onSubmit={handleSearch}>
+              <div className="gdc-search-row">
+                <input name="gene" type="text" defaultValue={DEFAULT_GENE} placeholder="HGNC symbol, e.g. TP53" aria-label="Enter gene symbol" className="gdc-search-input" />
+                <button type="submit" className="gdc-search-submit">Search</button>
+              </div>
+            </form>
           </div>
         </div>
-      </section>
 
-      <section className="gdc-stat-section">
-        <div className="gdc-stat-inner">
-          <article className="gdc-index-card">
-            <div className="gdc-card-head">
-              <p className="section-eyebrow">Detail</p>
-            </div>
-            <div className="gdc-overview-media-grid">
-              <button
-                type="button"
-                className="gdc-overview-media gdc-overview-media--tutorial"
-                onClick={() => setPreviewImage({ src: tutorialImg, title: "Tutorial" })}
-                aria-label="Preview tutorial image"
-              >
-                <span>Tutorial</span>
-                <img src={tutorialImg} alt="ctDNAdb tutorial workflow" />
-              </button>
-              <button
-                type="button"
-                className="gdc-overview-media gdc-overview-media--pipeline"
-                onClick={() => setPreviewImage({ src: indexMutectImg, title: "Pipeline" })}
-                aria-label="Preview pipeline image"
-              >
-                <span>Pipeline</span>
-                <img src={indexMutectImg} alt="ctDNAdb mutation analysis workflow" />
-              </button>
-            </div>
-          </article>
+        <div className="gdc-col-middle">
+          <div className="body-map">
+            <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" />
+            {visibleCallouts.map((cfg) => (
+              <div key={cfg.id} className="body-callout">
+                <svg className="callout-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline points={buildCalloutPolyline(cfg)} />
+                </svg>
+                <div className="callout-dot" style={{ left: `${cfg.pointXPct}%`, top: `${cfg.pointYPct}%` } as CSSProperties} aria-hidden="true" />
+                <button type="button" className={`callout-label callout-label--${cfg.side}`} style={{ top: `${cfg.labelTopPct}%`, left: `${getLabelCenterX(cfg)}%` } as CSSProperties} onClick={() => goToBrowse(cfg.browseKey)} aria-label={`Browse ${cfg.label} cohort`}>
+                  <strong>{cfg.label}</strong>
+                  <span>{formatNumber(countMap[cfg.id] ?? 0)}</span>
+                </button>
+              </div>
+            ))}
+            <Link to="/browse" className="body-map-note">Discover Cohort</Link>
+          </div>
+        </div>
 
+        <div className="gdc-col-right">
           <article className="gdc-stat-card">
-            <div className="gdc-card-head">
-              <p className="section-eyebrow">Statistic</p>
-            </div>
+            <div className="gdc-card-head"><p className="section-eyebrow">Statistic</p></div>
             <div className="gdc-overview-grid">
               {overviewCards.map((card) => (
-                <HeroRingChart
-                  key={card.id}
-                  title={card.title}
-                  total={card.total}
-                  entries={card.entries}
-                  caption={card.caption}
-                  palette={card.palette}
-                  onSliceClick={goToOverviewSlice}
-                />
+                <HeroRingChart key={card.id} title={card.title} total={card.total} entries={card.entries} caption={card.caption} palette={card.palette} onSliceClick={goToOverviewSlice} />
               ))}
             </div>
           </article>
         </div>
-      </section>
-
-      {previewImage ? (
-        <div className="gdc-lightbox" role="dialog" aria-modal="true" aria-label={`${previewImage.title} preview`} onClick={() => setPreviewImage(null)}>
-          <button type="button" className="gdc-lightbox-close" onClick={() => setPreviewImage(null)} aria-label="Close preview">
-            Close
-          </button>
-          <div className="gdc-lightbox-frame">
-            <img src={previewImage.src} alt={`${previewImage.title} preview`} />
-          </div>
-        </div>
-      ) : null}
-    </>
+      </div>
+    </section>
   );
 }

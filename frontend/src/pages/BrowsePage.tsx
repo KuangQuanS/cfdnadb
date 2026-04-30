@@ -355,7 +355,7 @@ export function BrowsePage() {
 
         <div className="statistics-toolbar-meta">
           <strong>
-            {formatCohortLabel(cancer)} {activeSource ? `| ${selectedLabel}` : ""}
+            {formatCohortLabel(cancer)}
           </strong>
         </div>
       </section>
