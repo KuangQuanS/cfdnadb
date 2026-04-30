@@ -467,7 +467,6 @@ export function HeroCarousel() {
       <div className="gdc-hero-inner gdc-hero-inner--intro">
         <div className="gdc-col-left">
           <h1 className="gdc-title">Welcome to <span>ctDNAdb</span></h1>
-          <p className="gdc-hero-tagline">A circulating tumor DNA somatic mutation database for cancer cohort discovery</p>
           <div className="gdc-title-rule" aria-hidden="true" />
           <div className="gdc-subtitle">
             <p>ctDNAdb represents a comprehensive plasma circulating tumor DNA somatic mutation resource encompassing {formatNumber(INTRO_TOTAL_SAMPLES)} curated samples across major cancer cohorts, including breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies.</p>
