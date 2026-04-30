@@ -8882,14 +8882,13 @@ button:disabled:hover {
 }
 
 .survival-results--omics.vaf-omics-results .survival-plots.vaf-omics-plots {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 24px;
 }
 
 .survival-results--omics.vaf-omics-results .survival-plot-card {
-  grid-column: auto;
-  padding: 24px;
+  padding: 32px 40px;
   background: #ffffff;
   border: 1px solid #e1e8f2;
   border-radius: 12px;
@@ -8902,9 +8901,9 @@ button:disabled:hover {
 
 .survival-results--omics.vaf-omics-results .survival-chart-frame--omics {
   width: 100%;
-  max-width: 600px;
+  max-width: 1080px;
   margin: 0 auto;
-  aspect-ratio: 1.3 / 1;
+  aspect-ratio: 2.2 / 1;
 }
 
 .survival-results {
