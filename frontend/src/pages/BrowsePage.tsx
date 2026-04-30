@@ -382,9 +382,6 @@ export function BrowsePage() {
       {activeSource ? (
         <section className="statistics-section-block">
           <div className="statistics-section-heading">
-            <p className="section-eyebrow">
-              {formatCohortLabel(cancer)} variant summary
-            </p>
             <h2>Summary Plots</h2>
           </div>
 
