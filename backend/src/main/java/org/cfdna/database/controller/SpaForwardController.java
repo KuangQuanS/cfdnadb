@@ -11,6 +11,7 @@ public class SpaForwardController {
             "/browse",
             "/statistics",
             "/survival",
+            "/vaf-analysis",
             "/downloads",
             "/help",
             "/visualizations",
