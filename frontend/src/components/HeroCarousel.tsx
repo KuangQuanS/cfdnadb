@@ -1,10 +1,9 @@
-import { type CSSProperties, type FormEvent, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import { Link, useNavigate } from "react-router-dom";
 import { getCancerSummary, getSourceDistribution } from "../api/client";
-import { DEFAULT_GENE } from "../constants/cfdna";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/body_simple_nohand.png";
@@ -25,13 +24,13 @@ const MOCK_COHORTS: CancerSummary[] = [
 ];
 
 const RING_PALETTES = {
-  sourceSamples: ["#173b68", "#1f5f9f", "#2d87c7", "#48abd7", "#7dc9df", "#a7dce8", "#ccecf1", "#e6f4f7"],
-  cancerSamples: ["#1a4f7a", "#2370a8", "#3c92c7", "#63afd8", "#90c9e3", "#b8ddea", "#d8edf2", "#9fb9cc"],
-  annotated: ["#176146", "#21845f", "#36a77c", "#58c194", "#87d4b0", "#b7e3c9", "#d9f0df", "#8da895"],
-  mutations: ["#0f5a43", "#187552", "#2f9468", "#4eb27f", "#7bcc9d", "#aadfbd", "#d5f0db", "#e4bd57"],
+  sourceSamples: ["#173b68", "#23589c", "#2d74cc", "#458ddb", "#62a1e3", "#7eb3ea"],
+  cancerSamples: ["#1a4f7a", "#1d5b8c", "#2168a0", "#277ebf", "#2e92db", "#4aa3e0", "#6ab3e5", "#8dc2eb"],
+  annotated: ["#176146", "#1c7353", "#228a63", "#29a376", "#32c28c", "#4ed1a0", "#6fdcb6", "#90e6ca"],
+  mutations: ["#0f5a43", "#137356", "#188c68", "#1ca379", "#22c28f", "#44d1a4", "#6adbb6", "#8de5c6"],
 } as const;
 
-const OTHER_SLICE_COLOR = "#cfd6dd";
+const OTHER_SLICE_COLOR = "#dce2e8";
 
 const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
 
@@ -46,6 +45,15 @@ const SOURCE_RING_LABELS: Record<typeof SOURCE_RING_ORDER[number], { label: stri
   public: { label: "Public Cohorts", browseSource: "Public" },
   tcga: { label: "TCGA", browseSource: "tcga" },
 };
+
+const HERO_ACTIONS = [
+  { label: "Gene Search", desc: "Explore variants & cohorts by gene", to: "/gene-search", icon: "gene" },
+  { label: "Survival Analysis", desc: "Evaluate prognostic value of mutations", to: "/survival", icon: "survival" },
+  { label: "Downloads", desc: "Get full variant & clinical datasets", to: "/downloads", icon: "download" },
+  { label: "Tutorials", desc: "Learn how to use ctDNAdb effectively", to: "/help", icon: "tutorial" },
+] as const;
+
+type HeroActionIcon = typeof HERO_ACTIONS[number]["icon"];
 
 const COHORT_DISPLAY_LABELS: Record<string, string> = {
   HeadAndNeck: "Head & Neck",
@@ -75,10 +83,57 @@ function normalizeSourceKey(source: string): typeof SOURCE_RING_ORDER[number] | 
   return "";
 }
 
+function HeroIcon({ icon }: { icon: HeroActionIcon }) {
+  if (icon === "gene") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.26 3.27A6.6 6.6 0 0 1 12 3c1.86 0 3.5.76 4.67 2.02" />
+        <path d="M18.8 8.41a6.6 6.6 0 0 1-.36 9.87" />
+        <path d="M15.4 20.63a6.6 6.6 0 0 1-9.86.04" />
+        <path d="M4.6 15.6A6.6 6.6 0 0 1 5.05 5.5" />
+        <path d="m6.5 13 4 4" />
+        <path d="m13.5 17 4-4" />
+        <path d="m17.5 11-4-4" />
+        <path d="m10.5 7-4 4" />
+        <circle cx="12" cy="12" r="2" />
+      </svg>
+    );
+  }
+
+  if (icon === "survival") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18" />
+        <path d="m19 9-5 5-4-4-3 3" />
+        <path d="M21 6h-6v6" />
+      </svg>
+    );
+  }
+
+  if (icon === "download") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" x2="12" y1="15" y2="3" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
+  );
+}
+
 type BodyCalloutConfig = {
   id: string;
   label: string;
   side: "left" | "right";
+  /* Percent coordinates are relative to the body-map box.
+     labelXPct/labelTopPct move the pill; pointXPct/pointYPct move the organ dot. */
   labelTopPct: number;
   labelXPct?: number;
   pointXPct: number;
@@ -88,18 +143,18 @@ type BodyCalloutConfig = {
 
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 15, labelXPct: 15, pointXPct: 50, pointYPct: 15, browseKey: "HeadAndNeck" },
-  { id: "Lung", label: "Lung", side: "left", labelTopPct: 25, pointXPct: 42, pointYPct: 25, browseKey: "Lung" },
-  { id: "Liver", label: "Liver", side: "left", labelTopPct: 34.8, pointXPct: 45, pointYPct: 34.8, browseKey: "Liver" },
-  { id: "Kidney", label: "Kidney", side: "left", labelTopPct: 44, pointXPct: 43.7, pointYPct: 40.8, browseKey: "Kidney" },
-  { id: "Endometrial", label: "Endometrial", side: "left", labelTopPct: 54, pointXPct: 48, pointYPct: 50.5, browseKey: "Endometrial" },
-  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 67, pointXPct: 49, pointYPct: 54.5, browseKey: "Bladder" },
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 14, labelXPct: 14, pointXPct: 60, pointYPct: 14, browseKey: "HeadAndNeck" },
+  { id: "Lung", label: "Lung", side: "left", labelTopPct: 24.5, labelXPct: 14, pointXPct: 56, pointYPct: 28.8, browseKey: "Lung" },
+  { id: "Liver", label: "Liver", side: "left", labelTopPct: 34.2, labelXPct: 14, pointXPct: 56, pointYPct: 37.3, browseKey: "Liver" },
+  { id: "Pancreatic", label: "Pancreas", side: "left", labelTopPct: 43.6, labelXPct: 14, pointXPct: 55.5, pointYPct: 39.6, browseKey: "Pancreatic" },
+  { id: "Endometrial", label: "Endometrial", side: "left", labelTopPct: 53, labelXPct: 14, pointXPct: 59.5, pointYPct: 53, browseKey: "Endometrial" },
+  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 66.8, labelXPct: 14, pointXPct: 59.7, pointYPct: 55.6, browseKey: "Bladder" },
   /* ── right side (top → bottom) ── */
-  { id: "Breast", label: "Breast", side: "right", labelTopPct: 26, pointXPct: 58.1, pointYPct: 28, browseKey: "Breast" },
-  { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 35.5, pointXPct: 54.6, pointYPct: 35.5, browseKey: "Gastric" },
-  { id: "Pancreatic", label: "Pancreas", side: "right", labelTopPct: 44, pointXPct: 48.5, pointYPct: 38.5, browseKey: "Pancreatic" },
-  { id: "Colorectal", label: "Colorectal", side: "right", labelTopPct: 55, pointXPct: 58.5, pointYPct: 47, browseKey: "Colorectal" },
-  { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 66, pointXPct: 52.2, pointYPct: 52.4, browseKey: "Ovarian" },
+  { id: "Breast", label: "Breast", side: "right", labelTopPct: 26.0, labelXPct: 86, pointXPct: 68, pointYPct: 33, browseKey: "Breast" },
+  { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 35.2, labelXPct: 86, pointXPct: 64, pointYPct: 39.5, browseKey: "Gastric" },
+  { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 44.2, labelXPct: 86, pointXPct: 67.5, pointYPct: 41, browseKey: "Kidney" },
+  { id: "Colorectal", label: "Colorectal", side: "right", labelTopPct: 54.8, labelXPct: 86, pointXPct: 67.5, pointYPct: 46.8, browseKey: "Colorectal" },
+  { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 66.0, labelXPct: 86, pointXPct: 65, pointYPct: 53.2, browseKey: "Ovarian" },
 ] as const satisfies readonly BodyCalloutConfig[];
 
 function getLabelCenterX(cfg: BodyCalloutConfig) {
@@ -308,7 +363,7 @@ function HeroRingChart({
           option={option}
           notMerge
           lazyUpdate={false}
-          style={{ height: 292, width: "100%" }}
+          style={{ height: 280, width: "100%" }}
           opts={{ renderer: "canvas" }}
           onEvents={{
             click: (params: { data?: { browseKey?: string; name?: string } }) => {
@@ -326,7 +381,6 @@ function HeroRingChart({
 
 export function HeroCarousel() {
   const navigate = useNavigate();
-  const [previewImage, setPreviewImage] = useState<{ src: string; title: string } | null>(null);
   const cancerQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary, staleTime: 5 * 60_000 });
   const sourceQuery = useQuery({ queryKey: ["source-distribution", "all"], queryFn: () => getSourceDistribution(), staleTime: 5 * 60_000 });
   const cohorts = cancerQuery.data?.length ? cancerQuery.data : MOCK_COHORTS;
@@ -446,13 +500,6 @@ export function HeroCarousel() {
     [annotatedRingEntries, mutationRingEntries, sampleRingEntries, sourceRingEntries, totalAnnotated, totalMutations, totalSamples, totalSourceSamples],
   );
 
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const fd = new FormData(event.currentTarget);
-    const gene = fd.get("gene")?.toString().trim() || DEFAULT_GENE;
-    navigate(`/gene-search?source=cfDNA&gene=${encodeURIComponent(gene)}`);
-  };
-
   const goToBrowse = (browseKey: string) => {
     navigate(`/browse?cancer=${encodeURIComponent(browseKey)}&source=cfDNA`);
   };
@@ -465,54 +512,38 @@ export function HeroCarousel() {
     goToBrowse(browseKey);
   };
 
-  useEffect(() => {
-    if (!previewImage) return;
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setPreviewImage(null);
-      }
-    };
-
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [previewImage]);
-
   return (
     <>
       <section className="gdc-hero">
         <div className="gdc-hero-inner gdc-hero-inner--intro">
           <div className="gdc-col-left">
             <h1 className="gdc-title">Welcome to <span>ctDNAdb</span></h1>
-            <p className="gdc-hero-tagline">A circulating tumor DNA somatic mutation database for cancer cohort discovery</p>
             <div className="gdc-title-rule" aria-hidden="true" />
             <div className="gdc-subtitle">
               <p>
-                ctDNAdb represents a comprehensive plasma circulating tumor DNA somatic mutation resource encompassing {formatNumber(INTRO_TOTAL_SAMPLES)} curated samples across major cancer cohorts, including breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies.
+                ctDNAdb represents a comprehensive plasma circulating tumor DNA somatic mutation resource encompassing <strong>{formatNumber(INTRO_TOTAL_SAMPLES)}</strong> curated samples across major cancer cohorts, including <strong>breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies</strong>.
               </p>
               <p>
-                The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising {formatNumber(INTRO_TOTAL_FILES)} data files, functional annotations, and {formatNumber(INTRO_TOTAL_MUTATIONS)} imported mutation records.
+                The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising <strong>{formatNumber(INTRO_TOTAL_FILES)}</strong> data files, functional annotations, and <strong>{formatNumber(INTRO_TOTAL_MUTATIONS)}</strong> imported mutation records.
               </p>
               <p>
                 The platform provides anatomical browsing, sample exploration, gene-oriented querying, cohort statistics, visualization modules, and download workflows to support cross-cohort comparison, cohort-level interpretation, and biomarker-focused liquid biopsy research.
               </p>
             </div>
 
-            <div className="gdc-search-dock gdc-search-dock--inline">
-              <form className="gdc-hero-search" onSubmit={handleSearch}>
-                <div className="gdc-search-row">
-                  <input
-                    name="gene"
-                    type="text"
-                    defaultValue={DEFAULT_GENE}
-                    placeholder="HGNC symbol, e.g. TP53"
-                    aria-label="Enter gene symbol"
-                    className="gdc-search-input"
-                  />
-                  <button type="submit" className="gdc-search-submit">Search</button>
-                </div>
-              </form>
-            </div>
+            <nav className="gdc-hero-actions-grid" aria-label="Primary ctDNAdb tools">
+              {HERO_ACTIONS.map((action) => (
+                <Link key={action.to} to={action.to} className="gdc-hero-action-card">
+                  <div className="gdc-hero-action-card-icon">
+                    <HeroIcon icon={action.icon} />
+                  </div>
+                  <div className="gdc-hero-action-card-content">
+                    <span className="gdc-hero-action-card-title">{action.label}</span>
+                    <span className="gdc-hero-action-card-desc">{action.desc}</span>
+                  </div>
+                </Link>
+              ))}
+            </nav>
           </div>
 
           <div className="gdc-col-middle">
@@ -520,7 +551,7 @@ export function HeroCarousel() {
               <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" />
 
               {visibleCallouts.map((cfg) => (
-                <div key={cfg.id} className="body-callout">
+                <div key={cfg.id} className={`body-callout body-callout--${cfg.side}`}>
                   <svg className="callout-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                     <polyline points={buildCalloutPolyline(cfg)} />
                   </svg>
@@ -543,7 +574,6 @@ export function HeroCarousel() {
                   </button>
                 </div>
               ))}
-              <Link to="/browse" className="body-map-note">Discover Cohort</Link>
             </div>
           </div>
         </div>
@@ -553,27 +583,10 @@ export function HeroCarousel() {
         <div className="gdc-stat-inner">
           <article className="gdc-index-card">
             <div className="gdc-card-head">
-              <p className="section-eyebrow">Detail</p>
+              <p className="section-eyebrow">Tutorial</p>
             </div>
-            <div className="gdc-overview-media-grid">
-              <button
-                type="button"
-                className="gdc-overview-media gdc-overview-media--tutorial"
-                onClick={() => setPreviewImage({ src: tutorialImg, title: "Tutorial" })}
-                aria-label="Preview tutorial image"
-              >
-                <span>Tutorial</span>
-                <img src={tutorialImg} alt="ctDNAdb tutorial workflow" />
-              </button>
-              <button
-                type="button"
-                className="gdc-overview-media gdc-overview-media--pipeline"
-                onClick={() => setPreviewImage({ src: indexMutectImg, title: "Pipeline" })}
-                aria-label="Preview pipeline image"
-              >
-                <span>Pipeline</span>
-                <img src={indexMutectImg} alt="ctDNAdb mutation analysis workflow" />
-              </button>
+            <div className="gdc-tutorial-panel">
+              <img src={tutorialImg} alt="ctDNAdb tutorial workflow" />
             </div>
           </article>
 
@@ -598,16 +611,16 @@ export function HeroCarousel() {
         </div>
       </section>
 
-      {previewImage ? (
-        <div className="gdc-lightbox" role="dialog" aria-modal="true" aria-label={`${previewImage.title} preview`} onClick={() => setPreviewImage(null)}>
-          <button type="button" className="gdc-lightbox-close" onClick={() => setPreviewImage(null)} aria-label="Close preview">
-            Close
-          </button>
-          <div className="gdc-lightbox-frame">
-            <img src={previewImage.src} alt={`${previewImage.title} preview`} />
+      <section className="gdc-pipeline-section">
+        <div className="gdc-pipeline-inner">
+          <div className="gdc-card-head">
+            <p className="section-eyebrow">Pipeline</p>
+          </div>
+          <div className="gdc-pipeline-frame">
+            <img src={indexMutectImg} alt="ctDNAdb mutation analysis workflow" />
           </div>
         </div>
-      ) : null}
+      </section>
     </>
   );
 }
