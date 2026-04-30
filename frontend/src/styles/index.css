@@ -8807,6 +8807,19 @@ button:disabled:hover {
   grid-column: 1 / -1;
 }
 
+.survival-results--omics.vaf-omics-results .survival-plots.vaf-omics-plots {
+  grid-template-columns: 1fr;
+}
+
+.survival-results--omics.vaf-omics-results .survival-plot-card {
+  grid-column: 1 / -1;
+  border-left: none;
+}
+
+.survival-results--omics.vaf-omics-results .survival-plot-card + .survival-plot-card {
+  border-top: 1px solid #e4ebf4;
+}
+
 .survival-results {
   width: 100%;
   padding: 0;
