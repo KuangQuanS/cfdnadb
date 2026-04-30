@@ -8348,7 +8348,7 @@ button:disabled:hover {
   text-transform: uppercase;
 }
 
-.vaf-organ-node {
+.vaf-cohort-node {
   position: absolute;
   left: var(--vaf-node-left);
   top: var(--vaf-node-top);
@@ -8362,49 +8362,43 @@ button:disabled:hover {
   transform: translate(-50%, -50%);
 }
 
-.vaf-organ-icon {
+.vaf-cohort-code {
   display: grid;
   place-items: center;
   width: var(--vaf-node-size);
   height: var(--vaf-node-size);
-  border: 2px solid #d8e2ee;
+  border: 1px solid #d8e2ee;
   border-radius: 50%;
   background: #ffffff;
-  box-shadow: 0 10px 22px rgba(34, 49, 78, 0.08);
+  box-shadow: 0 8px 18px rgba(34, 49, 78, 0.06);
   color: #8a99ad;
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
 }
 
-.vaf-organ-node--active .vaf-organ-icon {
-  border-color: color-mix(in srgb, var(--vaf-node-color) 60%, white);
-  color: var(--vaf-node-color);
+.vaf-cohort-node--active .vaf-cohort-code {
+  border-color: var(--vaf-node-color);
+  background: var(--vaf-node-color);
+  color: #ffffff;
   box-shadow:
-    0 0 0 5px color-mix(in srgb, var(--vaf-node-color) 14%, transparent),
-    0 12px 26px rgba(34, 49, 78, 0.14);
+    0 0 0 5px rgba(217, 95, 69, 0.08),
+    0 10px 22px rgba(34, 49, 78, 0.12);
 }
 
-.vaf-organ-icon svg {
-  width: 62%;
-  height: 62%;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.vaf-organ-node strong {
+.vaf-cohort-node strong {
   color: #233650;
   font-size: 0.82rem;
   font-weight: 900;
 }
 
-.vaf-organ-node small {
+.vaf-cohort-node small {
   color: #7a889d;
   font-size: 0.76rem;
   font-weight: 850;
 }
 
-.vaf-organ-node--active small {
+.vaf-cohort-node--active small {
   color: var(--vaf-node-color);
 }
 
