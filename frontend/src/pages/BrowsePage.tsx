@@ -126,17 +126,29 @@ function rankPlot(asset: CancerAsset) {
   return 10;
 }
 
-function BrowsePlotCard({ asset, className = "" }: { asset: CancerAsset; className?: string }) {
+
+function getDisplayPlotTitle(asset: CancerAsset, cancer: string) {
+  const title = asset.title?.trim() || "";
+  if (!title) return title;
+  const lower = title.toLowerCase();
+  if (lower.includes("summary")) {
+    return `${formatCohortLabel(cancer)} variant summary`;
+  }
+  return title;
+}
+
+function BrowsePlotCard({ asset, cancer, className = "" }: { asset: CancerAsset; cancer: string; className?: string }) {
+  const displayTitle = getDisplayPlotTitle(asset, cancer);
   const plotKind = getPlotKind(asset);
   return (
     <article className={`stat-pdf-card stat-pdf-card--${plotKind}${className ? ` ${className}` : ""}`}>
       <div className="statistics-panel-header">
-        <h3 className="stat-pdf-title">{asset.title}</h3>
+        <h3 className="stat-pdf-title">{displayTitle}</h3>
       </div>
       <div className="statistics-pdf-shell">
         <InlinePdfPage
           url={toApiUrl(asset.assetUrl)}
-          title={asset.title}
+          title={displayTitle}
           loadingLabel="Loading plot preview..."
           showCaption={false}
           className="statistics-inline-pdf--stat"
@@ -266,14 +278,13 @@ export function BrowsePage() {
   return (
     <div className="page-stack statistics-page">
       <SectionHeader
-        eyebrow="Browse"
-        title="Cohort browser"
+        title="Cancer browser"
       />
 
       <section className="detail-card statistics-toolbar-card">
         <div className="statistics-toolbar-top">
           <label className="statistics-toolbar-field">
-            <span>Cohort</span>
+            <span>Cancer</span>
             <select value={cancer} onChange={(event) => setParam("cancer", event.target.value)}>
               {CANCER_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -344,7 +355,7 @@ export function BrowsePage() {
 
         <div className="statistics-toolbar-meta">
           <strong>
-            {formatCohortLabel(cancer)} {activeSource ? `| ${selectedLabel}` : ""}
+            {formatCohortLabel(cancer)}
           </strong>
         </div>
       </section>
@@ -353,7 +364,7 @@ export function BrowsePage() {
       {activeSource ? (
         <article className="stat-pdf-card stat-pdf-card--oncoplot statistics-oncoplot-card">
           <div className="statistics-panel-header">
-            <h3 className="stat-pdf-title">Oncoplot</h3>
+            <h3 className="stat-pdf-title">Mutation plot</h3>
           </div>
           {geneError ? <p className="panel-note" style={{ color: "#c0392b" }}>{geneError}</p> : null}
           {oncoplottQ.isLoading ? <p className="panel-note">Loading oncoplot data...</p> : null}
@@ -372,7 +383,7 @@ export function BrowsePage() {
         <section className="statistics-section-block">
           <div className="statistics-section-heading">
             <p className="section-eyebrow">
-              {formatCohortLabel(cancer)} | {selectedLabel}
+              {formatCohortLabel(cancer)} variant summary
             </p>
             <h2>Summary Plots</h2>
           </div>
@@ -385,6 +396,7 @@ export function BrowsePage() {
                   <BrowsePlotCard
                     key={asset.fileName}
                     asset={asset}
+                    cancer={cancer}
                     className={`browse-pdf-card browse-pdf-card--${getPlotKind(asset)}`}
                   />
                 ))}
