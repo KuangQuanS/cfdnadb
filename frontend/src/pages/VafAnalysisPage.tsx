@@ -1,35 +1,32 @@
-import { Fragment, useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { getVafBodyMap } from "../api/client";
 import { SectionHeader } from "../components/SectionHeader";
 import type { VafBodyMapEntry } from "../types/api";
-import humanBodyImg from "../assets/body_simple_nohand.png";
 
 const DEFAULT_GENE = "ERBB2";
 
-type OrganMarker = {
+type OrganNode = {
   organKey: string;
   label: string;
+  icon: string;
   left: number;
   top: number;
-  labelLeft: number;
-  labelTop: number;
-  align?: "left" | "right";
 };
 
-const ORGAN_MARKERS: OrganMarker[] = [
-  { organKey: "brain", label: "Brain", left: 62.4, top: 7.2, labelLeft: 76, labelTop: 7.2 },
-  { organKey: "thyroid", label: "Thyroid", left: 63.7, top: 23.6, labelLeft: 76, labelTop: 23.4 },
-  { organKey: "lung", label: "Lung", left: 63.8, top: 31.2, labelLeft: 76, labelTop: 30.8 },
-  { organKey: "breast", label: "Breast", left: 63.4, top: 37.6, labelLeft: 76, labelTop: 37.2 },
-  { organKey: "liver", label: "Liver", left: 59.4, top: 43.6, labelLeft: 40, labelTop: 43.2, align: "right" },
-  { organKey: "gastric", label: "Gastric", left: 69.4, top: 45.4, labelLeft: 78, labelTop: 45.2 },
-  { organKey: "pancreatic", label: "Pancreatic", left: 65.4, top: 46.4, labelLeft: 78, labelTop: 50.4 },
-  { organKey: "kidney", label: "Kidney", left: 55.8, top: 49.8, labelLeft: 39, labelTop: 49.6, align: "right" },
-  { organKey: "colorectal", label: "Colorectal", left: 64.2, top: 54.6, labelLeft: 78, labelTop: 56.2 },
-  { organKey: "ovarian", label: "Ovarian", left: 63.8, top: 62.4, labelLeft: 78, labelTop: 63 },
-  { organKey: "bladder", label: "Bladder", left: 47.8, top: 64.2, labelLeft: 34, labelTop: 65.4, align: "right" },
+const ORGAN_NODES: OrganNode[] = [
+  { organKey: "brain", label: "Brain", icon: "brain", left: 50, top: 9 },
+  { organKey: "lung", label: "Lung", icon: "lung", left: 22, top: 20 },
+  { organKey: "breast", label: "Breast", icon: "breast", left: 78, top: 20 },
+  { organKey: "thyroid", label: "Thyroid", icon: "thyroid", left: 90, top: 43 },
+  { organKey: "kidney", label: "Kidney", icon: "kidney", left: 84, top: 68 },
+  { organKey: "ovarian", label: "Ovarian", icon: "ovarian", left: 64, top: 87 },
+  { organKey: "bladder", label: "Bladder", icon: "bladder", left: 36, top: 87 },
+  { organKey: "colorectal", label: "Colorectal", icon: "colon", left: 16, top: 68 },
+  { organKey: "liver", label: "Liver", icon: "liver", left: 10, top: 43 },
+  { organKey: "gastric", label: "Gastric", icon: "stomach", left: 30, top: 57 },
+  { organKey: "pancreatic", label: "Pancreatic", icon: "pancreas", left: 70, top: 57 },
 ];
 
 function formatVaf(value: number) {
@@ -57,6 +54,100 @@ function markerColor(ratio: number) {
   if (ratio >= 0.67) return "#d95f45";
   if (ratio >= 0.34) return "#f0a142";
   return "#3f9caf";
+}
+
+function OrganIcon({ icon }: { icon: string }) {
+  if (icon === "lung") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 9v27" />
+        <path d="M21 17c-7 2-11 8-11 18 0 4 2 6 5 6 6 0 8-8 8-18 0-3-1-5-2-6Z" />
+        <path d="M27 17c7 2 11 8 11 18 0 4-2 6-5 6-6 0-8-8-8-18 0-3 1-5 2-6Z" />
+      </svg>
+    );
+  }
+  if (icon === "breast") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M10 30c2-9 8-15 14-15s12 6 14 15" />
+        <circle cx="18" cy="31" r="8" />
+        <circle cx="30" cy="31" r="8" />
+      </svg>
+    );
+  }
+  if (icon === "liver") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M7 28c5-13 18-17 34-13 0 11-9 20-23 20-5 0-9-2-11-7Z" />
+        <path d="M30 20c5 2 8 6 9 11" />
+      </svg>
+    );
+  }
+  if (icon === "stomach") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 7c2 8-3 11-2 17 1 5 9 4 9 10 0 5-5 8-11 8-8 0-13-5-13-12 0-6 4-10 11-11" />
+        <path d="M24 7c4 2 6 5 6 9" />
+      </svg>
+    );
+  }
+  if (icon === "colon") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M15 10h18c4 0 7 3 7 7v17c0 4-3 7-7 7H18c-4 0-7-3-7-7V20c0-4 3-7 7-7h12" />
+        <path d="M19 18h10c3 0 5 2 5 5v7c0 3-2 5-5 5h-8c-3 0-5-2-5-5v-4" />
+      </svg>
+    );
+  }
+  if (icon === "pancreas") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M8 28c8-10 19-13 32-6-4 9-13 13-24 11-4-1-6-2-8-5Z" />
+        <path d="M22 24c5 0 9 1 13 4" />
+      </svg>
+    );
+  }
+  if (icon === "kidney") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M18 10c-6 2-9 8-8 16 1 8 5 13 10 12 4-1 4-6 2-11-2-6 2-10 2-14-1-2-3-4-6-3Z" />
+        <path d="M30 10c6 2 9 8 8 16-1 8-5 13-10 12-4-1-4-6-2-11 2-6-2-10-2-14 1-2 3-4 6-3Z" />
+      </svg>
+    );
+  }
+  if (icon === "ovarian") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M15 29c2-7 6-11 9-11s7 4 9 11" />
+        <circle cx="13" cy="32" r="5" />
+        <circle cx="35" cy="32" r="5" />
+      </svg>
+    );
+  }
+  if (icon === "bladder") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M17 14c1 7-4 11-4 18 0 6 5 10 11 10s11-4 11-10c0-7-5-11-4-18" />
+        <path d="M20 14h8" />
+      </svg>
+    );
+  }
+  if (icon === "thyroid") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 12v24" />
+        <path d="M21 22c-7-5-12-2-12 5 0 5 3 8 8 8 4 0 6-3 7-7" />
+        <path d="M27 22c7-5 12-2 12 5 0 5-3 8-8 8-4 0-6-3-7-7" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M14 28c-4-8 2-18 10-18s14 10 10 18c-2 5-6 8-10 8s-8-3-10-8Z" />
+      <path d="M18 21h12" />
+      <path d="M20 27h8" />
+    </svg>
+  );
 }
 
 export function VafAnalysisPage() {
@@ -140,35 +231,34 @@ export function VafAnalysisPage() {
 
         <div className="vaf-analysis-workspace">
           <div className="vaf-bodymap-panel">
-            <div className="vaf-bodymap-canvas" aria-label={`${queryGene} VAF body map`}>
-              <img src={humanBodyImg} alt="Human body map for VAF analysis" />
-              {ORGAN_MARKERS.map((marker) => {
-                const entry = organEntries.get(marker.organKey);
-                if (!entry) return null;
-                const ratio = maxMean > 0 ? Math.max(0.18, entry.meanVaf / maxMean) : 0.18;
+            <div className="vaf-icon-map" aria-label={`${queryGene} VAF organ map`}>
+              <div className="vaf-icon-map-core">
+                <strong>{vafQ.data?.gene ?? queryGene.toUpperCase()}</strong>
+                <span>mean VAF map</span>
+              </div>
+              {ORGAN_NODES.map((node) => {
+                const entry = organEntries.get(node.organKey);
+                const active = Boolean(entry);
+                const ratio = entry && maxMean > 0 ? Math.max(0.18, entry.meanVaf / maxMean) : 0;
                 const style = {
-                  "--vaf-left": `${marker.left}%`,
-                  "--vaf-top": `${marker.top}%`,
-                  "--vaf-label-left": `${marker.labelLeft}%`,
-                  "--vaf-label-top": `${marker.labelTop}%`,
-                  "--vaf-size": `${14 + ratio * 14}px`,
-                  "--vaf-color": markerColor(ratio),
+                  "--vaf-node-left": `${node.left}%`,
+                  "--vaf-node-top": `${node.top}%`,
+                  "--vaf-node-size": `${active ? 50 + ratio * 16 : 46}px`,
+                  "--vaf-node-color": active ? markerColor(ratio) : "#9aa8ba",
                 } as CSSProperties;
                 return (
-                  <Fragment key={marker.organKey}>
-                    <span
-                      className="vaf-bodymap-marker"
-                      style={style}
-                      title={`${marker.label}: mean VAF ${formatVaf(entry.meanVaf)} (${entry.sampleCount} samples)`}
-                    />
-                    <span
-                      className={`vaf-bodymap-label${marker.align === "right" ? " vaf-bodymap-label--right" : ""}`}
-                      style={style}
-                    >
-                      <strong>{entry.cancerType}</strong>
-                      <small>{formatVaf(entry.meanVaf)}</small>
+                  <div
+                    key={node.organKey}
+                    className={`vaf-organ-node${active ? " vaf-organ-node--active" : ""}`}
+                    style={style}
+                    title={entry ? `${node.label}: mean VAF ${formatVaf(entry.meanVaf)} (${entry.sampleCount} samples)` : `${node.label}: no data`}
+                  >
+                    <span className="vaf-organ-icon">
+                      <OrganIcon icon={node.icon} />
                     </span>
-                  </Fragment>
+                    <strong>{entry?.cancerType ?? node.label}</strong>
+                    <small>{entry ? formatVaf(entry.meanVaf) : "No data"}</small>
+                  </div>
                 );
               })}
             </div>

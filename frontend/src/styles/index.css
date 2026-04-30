@@ -8297,79 +8297,115 @@ button:disabled:hover {
   min-width: 0;
 }
 
-.vaf-bodymap-canvas {
+.vaf-icon-map {
   position: relative;
-  width: min(100%, 520px);
+  width: min(100%, 560px);
+  aspect-ratio: 1;
+  border: 1px solid #dde7f2;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.96) 0 22%, transparent 22%),
+    radial-gradient(circle at 50% 50%, transparent 0 38%, rgba(226, 235, 248, 0.9) 38% 38.5%, transparent 38.5% 100%),
+    radial-gradient(circle at 50% 50%, transparent 0 57%, rgba(226, 235, 248, 0.75) 57% 57.4%, transparent 57.4% 100%),
+    linear-gradient(135deg, rgba(245, 249, 253, 0.9), rgba(255, 255, 255, 0.98));
 }
 
-.vaf-bodymap-canvas img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.vaf-bodymap-marker {
-  position: absolute;
-  left: var(--vaf-left);
-  top: var(--vaf-top);
-  width: var(--vaf-size);
-  height: var(--vaf-size);
-  border-radius: 999px;
-  background: var(--vaf-color);
-  border: 3px solid rgba(255, 255, 255, 0.92);
-  box-shadow:
-    0 0 0 1px rgba(25, 40, 63, 0.18),
-    0 8px 18px rgba(39, 51, 77, 0.18);
-  transform: translate(-50%, -50%);
-  pointer-events: auto;
-}
-
-.vaf-bodymap-marker::after {
+.vaf-icon-map::before {
   content: "";
   position: absolute;
-  inset: -9px;
-  border: 1px solid var(--vaf-color);
-  border-radius: inherit;
-  opacity: 0.22;
+  inset: 9%;
+  border: 2px solid rgba(44, 107, 177, 0.12);
+  border-radius: 50%;
 }
 
-.vaf-bodymap-label {
+.vaf-icon-map-core {
   position: absolute;
-  left: var(--vaf-label-left);
-  top: var(--vaf-label-top);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 104px;
-  padding: 7px 10px;
-  border: 1px solid #dfe8f3;
-  border-left: 4px solid var(--vaf-color);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 8px 20px rgba(32, 48, 76, 0.08);
-  color: #1f2d44;
-  transform: translateY(-50%);
-  white-space: nowrap;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 132px;
+  height: 132px;
+  border: 1px solid #dbe6f2;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(35, 51, 77, 0.08);
+  color: #22334c;
+  transform: translate(-50%, -50%);
 }
 
-.vaf-bodymap-label--right {
-  transform: translate(-100%, -50%);
+.vaf-icon-map-core strong {
+  font-size: 1.28rem;
+  font-weight: 950;
 }
 
-.vaf-bodymap-label strong,
-.vaf-bodymap-label small {
-  display: block;
+.vaf-icon-map-core span {
+  margin-top: -28px;
+  color: #72829a;
+  font-size: 0.75rem;
+  font-weight: 850;
+  text-transform: uppercase;
 }
 
-.vaf-bodymap-label strong {
+.vaf-organ-node {
+  position: absolute;
+  left: var(--vaf-node-left);
+  top: var(--vaf-node-top);
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  width: 112px;
+  gap: 5px;
+  color: #6d7d93;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.vaf-organ-icon {
+  display: grid;
+  place-items: center;
+  width: var(--vaf-node-size);
+  height: var(--vaf-node-size);
+  border: 2px solid #d8e2ee;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 10px 22px rgba(34, 49, 78, 0.08);
+  color: #8a99ad;
+}
+
+.vaf-organ-node--active .vaf-organ-icon {
+  border-color: color-mix(in srgb, var(--vaf-node-color) 60%, white);
+  color: var(--vaf-node-color);
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--vaf-node-color) 14%, transparent),
+    0 12px 26px rgba(34, 49, 78, 0.14);
+}
+
+.vaf-organ-icon svg {
+  width: 62%;
+  height: 62%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vaf-organ-node strong {
+  color: #233650;
   font-size: 0.82rem;
   font-weight: 900;
 }
 
-.vaf-bodymap-label small {
-  color: #64748b;
-  font-size: 0.78rem;
+.vaf-organ-node small {
+  color: #7a889d;
+  font-size: 0.76rem;
   font-weight: 850;
+}
+
+.vaf-organ-node--active small {
+  color: var(--vaf-node-color);
 }
 
 .vaf-analysis-table-wrap {
