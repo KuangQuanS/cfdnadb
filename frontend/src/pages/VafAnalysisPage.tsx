@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import { Fragment, useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { getVafBodyMap } from "../api/client";
@@ -8,33 +8,28 @@ import humanBodyImg from "../assets/body_simple_nohand.png";
 
 const DEFAULT_GENE = "ERBB2";
 
-type OrganShape = {
+type OrganMarker = {
   organKey: string;
   label: string;
   left: number;
   top: number;
-  width: number;
-  height: number;
-  rotate?: number;
+  labelLeft: number;
+  labelTop: number;
+  align?: "left" | "right";
 };
 
-const ORGAN_SHAPES: OrganShape[] = [
-  { organKey: "lung", label: "Lung", left: 55.5, top: 27.2, width: 7.4, height: 10.8, rotate: -12 },
-  { organKey: "lung", label: "Lung", left: 67.2, top: 27.2, width: 7.4, height: 10.8, rotate: 12 },
-  { organKey: "breast", label: "Breast", left: 55.2, top: 36.8, width: 7.8, height: 5.2, rotate: 8 },
-  { organKey: "breast", label: "Breast", left: 68.3, top: 36.8, width: 7.8, height: 5.2, rotate: -8 },
-  { organKey: "bladder", label: "Bladder", left: 33.2, top: 63.8, width: 5.6, height: 4.4 },
-  { organKey: "bladder", label: "Bladder", left: 62.4, top: 63.4, width: 5.6, height: 4.4 },
-  { organKey: "liver", label: "Liver", left: 55.2, top: 41.6, width: 13.4, height: 7.2, rotate: -8 },
-  { organKey: "gastric", label: "Gastric", left: 67.2, top: 43.8, width: 8.2, height: 5.6, rotate: -18 },
-  { organKey: "colorectal", label: "Colorectal", left: 58.2, top: 50.8, width: 14.6, height: 8.8 },
-  { organKey: "pancreatic", label: "Pancreatic", left: 62.4, top: 44.6, width: 8.2, height: 2.8, rotate: -8 },
-  { organKey: "kidney", label: "Kidney", left: 54.4, top: 47.8, width: 4.6, height: 5.6, rotate: 10 },
-  { organKey: "kidney", label: "Kidney", left: 72.3, top: 47.8, width: 4.6, height: 5.6, rotate: -10 },
-  { organKey: "ovarian", label: "Ovarian", left: 58.3, top: 61.2, width: 3.8, height: 3.6 },
-  { organKey: "ovarian", label: "Ovarian", left: 68.8, top: 61.2, width: 3.8, height: 3.6 },
-  { organKey: "brain", label: "Brain", left: 56.3, top: 4.8, width: 14.4, height: 7.8 },
-  { organKey: "thyroid", label: "Thyroid", left: 62.5, top: 22.8, width: 3.8, height: 2.7 },
+const ORGAN_MARKERS: OrganMarker[] = [
+  { organKey: "brain", label: "Brain", left: 62.4, top: 7.2, labelLeft: 76, labelTop: 7.2 },
+  { organKey: "thyroid", label: "Thyroid", left: 63.7, top: 23.6, labelLeft: 76, labelTop: 23.4 },
+  { organKey: "lung", label: "Lung", left: 63.8, top: 31.2, labelLeft: 76, labelTop: 30.8 },
+  { organKey: "breast", label: "Breast", left: 63.4, top: 37.6, labelLeft: 76, labelTop: 37.2 },
+  { organKey: "liver", label: "Liver", left: 59.4, top: 43.6, labelLeft: 40, labelTop: 43.2, align: "right" },
+  { organKey: "gastric", label: "Gastric", left: 69.4, top: 45.4, labelLeft: 78, labelTop: 45.2 },
+  { organKey: "pancreatic", label: "Pancreatic", left: 65.4, top: 46.4, labelLeft: 78, labelTop: 50.4 },
+  { organKey: "kidney", label: "Kidney", left: 55.8, top: 49.8, labelLeft: 39, labelTop: 49.6, align: "right" },
+  { organKey: "colorectal", label: "Colorectal", left: 64.2, top: 54.6, labelLeft: 78, labelTop: 56.2 },
+  { organKey: "ovarian", label: "Ovarian", left: 63.8, top: 62.4, labelLeft: 78, labelTop: 63 },
+  { organKey: "bladder", label: "Bladder", left: 47.8, top: 64.2, labelLeft: 34, labelTop: 65.4, align: "right" },
 ];
 
 function formatVaf(value: number) {
@@ -56,6 +51,12 @@ function buildOrganEntryMap(entries: VafBodyMapEntry[]) {
     }
   }
   return map;
+}
+
+function markerColor(ratio: number) {
+  if (ratio >= 0.67) return "#d95f45";
+  if (ratio >= 0.34) return "#f0a142";
+  return "#3f9caf";
 }
 
 export function VafAnalysisPage() {
@@ -141,26 +142,33 @@ export function VafAnalysisPage() {
           <div className="vaf-bodymap-panel">
             <div className="vaf-bodymap-canvas" aria-label={`${queryGene} VAF body map`}>
               <img src={humanBodyImg} alt="Human body map for VAF analysis" />
-              {ORGAN_SHAPES.map((shape, index) => {
-                const entry = organEntries.get(shape.organKey);
+              {ORGAN_MARKERS.map((marker) => {
+                const entry = organEntries.get(marker.organKey);
                 if (!entry) return null;
                 const ratio = maxMean > 0 ? Math.max(0.18, entry.meanVaf / maxMean) : 0.18;
-                const opacity = Math.min(0.82, 0.18 + ratio * 0.58);
                 const style = {
-                  "--vaf-left": `${shape.left}%`,
-                  "--vaf-top": `${shape.top}%`,
-                  "--vaf-width": `${shape.width}%`,
-                  "--vaf-height": `${shape.height}%`,
-                  "--vaf-rotate": `${shape.rotate ?? 0}deg`,
-                  "--vaf-opacity": opacity,
+                  "--vaf-left": `${marker.left}%`,
+                  "--vaf-top": `${marker.top}%`,
+                  "--vaf-label-left": `${marker.labelLeft}%`,
+                  "--vaf-label-top": `${marker.labelTop}%`,
+                  "--vaf-size": `${14 + ratio * 14}px`,
+                  "--vaf-color": markerColor(ratio),
                 } as CSSProperties;
                 return (
-                  <span
-                    key={`${shape.organKey}-${index}`}
-                    className="vaf-bodymap-spot"
-                    style={style}
-                    title={`${shape.label}: mean VAF ${formatVaf(entry.meanVaf)} (${entry.sampleCount} samples)`}
-                  />
+                  <Fragment key={marker.organKey}>
+                    <span
+                      className="vaf-bodymap-marker"
+                      style={style}
+                      title={`${marker.label}: mean VAF ${formatVaf(entry.meanVaf)} (${entry.sampleCount} samples)`}
+                    />
+                    <span
+                      className={`vaf-bodymap-label${marker.align === "right" ? " vaf-bodymap-label--right" : ""}`}
+                      style={style}
+                    >
+                      <strong>{entry.cancerType}</strong>
+                      <small>{formatVaf(entry.meanVaf)}</small>
+                    </span>
+                  </Fragment>
                 );
               })}
             </div>

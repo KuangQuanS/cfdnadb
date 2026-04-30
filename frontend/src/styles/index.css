@@ -8308,20 +8308,68 @@ button:disabled:hover {
   height: auto;
 }
 
-.vaf-bodymap-spot {
+.vaf-bodymap-marker {
   position: absolute;
   left: var(--vaf-left);
   top: var(--vaf-top);
-  width: var(--vaf-width);
-  height: var(--vaf-height);
+  width: var(--vaf-size);
+  height: var(--vaf-size);
   border-radius: 999px;
-  background: radial-gradient(circle at 42% 42%, rgba(255, 228, 172, 0.95), rgba(211, 66, 54, var(--vaf-opacity)) 68%);
-  border: 1px solid rgba(157, 42, 36, 0.42);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45) inset;
-  opacity: var(--vaf-opacity);
-  transform: translate(-50%, -50%) rotate(var(--vaf-rotate));
-  mix-blend-mode: multiply;
+  background: var(--vaf-color);
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(25, 40, 63, 0.18),
+    0 8px 18px rgba(39, 51, 77, 0.18);
+  transform: translate(-50%, -50%);
   pointer-events: auto;
+}
+
+.vaf-bodymap-marker::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border: 1px solid var(--vaf-color);
+  border-radius: inherit;
+  opacity: 0.22;
+}
+
+.vaf-bodymap-label {
+  position: absolute;
+  left: var(--vaf-label-left);
+  top: var(--vaf-label-top);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 104px;
+  padding: 7px 10px;
+  border: 1px solid #dfe8f3;
+  border-left: 4px solid var(--vaf-color);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 20px rgba(32, 48, 76, 0.08);
+  color: #1f2d44;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.vaf-bodymap-label--right {
+  transform: translate(-100%, -50%);
+}
+
+.vaf-bodymap-label strong,
+.vaf-bodymap-label small {
+  display: block;
+}
+
+.vaf-bodymap-label strong {
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.vaf-bodymap-label small {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 850;
 }
 
 .vaf-analysis-table-wrap {
