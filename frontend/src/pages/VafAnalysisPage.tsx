@@ -293,33 +293,35 @@ export function VafAnalysisPage() {
                 onChange={(event) => setGeneInput(event.target.value)}
                 placeholder="ERBB2, TP53, PIK3CA..."
               />
-              <button className="button-primary" type="submit">Plot</button>
+              <button className="button-primary" type="submit">PLOT</button>
             </div>
           </form>
 
-          <div className="vaf-analysis-metrics" aria-label="VAF summary">
-            <div>
-              <span>Gene</span>
-              <strong>{vafQ.data?.gene ?? queryGene.toUpperCase()}</strong>
+          <div className="vaf-analysis-metrics-wrap">
+            <div className="vaf-analysis-metrics" aria-label="VAF summary">
+              <div>
+                <span>Gene</span>
+                <strong>{vafQ.data?.gene ?? queryGene.toUpperCase()}</strong>
+              </div>
+              <div>
+                <span>Cohorts</span>
+                <strong>{entries.length}</strong>
+              </div>
+              <div>
+                <span>Samples</span>
+                <strong>{totalSamples}</strong>
+              </div>
+              <div>
+                <span>Records</span>
+                <strong>{totalRecords}</strong>
+              </div>
             </div>
-            <div>
-              <span>Cohorts</span>
-              <strong>{entries.length}</strong>
-            </div>
-            <div>
-              <span>Samples</span>
-              <strong>{totalSamples}</strong>
-            </div>
-            <div>
-              <span>Records</span>
-              <strong>{totalRecords}</strong>
-            </div>
-          </div>
 
-          <div className="vaf-analysis-legend" aria-label="VAF heat scale">
-            <span>Low mean VAF</span>
-            <div aria-hidden="true" />
-            <span>High mean VAF</span>
+            <div className="vaf-analysis-legend" aria-label="VAF heat scale">
+              <span>Low</span>
+              <div aria-hidden="true" />
+              <span>High</span>
+            </div>
           </div>
         </div>
 
