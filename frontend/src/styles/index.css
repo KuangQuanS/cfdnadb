@@ -24,10 +24,10 @@
   /* Status/Other */
   --success: #38A169;
   
-  /* Structural - COSMIC heavily relies on large border radii and shadows */
+  /* Structural */
   --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
-  --shadow: 3px 2px 7px 1px rgba(0,0,0,0.15); /* Distinctive COSMIC shadow */
-  --radius: 20px; /* COSMIC uses large 20px corners */
+  --shadow: none;
+  --radius: 8px;
   --radius-sm: 8px;
   --radius-pill: 9999px;
 }
@@ -1484,10 +1484,10 @@ button, input, select { font: inherit; }
   100% { opacity: 1; transform: translateY(0); }
 }
 
-/* Panels and Cards - Large shadow, large radius */
+/* Panels and Cards */
 .hero-panel, .detail-card, .chart-card, .filter-panel, .table-shell, .stat-card {
   background: var(--panel);
-  border: none;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -2394,11 +2394,15 @@ button, input, select { font: inherit; }
 }
 
 .statistics-toolbar-card {
-  padding: 22px 26px;
+  padding: 18px 0 0;
   display: grid;
   gap: 18px;
-  border-radius: 3px;
+  border: none;
+  border-top: 1px solid #d7dee7;
+  border-bottom: 1px solid #d7dee7;
+  border-radius: 0;
   box-shadow: none;
+  background: transparent;
 }
 
 .statistics-toolbar-top {
@@ -2406,6 +2410,7 @@ button, input, select { font: inherit; }
   grid-template-columns: 240px 190px minmax(0, 1fr);
   gap: 18px;
   align-items: start;
+  padding-bottom: 18px;
 }
 
 .statistics-toolbar-field,
@@ -2603,13 +2608,13 @@ button, input, select { font: inherit; }
 .statistics-toolbar-meta {
   display: grid;
   gap: 4px;
-  padding-top: 16px;
-  border-top: 1px solid #dde5f0;
+  padding: 10px 0 0;
+  border-top: 1px solid #e2e8f0;
 }
 
 .statistics-toolbar-meta strong {
-  color: #223a70;
-  font-size: 1rem;
+  color: #475467;
+  font-size: 0.88rem;
 }
 
 .statistics-toolbar-meta p {
@@ -3215,13 +3220,13 @@ button, input, select { font: inherit; }
 .animate-fade-up-3 { animation-delay: 0.19s; }
 .animate-fade-up-4 { animation-delay: 0.26s; }
 
-/* Card hover lift */
+/* Cards stay flat on hover */
 .detail-card, .chart-card, .stat-card, .feature-card {
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
 }
 .detail-card:hover, .chart-card:hover, .feature-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 28px rgba(44, 58, 133, 0.14);
+  transform: none;
+  box-shadow: none;
 }
 
 /* Skeleton loading shimmer */
@@ -7106,7 +7111,7 @@ button:disabled:hover {
   background: linear-gradient(135deg, #4b359a 0%, #6b4fd8 55%, #9d6cff 100%);
   color: #fff;
   text-decoration: none;
-  box-shadow: 0 10px 24px rgba(75, 53, 154, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  box-shadow: none;
   overflow: hidden;
   transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
@@ -7122,8 +7127,8 @@ button:disabled:hover {
 }
 
 .gene-survival-cta:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(75, 53, 154, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transform: none;
+  box-shadow: none;
   color: #fff;
   text-decoration: none;
 }
@@ -7456,11 +7461,13 @@ button:disabled:hover {
 }
 
 .statistics-private-toolbar-card {
-  padding: 22px 26px;
-  border: 1px solid #d8e1ef;
-  border-radius: 3px;
+  padding: 16px 0;
+  border: none;
+  border-top: 1px solid #d8e1ef;
+  border-bottom: 1px solid #d8e1ef;
+  border-radius: 0;
   box-shadow: none;
-  background: #fff;
+  background: transparent;
 }
 
 .statistics-private-toolbar-row {
@@ -7692,13 +7699,16 @@ button:disabled:hover {
 .downloads-mode-card,
 .downloads-table-card {
   border: 1px solid #d8e1ef;
-  border-radius: 3px;
+  border-radius: 0;
   box-shadow: none;
   overflow: hidden;
 }
 
 .downloads-mode-card {
   padding: 0;
+  border-left: none;
+  border-right: none;
+  background: transparent;
 }
 
 .downloads-mode-switch {
@@ -7706,7 +7716,7 @@ button:disabled:hover {
   flex-wrap: wrap;
   gap: 10px;
   padding: 16px 18px 18px;
-  background: #fff;
+  background: transparent;
 }
 
 .downloads-table-shell {
@@ -8266,23 +8276,25 @@ button:disabled:hover {
 .survival-shell {
   padding: 0;
   overflow: hidden;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .survival-masthead {
   display: grid;
   gap: 14px;
-  padding: 28px 32px 24px;
+  padding: 18px 0 20px;
   border: none;
   border-radius: 0;
-  background:
-    radial-gradient(circle at top right, rgba(103, 84, 187, 0.08), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.98) 100%);
+  background: transparent;
   box-shadow: none;
 }
 
 .survival-shell-divider {
   height: 1px;
-  margin: 0 32px;
+  margin: 0;
   background: #e6edf5;
 }
 
@@ -8331,7 +8343,7 @@ button:disabled:hover {
 .survival-controls-header {
   display: grid;
   gap: 8px;
-  padding: 24px 32px 18px;
+  padding: 22px 0 18px;
 }
 
 .survival-controls-header .section-eyebrow,
@@ -8460,20 +8472,21 @@ button:disabled:hover {
 .survival-plot-btn {
   min-height: 52px;
   padding: 0 22px;
-  background: linear-gradient(135deg, #5d45bc 0%, #396eb6 100%);
+  background: #4f3b93;
   color: #fff;
   font-size: 14px;
   font-weight: 700;
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 10px 22px rgba(76, 81, 176, 0.22);
-  transition: transform 0.12s, box-shadow 0.12s;
+  box-shadow: none;
+  transition: background-color 0.12s ease;
 }
 
 .survival-plot-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(76, 81, 176, 0.28);
+  background: #442f86;
+  transform: none;
+  box-shadow: none;
 }
 
 .survival-plot-btn:disabled {
@@ -8507,10 +8520,14 @@ button:disabled:hover {
 .survival-results {
   padding: 0;
   overflow: hidden;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .survival-results .survival-masthead-copy {
-  padding: 28px 32px 18px;
+  padding: 24px 0 18px;
 }
 
 .survival-plot-card {
@@ -8581,13 +8598,13 @@ button:disabled:hover {
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
 .survival-plot-actions button:hover {
   background: #eef4ff;
   border-color: #bfd0ea;
-  transform: translateY(-1px);
+  transform: none;
 }
 
 @media (max-width: 1100px) {
@@ -8670,4 +8687,29 @@ button:disabled:hover {
     border-right: none;
     border-bottom: 1px solid #e4ebf4;
   }
+}
+
+/* Keep card-like surfaces flat across the app. */
+.detail-card:hover,
+.chart-card:hover,
+.stat-card:hover,
+.feature-card:hover,
+.home-v2-feature-card:hover,
+.portal-tool-tile:hover,
+.stat-pdf-card:hover,
+.browse-pdf-card:hover,
+.statistics-private-card:hover,
+.statistics-private-toolbar-card:hover,
+.downloads-mode-card:hover,
+.downloads-table-card:hover,
+.downloads-filtered-control-card:hover,
+.downloads-filtered-hero-card:hover,
+.downloads-filtered-workspace-card:hover,
+.survival-shell:hover,
+.survival-results:hover,
+.survival-plot-card:hover,
+.gene-plot-card:hover,
+.gene-stat-card:hover {
+  transform: none;
+  box-shadow: none;
 }
