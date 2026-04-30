@@ -271,6 +271,22 @@
   border-radius: 8px;
 }
 
+.gdc-tutorial-zoom {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.gdc-tutorial-zoom:focus-visible {
+  outline: 2px solid #1f5f9f;
+  outline-offset: 4px;
+}
+
 .gdc-overview-media-grid {
   display: grid;
   grid-template-rows: minmax(240px, 0.42fr) minmax(320px, 0.58fr);

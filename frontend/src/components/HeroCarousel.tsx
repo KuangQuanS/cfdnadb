@@ -1,4 +1,4 @@
-import { type CSSProperties, useMemo } from "react";
+import { type CSSProperties, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
@@ -381,6 +381,7 @@ function HeroRingChart({
 
 export function HeroCarousel() {
   const navigate = useNavigate();
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const cancerQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary, staleTime: 5 * 60_000 });
   const sourceQuery = useQuery({ queryKey: ["source-distribution", "all"], queryFn: () => getSourceDistribution(), staleTime: 5 * 60_000 });
   const cohorts = cancerQuery.data?.length ? cancerQuery.data : MOCK_COHORTS;
@@ -585,7 +586,14 @@ export function HeroCarousel() {
               <p className="section-eyebrow">Tutorial</p>
             </div>
             <div className="gdc-tutorial-panel">
-              <img src={tutorialImg} alt="ctDNAdb tutorial workflow" />
+              <button
+                type="button"
+                className="gdc-tutorial-zoom"
+                onClick={() => setIsTutorialOpen(true)}
+                aria-label="Enlarge ctDNAdb tutorial workflow"
+              >
+                <img src={tutorialImg} alt="ctDNAdb tutorial workflow" />
+              </button>
             </div>
           </article>
 
@@ -609,6 +617,30 @@ export function HeroCarousel() {
           </article>
         </div>
       </section>
+
+      {isTutorialOpen ? (
+        <div
+          className="gdc-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="ctDNAdb tutorial workflow"
+          onClick={() => setIsTutorialOpen(false)}
+        >
+          <button
+            type="button"
+            className="gdc-lightbox-close"
+            onClick={(event) => {
+              event.stopPropagation();
+              setIsTutorialOpen(false);
+            }}
+          >
+            Close
+          </button>
+          <div className="gdc-lightbox-frame" onClick={(event) => event.stopPropagation()}>
+            <img src={tutorialImg} alt="ctDNAdb tutorial workflow enlarged" />
+          </div>
+        </div>
+      ) : null}
 
       <section className="gdc-pipeline-section">
         <div className="gdc-pipeline-inner">

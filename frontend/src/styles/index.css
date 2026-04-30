@@ -8152,7 +8152,8 @@ button:disabled:hover {
   text-decoration: underline;
 }
 
-.help-flowchart {
+.help-flowchart,
+.help-tutorial-figure {
   margin: 4px 0 26px;
   padding: 14px;
   border: 1px solid #e1e8f2;
@@ -8160,10 +8161,17 @@ button:disabled:hover {
   background: #f9fbfe;
 }
 
-.help-flowchart img {
+.help-tutorial-figure {
+  margin-top: 10px;
+  margin-bottom: 18px;
+}
+
+.help-flowchart img,
+.help-tutorial-figure img {
   display: block;
   width: 100%;
   height: auto;
+  border-radius: 4px;
 }
 
 .help-definition-list {
