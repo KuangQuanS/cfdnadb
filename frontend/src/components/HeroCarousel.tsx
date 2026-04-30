@@ -25,10 +25,10 @@ const MOCK_COHORTS: CancerSummary[] = [
 ];
 
 const RING_PALETTES = {
-  sourceSamples: ["#173b68", "#1f5f9f", "#2d87c7", "#48abd7", "#7dc9df", "#a7dce8", "#ccecf1", "#e6f4f7"],
-  cancerSamples: ["#1a4f7a", "#2370a8", "#3c92c7", "#63afd8", "#90c9e3", "#b8ddea", "#d8edf2", "#9fb9cc"],
-  annotated: ["#176146", "#21845f", "#36a77c", "#58c194", "#87d4b0", "#b7e3c9", "#d9f0df", "#8da895"],
-  mutations: ["#0f5a43", "#187552", "#2f9468", "#4eb27f", "#7bcc9d", "#aadfbd", "#d5f0db", "#e4bd57"],
+  sourceSamples: ["#173b68", "#1f5f9f", "#2d87c7", "#3f9fd0", "#53add6", "#67badc", "#7bc8e2", "#91d4e8"],
+  cancerSamples: ["#1a4f7a", "#2370a8", "#3c92c7", "#52a4d1", "#68b4d8", "#7ec3df", "#94d1e6", "#6f95b1"],
+  annotated: ["#176146", "#21845f", "#36a77c", "#4cb78a", "#62c79a", "#78d6aa", "#8ee3b9", "#6f9e84"],
+  mutations: ["#0f5a43", "#187552", "#2f9468", "#43a976", "#57bc84", "#6ccf92", "#81e1a0", "#d5a944"],
 } as const;
 
 const OTHER_SLICE_COLOR = "#cfd6dd";
