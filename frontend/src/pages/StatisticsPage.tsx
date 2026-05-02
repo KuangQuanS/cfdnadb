@@ -653,23 +653,6 @@ function RidgelinePlot({ data }: { data: VafDistribution[] }) {
   );
 }
 
-function KpiTile({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="statistics-private-kpi-tile">
-      <span className="statistics-private-kpi-label">{label}</span>
-      <strong className="statistics-private-kpi-value">
-        {formatNumber(value)}
-      </strong>
-    </div>
-  );
-}
-
 export function StatisticsPage() {
   const navigate = useNavigate();
   const [source, setSource] = useState<"private" | "public">("private");
@@ -728,8 +711,6 @@ export function StatisticsPage() {
   );
   const mafSummary = overview?.mafSummary;
   const totalSamples = isPublic ? mafSummary?.totalSamples ?? 0 : sampleSum;
-  const totalVariants = mafSummary?.totalVariants ?? 0;
-  const totalGenes = mafSummary?.totalGenes ?? 0;
 
   const vafData = vafQ.data ?? [];
 
@@ -752,7 +733,6 @@ export function StatisticsPage() {
       <section className="detail-card statistics-private-toolbar-card">
         <div className="statistics-private-toolbar-row">
           <div className="statistics-private-toolbar-meta">
-            <p className="section-eyebrow">Data Source</p>
             <div className="downloads-mode-switch" style={{ marginTop: 8 }}>
               <button
                 type="button"
@@ -773,7 +753,6 @@ export function StatisticsPage() {
           </div>
           {isPublic ? (
             <div className="statistics-private-toolbar-meta">
-              <p className="section-eyebrow">Cancer Cohort</p>
               <div className="downloads-mode-switch" style={{ marginTop: 8, flexWrap: "wrap", gap: 6 }}>
                 {publicCohorts.length === 0 && publicCohortsQ.isFetched ? (
                   <span className="panel-note">No public cohorts imported yet.</span>
@@ -799,22 +778,6 @@ export function StatisticsPage() {
         </div>
       </section>
 
-      <section className="statistics-private-kpis">
-        <KpiTile label="Samples" value={totalSamples} />
-        <KpiTile
-          label="Variants"
-          value={totalVariants}
-        />
-        <KpiTile
-          label="Mutated Genes"
-          value={totalGenes}
-        />
-        <KpiTile
-          label="Cancer Cohorts"
-          value={isPublic ? (publicCohort ? 1 : publicCohorts.length) : cancerCohorts.length}
-        />
-      </section>
-
       {loading ? (
         <p className="panel-note">Loading database statistics...</p>
       ) : null}
@@ -823,9 +786,6 @@ export function StatisticsPage() {
         {!isPublic ? (
           <article className="detail-card statistics-private-card">
             <header className="statistics-private-card-header">
-              <div className="statistics-private-card-header-row">
-                <p className="section-eyebrow">Cohort Composition</p>
-              </div>
               <h3>Sample Distribution Across Cohorts</h3>
             </header>
             <div className="statistics-private-card-body">
@@ -841,9 +801,6 @@ export function StatisticsPage() {
 
         <article className="detail-card statistics-private-card">
           <header className="statistics-private-card-header">
-            <div className="statistics-private-card-header-row">
-              <p className="section-eyebrow">Functional Region</p>
-            </div>
             <h3>Variant Distribution by Genomic Region</h3>
           </header>
           <div className="statistics-private-card-body">
@@ -858,9 +815,6 @@ export function StatisticsPage() {
 
         <article className="detail-card statistics-private-card">
           <header className="statistics-private-card-header">
-            <div className="statistics-private-card-header-row">
-              <p className="section-eyebrow">Exonic Consequence</p>
-            </div>
             <h3>Coding Consequence Composition</h3>
           </header>
           <div className="statistics-private-card-body">
@@ -875,9 +829,6 @@ export function StatisticsPage() {
 
         <article className="detail-card statistics-private-card">
           <header className="statistics-private-card-header">
-            <div className="statistics-private-card-header-row">
-              <p className="section-eyebrow">Chromosomal Distribution</p>
-            </div>
             <h3>Variant Counts per Chromosome</h3>
           </header>
           <div className="statistics-private-card-body">
@@ -897,9 +848,6 @@ export function StatisticsPage() {
         <section className="statistics-private-ridge-section">
           <article className="detail-card statistics-private-card statistics-private-card-wide">
             <header className="statistics-private-card-header">
-              <div className="statistics-private-card-header-row">
-                <p className="section-eyebrow">VAF Analysis</p>
-              </div>
               <h3>VAF Distribution by Cancer Type</h3>
             </header>
             <div className="statistics-private-card-body">

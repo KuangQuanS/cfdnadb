@@ -267,7 +267,7 @@ export function BrowsePage() {
     <div className="page-stack statistics-page">
       <SectionHeader
         eyebrow="Browse"
-        title="Cohort browser"
+        title="Cancer browser"
       />
 
       <section className="detail-card statistics-toolbar-card">
@@ -353,14 +353,14 @@ export function BrowsePage() {
       {activeSource ? (
         <article className="stat-pdf-card stat-pdf-card--oncoplot statistics-oncoplot-card">
           <div className="statistics-panel-header">
-            <h3 className="stat-pdf-title">Oncoplot</h3>
+            <h3 className="stat-pdf-title">Mutation plot</h3>
           </div>
           {geneError ? <p className="panel-note" style={{ color: "#c0392b" }}>{geneError}</p> : null}
           {oncoplottQ.isLoading ? <p className="panel-note">Loading oncoplot data...</p> : null}
           {oncoplottQ.isError ? <p className="panel-note" style={{ color: "#c0392b" }}>Failed to load oncoplot data.</p> : null}
           {oncoplottQ.data && oncoplottQ.data.genes.length > 0 ? (
             <div className="statistics-pdf-shell statistics-pdf-shell--oncoplot">
-              <WaterfallChart data={oncoplottQ.data} title={formatCohortLabel(cancer)} />
+              <WaterfallChart data={oncoplottQ.data} title="Mutation plot" />
             </div>
           ) : oncoplottQ.data && !oncoplottQ.isLoading ? (
             <p className="panel-note">No mutation data available for this cohort / source.</p>
@@ -371,9 +371,6 @@ export function BrowsePage() {
       {activeSource ? (
         <section className="statistics-section-block">
           <div className="statistics-section-heading">
-            <p className="section-eyebrow">
-              {formatCohortLabel(cancer)} | {selectedLabel}
-            </p>
             <h2>Summary Plots</h2>
           </div>
 

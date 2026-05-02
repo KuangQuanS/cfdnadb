@@ -761,7 +761,6 @@ export function SurvivalAnalysisPage() {
 
           <div className="survival-controls-grid">
             <div className="survival-control-block survival-control-block--query">
-              <p className="section-eyebrow">Gene Query</p>
               <label className="survival-field">
                 <span>Gene symbol</span>
                 <input
@@ -780,7 +779,6 @@ export function SurvivalAnalysisPage() {
             </div>
 
             <div className="survival-control-block survival-control-block--plots">
-              <p className="section-eyebrow">Plot Types</p>
               <div className="survival-check-grid">
                 {(
                   [
@@ -802,7 +800,6 @@ export function SurvivalAnalysisPage() {
             </div>
 
             <div className="survival-control-block survival-control-block--dataset">
-              <p className="section-eyebrow">Dataset</p>
               <select
                 className="survival-cohort-list"
                 size={8}
@@ -818,9 +815,6 @@ export function SurvivalAnalysisPage() {
             </div>
 
             <div className="survival-control-block survival-action">
-              <div className="survival-action-copy">
-                <p className="section-eyebrow">Run Analysis</p>
-              </div>
               <button
                 type="button"
                 className="survival-plot-btn"
