@@ -307,7 +307,27 @@ export function BrowsePage() {
                 placeholder="Enter genes separated by commas, spaces, or new lines"
                 rows={1}
               />
-              <span className="statistics-gene-or">OR</span>
+            </div>
+            <div className="statistics-gene-support-row">
+              <div className="statistics-gene-examples" aria-label="Gene input examples">
+                <span className="statistics-gene-examples-label">Example:</span>
+                <div className="statistics-gene-examples-list">
+                  {GENE_INPUT_EXAMPLES.map((example) => {
+                    const text = example.join(", ");
+                    return (
+                      <button
+                        key={text}
+                        type="button"
+                        className="statistics-gene-example-btn"
+                        onClick={() => fillGeneExample(example)}
+                        title="Click to fill"
+                      >
+                        {text}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <button type="button" className="statistics-gene-upload-btn" onClick={() => fileInputRef.current?.click()}>
                 Upload file
               </button>
@@ -319,25 +339,6 @@ export function BrowsePage() {
                 onChange={(event) => void onFileChange(event.target.files?.[0] ?? null)}
               />
             </div>
-            <div className="statistics-gene-examples" aria-label="Gene input examples">
-              <span className="statistics-gene-examples-label">Example:</span>
-              <div className="statistics-gene-examples-list">
-                {GENE_INPUT_EXAMPLES.map((example) => {
-                  const text = example.join(", ");
-                  return (
-                    <button
-                      key={text}
-                      type="button"
-                      className="statistics-gene-example-btn"
-                      onClick={() => fillGeneExample(example)}
-                      title="Click to fill"
-                    >
-                      {text}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
             {geneError ? <p className="statistics-gene-error">{geneError}</p> : null}
           </div>
         </div>
@@ -346,15 +347,23 @@ export function BrowsePage() {
 
       {activeSource ? (
         <article className="stat-pdf-card stat-pdf-card--oncoplot statistics-oncoplot-card">
-          <div className="statistics-panel-header">
-            <h3 className="stat-pdf-title">Mutation plot</h3>
+          <div className="statistics-panel-header statistics-panel-header--plot">
+            <div>
+              <h3 className="stat-pdf-title">Mutation plot</h3>
+              <p className="statistics-panel-note">Click gene labels to open Gene Search.</p>
+            </div>
+            {oncoplottQ.data && oncoplottQ.data.genes.length > 0 ? (
+              <span className="statistics-plot-meta">
+                {oncoplottQ.data.genes.length} genes · n={oncoplottQ.data.samples.length} samples
+              </span>
+            ) : null}
           </div>
           {geneError ? <p className="panel-note" style={{ color: "#c0392b" }}>{geneError}</p> : null}
           {oncoplottQ.isLoading ? <p className="panel-note">Loading oncoplot data...</p> : null}
           {oncoplottQ.isError ? <p className="panel-note" style={{ color: "#c0392b" }}>Failed to load oncoplot data.</p> : null}
           {oncoplottQ.data && oncoplottQ.data.genes.length > 0 ? (
             <div className="statistics-pdf-shell statistics-pdf-shell--oncoplot">
-              <WaterfallChart data={oncoplottQ.data} title="Mutation plot" />
+              <WaterfallChart data={oncoplottQ.data} />
             </div>
           ) : oncoplottQ.data && !oncoplottQ.isLoading ? (
             <p className="panel-note">No mutation data available for this cohort / source.</p>

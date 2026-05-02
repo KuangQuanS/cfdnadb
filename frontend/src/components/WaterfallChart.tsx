@@ -486,9 +486,7 @@ export function WaterfallChart({ data, title, cellHeight = 18 }: WaterfallChartP
   return (
     <div className="waterfall-chart-wrap" ref={wrapperRef}>
       <div className="waterfall-chart-shell">
-        <p className="waterfall-gene-hint">
-          Click gene labels to open Gene Search · {totalGenes} genes · n={totalSamples} samples
-        </p>
+        <p className="waterfall-gene-hint">Click gene labels to open Gene Search</p>
         <div className="waterfall-chart-legend waterfall-chart-legend--overlay" aria-label="Mutation legend">
           {visibleMutationTypes.map((item) => (
             <span key={item.cls} className="waterfall-chart-legend-item">

@@ -309,7 +309,10 @@ export function GeneSearchPage() {
           rows.length === 0 ? (
             <div className="browse-empty-state">
               <h4>No genes found</h4>
-              <p>Try broadening the query or removing one of the active filters.</p>
+              <p>
+                Gene Search uses exact gene symbols. Try a full symbol such as TP53, or choose one from the suggestions.
+                {activeFilters.length > 0 ? " You can also remove filters to broaden the result set." : ""}
+              </p>
             </div>
           ) : (
             <>

@@ -2469,18 +2469,7 @@ button, input, select { font: inherit; }
 }
 
 .statistics-gene-inline {
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-}
-
-.statistics-gene-or {
-  display: inline-flex;
-  align-items: center;
-  color: #6a7891;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  display: block;
 }
 
 .statistics-gene-textarea {
@@ -2506,12 +2495,13 @@ button, input, select { font: inherit; }
 }
 
 .statistics-gene-upload-btn {
-  height: 44px;
-  padding: 0 14px;
+  height: 36px;
+  padding: 0 12px;
   border: 1px solid #cfd7e6;
   border-radius: 4px;
   background: #fff;
   color: #2d4368;
+  font-size: 0.86rem;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
@@ -2523,6 +2513,14 @@ button, input, select { font: inherit; }
 
 .statistics-gene-hidden-file {
   display: none;
+}
+
+.statistics-gene-support-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 10px;
 }
 
 .statistics-gene-upload-hint {
@@ -2754,6 +2752,13 @@ button, input, select { font: inherit; }
   background: #f5f7fa;
 }
 
+.statistics-panel-header--plot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
 .statistics-panel-header-soft {
   border-top: 1px solid #e3eaf4;
   border-bottom: 1px solid #e3eaf4;
@@ -2770,6 +2775,14 @@ button, input, select { font: inherit; }
   color: #6a7890;
   line-height: 1.55;
   font-size: 0.86rem;
+}
+
+.statistics-plot-meta {
+  flex: 0 0 auto;
+  color: #5d6b82;
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .statistics-pdf-shell {
@@ -3005,7 +3018,7 @@ button, input, select { font: inherit; }
 .waterfall-chart-shell {
   position: relative;
   width: 100%;
-  padding-top: 42px;
+  padding-top: 36px;
 }
 
 .waterfall-chart-legend {
@@ -3119,6 +3132,16 @@ button, input, select { font: inherit; }
 
   .statistics-toolbar-field--compact {
     width: 100%;
+  }
+
+  .statistics-gene-support-row,
+  .statistics-panel-header--plot {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .statistics-plot-meta {
+    white-space: normal;
   }
 
   .statistics-pdf-grid {
