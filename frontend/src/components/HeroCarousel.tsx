@@ -30,7 +30,7 @@ const RING_PALETTES = {
   mutations: ["#0f5a43", "#137356", "#188c68", "#1ca379", "#22c28f", "#44d1a4", "#6adbb6", "#8de5c6"],
 } as const;
 
-const OTHER_SLICE_COLOR = "#dce2e8";
+const OTHER_SLICE_COLOR = "#7b4bb7";
 
 const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
 

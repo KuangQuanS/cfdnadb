@@ -179,7 +179,6 @@ export function GeneSearchPage() {
     <div className="page-stack maf-page">
       <section className="maf-hero">
         <div className="maf-hero-copy">
-          <span className="maf-eyebrow">Mutation Workbench</span>
           <h2>Gene Search</h2>
         </div>
 

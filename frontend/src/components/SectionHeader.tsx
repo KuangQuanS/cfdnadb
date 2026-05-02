@@ -4,10 +4,9 @@ interface SectionHeaderProps {
   description?: string;
 }
 
-export function SectionHeader({ eyebrow, title }: SectionHeaderProps) {
+export function SectionHeader({ title }: SectionHeaderProps) {
   return (
     <div className="section-header">
-      {eyebrow ? <p className="section-eyebrow">{eyebrow}</p> : null}
       <h2>{title}</h2>
     </div>
   );

@@ -100,7 +100,6 @@ export function GeneMarkerDetailPage() {
     <div className="page-stack maf-page maf-detail-page">
       <section className="maf-hero maf-detail-header">
         <div className="maf-hero-copy">
-          <span className="maf-eyebrow">Gene Detail</span>
           <h2>{geneSymbol}</h2>
         </div>
         <div className="maf-detail-actions">
