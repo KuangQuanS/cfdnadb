@@ -2773,7 +2773,7 @@ public class DuckDbService {
                                        List<String> chromosomes, List<String> variantClasses, List<String> variantTypes,
                                        boolean tcga) {
         List<String> conditions = new ArrayList<>();
-        if (hasGene) conditions.add("LOWER(COALESCE(hugo_symbol, '')) LIKE ?");
+        if (hasGene) conditions.add("LOWER(COALESCE(hugo_symbol, '')) = ?");
         if (hasSample) conditions.add("LOWER(COALESCE(tumor_sample_barcode, '')) LIKE ?");
         if (!tcga && !cancerTypes.isEmpty()) conditions.add(buildInClause("cancer_type", cancerTypes.size()));
         if (!chromosomes.isEmpty()) conditions.add(buildInClause(buildNormalizedMafChromosomeExpression(), chromosomes.size()));
@@ -2803,7 +2803,7 @@ public class DuckDbService {
                               List<String> variantClasses,
                               List<String> variantTypes,
                               boolean tcga) throws SQLException {
-        if (hasGene) stmt.setString(idx++, "%" + gene.trim().toLowerCase(Locale.ROOT) + "%");
+        if (hasGene) stmt.setString(idx++, gene.trim().toLowerCase(Locale.ROOT));
         if (hasSample) stmt.setString(idx++, "%" + sample.trim().toLowerCase(Locale.ROOT) + "%");
         if (!tcga) {
             idx = bindListParams(stmt, idx, cancerTypes);

@@ -2412,6 +2412,10 @@ button, input, select { font: inherit; }
   background: transparent;
 }
 
+.statistics-toolbar-card--browse {
+  border-bottom: none;
+}
+
 .statistics-toolbar-top {
   display: grid;
   grid-template-columns: 240px 190px minmax(0, 1fr);

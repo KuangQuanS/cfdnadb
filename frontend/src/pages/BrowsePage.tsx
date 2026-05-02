@@ -270,7 +270,7 @@ export function BrowsePage() {
         title="Cancer browser"
       />
 
-      <section className="detail-card statistics-toolbar-card">
+      <section className="detail-card statistics-toolbar-card statistics-toolbar-card--browse">
         <div className="statistics-toolbar-top">
           <label className="statistics-toolbar-field">
             <span>Cohort</span>
@@ -340,12 +340,6 @@ export function BrowsePage() {
             </div>
             {geneError ? <p className="statistics-gene-error">{geneError}</p> : null}
           </div>
-        </div>
-
-        <div className="statistics-toolbar-meta">
-          <strong>
-            {formatCohortLabel(cancer)} {activeSource ? `| ${selectedLabel}` : ""}
-          </strong>
         </div>
       </section>
 
