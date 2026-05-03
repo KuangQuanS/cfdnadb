@@ -1,9 +1,7 @@
-import { useMemo, useRef, useEffect, useCallback, useState } from "react";
+import { useMemo, useRef, useEffect, useCallback, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
-import { useNavigate } from "react-router-dom";
-import { SectionHeader } from "../components/SectionHeader";
 import {
   getStatisticsOverview,
   getStatisticsPublicCohorts,
@@ -15,29 +13,29 @@ import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
 
 const PURPLE_SCALE = [
-  "#4b359a",
-  "#5d45b4",
-  "#7258c6",
-  "#8a70d2",
-  "#a288dd",
-  "#b7a0e5",
-  "#c9b7ec",
-  "#dbcdf2",
+  "#2d9cdb",
+  "#40c878",
+  "#6f9ee8",
+  "#74d69a",
+  "#1f77b4",
+  "#31a354",
+  "#8bbcf3",
+  "#9ae5b4",
 ];
 
 const DONUT_SCALE = [
-  "#4b359a",
-  "#6548b8",
-  "#7e63cb",
-  "#9a83dd",
-  "#b8aae9",
-  "#d7d0f6",
-  "#ece4ff",
+  "#2d9cdb",
+  "#40c878",
+  "#6f9ee8",
+  "#74d69a",
+  "#1f77b4",
+  "#31a354",
+  "#b5d7f6",
 ];
 
 const CHART_LOADING_OPTION = {
   text: "Loading chart...",
-  color: "#7258c6",
+  color: "#2d9cdb",
   textColor: "#5c6b86",
   maskColor: "rgba(255, 255, 255, 0.72)",
   zlevel: 0,
@@ -63,6 +61,108 @@ function withOtherGroup(items: LabelCount[], limit = 6): LabelCount[] {
     .slice(limit)
     .reduce((sum, item) => sum + item.count, 0);
   return [...head, { label: "Other", count: tailCount }];
+}
+
+interface StatRow {
+  label: string;
+  count: number;
+  percentage?: number;
+}
+
+function toStatRows(items: LabelCount[], limit = 10): StatRow[] {
+  const sorted = [...cleanLabels(items)].sort((a, b) => b.count - a.count);
+  const total = sorted.reduce((sum, item) => sum + item.count, 0);
+  return sorted.slice(0, limit).map((item) => ({
+    label: item.label,
+    count: item.count,
+    percentage: total > 0 ? (item.count / total) * 100 : 0,
+  }));
+}
+
+function toCohortRows(items: CancerSummary[], limit = 10): StatRow[] {
+  const sorted = [...items]
+    .filter((item) => item.sampleCount > 0)
+    .sort((a, b) => b.sampleCount - a.sampleCount);
+  const total = sorted.reduce((sum, item) => sum + item.sampleCount, 0);
+  return sorted.slice(0, limit).map((item) => ({
+    label: formatCohortLabel(item.cancer),
+    count: item.sampleCount,
+    percentage: total > 0 ? (item.sampleCount / total) * 100 : 0,
+  }));
+}
+
+function formatPercent(value?: number) {
+  if (value == null) return "-";
+  return `${value.toFixed(1)}%`;
+}
+
+function StatTable({
+  rows,
+  labelHeader,
+  countHeader = "Count",
+}: {
+  rows: StatRow[];
+  labelHeader: string;
+  countHeader?: string;
+}) {
+  return (
+    <div className="statistics-rna-table-wrap">
+      <table className="statistics-rna-table">
+        <thead>
+          <tr>
+            <th>{labelHeader}</th>
+            <th>{countHeader}</th>
+            <th>Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length > 0 ? rows.map((row) => (
+            <tr key={row.label}>
+              <td>{row.label}</td>
+              <td>{formatNumber(row.count)}</td>
+              <td>{formatPercent(row.percentage)}</td>
+            </tr>
+          )) : (
+            <tr>
+              <td colSpan={3}>No statistics available.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      <div className="statistics-rna-table-meta">
+        Showing 1 to {rows.length} of {rows.length} entries
+      </div>
+    </div>
+  );
+}
+
+function StatisticsSplitSection({
+  title,
+  intro,
+  rows,
+  labelHeader,
+  countHeader,
+  children,
+}: {
+  title: string;
+  intro: ReactNode;
+  rows: StatRow[];
+  labelHeader: string;
+  countHeader?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="statistics-rna-section">
+      <div className="statistics-rna-section-title">
+        <h2>{title}</h2>
+        <p>{intro}</p>
+      </div>
+      <div className="statistics-rna-split">
+        <StatTable rows={rows} labelHeader={labelHeader} countHeader={countHeader} />
+        <div className="statistics-rna-chart">{children}</div>
+      </div>
+    </section>
+  );
 }
 
 function buildCohortDonutOption(
@@ -654,7 +754,6 @@ function RidgelinePlot({ data }: { data: VafDistribution[] }) {
 }
 
 export function StatisticsPage() {
-  const navigate = useNavigate();
   const [source, setSource] = useState<"private" | "public">("private");
   const [publicCohort, setPublicCohort] = useState<string | null>(null);
 
@@ -720,146 +819,151 @@ export function StatisticsPage() {
   const funcChartLoading = activeQ.isLoading;
   const exonicChartLoading = activeQ.isLoading;
   const chromChartLoading = activeQ.isLoading;
+  const cohortRows = useMemo(() => toCohortRows(activeCohorts, 10), [activeCohorts]);
+  const funcRows = useMemo(() => toStatRows(overview?.funcDistribution ?? [], 10), [overview?.funcDistribution]);
+  const exonicRows = useMemo(() => toStatRows(overview?.exonicDistribution ?? [], 10), [overview?.exonicDistribution]);
+  const chromRows = useMemo(() => {
+    const normalized = cleanLabels(overview?.chromDistribution ?? []).map((item) => ({
+      label: item.label.replace(/^chr/i, "").toUpperCase(),
+      count: item.count,
+    }));
+    const total = normalized.reduce((sum, item) => sum + item.count, 0);
+    return normalized
+      .filter((item) => CHROM_ORDER.includes(item.label))
+      .sort((a, b) => CHROM_ORDER.indexOf(a.label) - CHROM_ORDER.indexOf(b.label))
+      .slice(0, 10)
+      .map((item) => ({
+        label: `chr${item.label}`,
+        count: item.count,
+        percentage: total > 0 ? (item.count / total) * 100 : 0,
+      }));
+  }, [overview?.chromDistribution]);
 
   return (
-    <div className="page-stack statistics-private-page">
-      <SectionHeader
-        eyebrow="Database Statistics"
-        title={isPublic
-          ? "Mutational Landscape of Public Cohort Aggregates"
-          : "Mutational Landscape of the Internal Data Liquid-Biopsy Database"}
-      />
-
-      <section className="detail-card statistics-private-toolbar-card">
-        <div className="statistics-private-toolbar-row">
-          <div className="statistics-private-toolbar-meta">
-            <div className="downloads-mode-switch" style={{ marginTop: 8 }}>
-              <button
-                type="button"
-                className={`statistics-cohort-pill${!isPublic ? " active" : ""}`}
-                onClick={() => setSource("private")}
-              >
-                Internal Data
-              </button>
-              <button
-                type="button"
-                className={`statistics-cohort-pill${isPublic ? " active" : ""}`}
-                onClick={() => setSource("public")}
-                disabled={publicCohortsQ.isLoading}
-              >
-                Public Cohorts
-              </button>
-            </div>
-          </div>
-          {isPublic ? (
-            <div className="statistics-private-toolbar-meta">
-              <div className="downloads-mode-switch" style={{ marginTop: 8, flexWrap: "wrap", gap: 6 }}>
-                {publicCohorts.length === 0 && publicCohortsQ.isFetched ? (
-                  <span className="panel-note">No public cohorts imported yet.</span>
-                ) : null}
-                {publicCohorts.map((cohort) => (
-                  <button
-                    type="button"
-                    key={cohort}
-                    className={`statistics-cohort-pill${publicCohort === cohort ? " active" : ""}`}
-                    onClick={() => setPublicCohort(cohort)}
-                  >
-                    {formatCohortLabel(cohort)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="statistics-private-toolbar-badge">
-              <span>Cohorts</span>
-              <strong>{formatNumber(cancerCohorts.length)}</strong>
-            </div>
-          )}
+    <div className="page-stack statistics-rna-page">
+      <section className="statistics-rna-intro">
+        <div>
+          <h1>Statistic Of Dataset</h1>
+          <p>
+            <strong>{isPublic ? "Public cohort" : "Internal Data"} statistics</strong> across cfDNA mutation datasets in our collection.
+          </p>
+        </div>
+        <div className="statistics-rna-controls">
+          <button
+            type="button"
+            className={!isPublic ? "active" : ""}
+            onClick={() => setSource("private")}
+          >
+            Internal Data
+          </button>
+          <button
+            type="button"
+            className={isPublic ? "active" : ""}
+            onClick={() => setSource("public")}
+            disabled={publicCohortsQ.isLoading}
+          >
+            Public Cohorts
+          </button>
         </div>
       </section>
+
+      {isPublic ? (
+        <div className="statistics-rna-cohort-strip">
+          {publicCohorts.length === 0 && publicCohortsQ.isFetched ? (
+            <span>No public cohorts imported yet.</span>
+          ) : null}
+          {publicCohorts.map((cohort) => (
+            <button
+              type="button"
+              key={cohort}
+              className={publicCohort === cohort ? "active" : ""}
+              onClick={() => setPublicCohort(cohort)}
+            >
+              {formatCohortLabel(cohort)}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {loading ? (
         <p className="panel-note">Loading database statistics...</p>
       ) : null}
 
-      <section className="statistics-private-grid">
-        {!isPublic ? (
-          <article className="detail-card statistics-private-card">
-            <header className="statistics-private-card-header">
-              <h3>Sample Distribution Across Cohorts</h3>
-            </header>
-            <div className="statistics-private-card-body">
-              <ReactECharts
-                option={buildCohortDonutOption(activeCohorts, totalSamples)}
-                showLoading={cohortChartLoading}
-                loadingOption={CHART_LOADING_OPTION}
-                style={{ height: 380 }}
-              />
-            </div>
-          </article>
-        ) : null}
+      {!isPublic ? (
+        <StatisticsSplitSection
+          title="Statistic Of Disease"
+          intro={<><strong>Disease</strong> across cfDNA cohorts in our collection.</>}
+          rows={cohortRows}
+          labelHeader="Disease"
+          countHeader="Sample Count"
+        >
+          <ReactECharts
+            option={buildCohortDonutOption(activeCohorts, totalSamples)}
+            showLoading={cohortChartLoading}
+            loadingOption={CHART_LOADING_OPTION}
+            style={{ height: 360 }}
+          />
+        </StatisticsSplitSection>
+      ) : null}
 
-        <article className="detail-card statistics-private-card">
-          <header className="statistics-private-card-header">
-            <h3>Variant Distribution by Genomic Region</h3>
-          </header>
-          <div className="statistics-private-card-body">
-            <ReactECharts
-              option={buildDonutOption(overview?.funcDistribution ?? [], "variants")}
-              showLoading={funcChartLoading}
-              loadingOption={CHART_LOADING_OPTION}
-              style={{ height: 380 }}
-            />
-          </div>
-        </article>
+      <StatisticsSplitSection
+        title="Statistic Of Genomic Region"
+        intro={<><strong>Variant region</strong> distribution across the selected data source.</>}
+        rows={funcRows}
+        labelHeader="Region"
+      >
+        <ReactECharts
+          option={buildDonutOption(overview?.funcDistribution ?? [], "variants")}
+          showLoading={funcChartLoading}
+          loadingOption={CHART_LOADING_OPTION}
+          style={{ height: 360 }}
+        />
+      </StatisticsSplitSection>
 
-        <article className="detail-card statistics-private-card">
-          <header className="statistics-private-card-header">
-            <h3>Coding Consequence Composition</h3>
-          </header>
-          <div className="statistics-private-card-body">
-            <ReactECharts
-              option={buildCompositionBarOption(overview?.exonicDistribution ?? [], "variants")}
-              showLoading={exonicChartLoading}
-              loadingOption={CHART_LOADING_OPTION}
-              style={{ height: 380 }}
-            />
-          </div>
-        </article>
+      <StatisticsSplitSection
+        title="Statistic Of Coding Consequence"
+        intro={<><strong>Coding consequence</strong> counts across filtered mutation records.</>}
+        rows={exonicRows}
+        labelHeader="Consequence"
+      >
+        <ReactECharts
+          option={buildCompositionBarOption(overview?.exonicDistribution ?? [], "variants")}
+          showLoading={exonicChartLoading}
+          loadingOption={CHART_LOADING_OPTION}
+          style={{ height: 360 }}
+        />
+      </StatisticsSplitSection>
 
-        <article className="detail-card statistics-private-card">
-          <header className="statistics-private-card-header">
-            <h3>Variant Counts per Chromosome</h3>
-          </header>
-          <div className="statistics-private-card-body">
-            <ReactECharts
-              option={buildChromOption(overview?.chromDistribution ?? [])}
-              showLoading={chromChartLoading}
-              loadingOption={CHART_LOADING_OPTION}
-              style={{ height: 380 }}
-            />
-          </div>
-        </article>
-
-      </section>
+      <StatisticsSplitSection
+        title="Statistic Of Chromosome"
+        intro={<><strong>Chromosome</strong> mutation counts across the selected data source.</>}
+        rows={chromRows}
+        labelHeader="Chromosome"
+      >
+        <ReactECharts
+          option={buildChromOption(overview?.chromDistribution ?? [])}
+          showLoading={chromChartLoading}
+          loadingOption={CHART_LOADING_OPTION}
+          style={{ height: 360 }}
+        />
+      </StatisticsSplitSection>
 
       {/* Ridgeline Plot — VAF Distribution (private only; public aggregates lack per-sample VAF) */}
       {!isPublic ? (
-        <section className="statistics-private-ridge-section">
-          <article className="detail-card statistics-private-card statistics-private-card-wide">
-            <header className="statistics-private-card-header">
-              <h3>VAF Distribution by Cancer Type</h3>
-            </header>
-            <div className="statistics-private-card-body">
-              {vafQ.isLoading ? (
-                <p className="panel-note">Loading VAF distribution...</p>
-              ) : vafData.length > 0 ? (
-                <RidgelinePlot data={vafData} />
-              ) : (
-                <p className="panel-note">No VAF data available</p>
-              )}
-            </div>
-          </article>
+        <section className="statistics-rna-section statistics-rna-section--wide">
+          <div className="statistics-rna-section-title">
+            <h2>Statistic Of VAF</h2>
+            <p><strong>Variant allele frequency</strong> distribution by cancer type.</p>
+          </div>
+          <div className="statistics-rna-ridge">
+            {vafQ.isLoading ? (
+              <p className="panel-note">Loading VAF distribution...</p>
+            ) : vafData.length > 0 ? (
+              <RidgelinePlot data={vafData} />
+            ) : (
+              <p className="panel-note">No VAF data available</p>
+            )}
+          </div>
         </section>
       ) : null}
     </div>

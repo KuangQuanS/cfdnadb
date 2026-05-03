@@ -12,6 +12,22 @@ const navItems = [
   { to: "/help", label: "Tutorial" }
 ];
 
+const breadcrumbLabels: Array<[string, string]> = [
+  ["/browse", "Data Browser"],
+  ["/statistics", "Statistic"],
+  ["/gene-search", "Gene Search"],
+  ["/survival", "Survival Analysis"],
+  ["/vaf-analysis", "VAF Analysis"],
+  ["/downloads", "Download"],
+  ["/help", "Help"],
+  ["/studies", "Study Detail"],
+];
+
+function getBreadcrumbLabel(pathname: string) {
+  if (pathname === "/") return null;
+  return breadcrumbLabels.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? "Page";
+}
+
 function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
   const [dismissed, setDismissed] = useState(false);
 
@@ -67,6 +83,7 @@ function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
 
 export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
+  const breadcrumbLabel = getBreadcrumbLabel(location.pathname);
   const geneMenuActive =
     location.pathname.startsWith("/gene-search") ||
     location.pathname.startsWith("/survival") ||
@@ -153,6 +170,14 @@ export function AppShell({ children }: PropsWithChildren) {
           </nav>
         </div>
       </header>
+
+      {breadcrumbLabel ? (
+        <div className="site-breadcrumb-bar" aria-label="Breadcrumb">
+          <Link to="/">Home</Link>
+          <span>/</span>
+          <span>{breadcrumbLabel}</span>
+        </div>
+      ) : null}
 
       <main className={`page-content${showLoader ? " page-content-loading" : ""}`}>{children}</main>
 
