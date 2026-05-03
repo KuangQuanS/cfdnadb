@@ -424,12 +424,7 @@ button, input, select { font: inherit; }
   background: #fff;
 }
 
-@media (min-width: 1201px) and (max-width: 1920px) {
-  .page-stack {
-    max-width: none;
-    width: calc(100vw - 56px);
-  }
-}
+
 
 /* ============================================================
    Hero V2 — clean dark gradient with body + bar chart
