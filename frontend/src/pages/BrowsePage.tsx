@@ -17,22 +17,6 @@ const DEFAULT_ONCOPLOT_LIMIT = 40;
 const GENE_INPUT_EXAMPLES = [
   ["TTN", "MUC12", "OBSCN", "HRNR", "EPPK1"],
 ];
-const DISPLAY_PANELS = [
-  { key: "mutation", label: "Mutation Plot" },
-  { key: "summary", label: "Summary" },
-  { key: "spectrum", label: "Spectrum" },
-  { key: "titv", label: "Ti/Tv" },
-] as const;
-
-type DisplayPanelKey = typeof DISPLAY_PANELS[number]["key"];
-type DisplayPanelState = Record<DisplayPanelKey, boolean>;
-
-const DEFAULT_DISPLAY_PANELS: DisplayPanelState = {
-  mutation: true,
-  summary: true,
-  spectrum: true,
-  titv: true,
-};
 
 async function inflateRaw(data: Uint8Array) {
   const stream = new DecompressionStream("deflate-raw");
@@ -141,10 +125,6 @@ function rankPlot(asset: CancerAsset) {
   return 10;
 }
 
-function escapeCsv(value: string | number) {
-  return `"${String(value).replace(/"/g, '""')}"`;
-}
-
 function BrowsePlotCard({ asset, className = "" }: { asset: CancerAsset; className?: string }) {
   const plotKind = getPlotKind(asset);
   return (
@@ -174,7 +154,6 @@ export function BrowsePage() {
   const selectedLabel = SOURCE_LABELS[activeSource] ?? activeSource;
   const [geneInput, setGeneInput] = useState("");
   const [geneError, setGeneError] = useState<string | null>(null);
-  const [displayPanels, setDisplayPanels] = useState<DisplayPanelState>(DEFAULT_DISPLAY_PANELS);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const geneInputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -271,19 +250,10 @@ export function BrowsePage() {
     params.set("source", BROWSE_SOURCES[0].source);
     setSearchParams(params);
     onGeneInputChange("");
-    setDisplayPanels(DEFAULT_DISPLAY_PANELS);
     if (geneInputRef.current) {
       geneInputRef.current.style.height = "44px";
     }
   }, [onGeneInputChange, setSearchParams]);
-
-  const toggleDisplayPanel = useCallback((key: DisplayPanelKey) => {
-    setDisplayPanels((previous) => ({ ...previous, [key]: !previous[key] }));
-  }, []);
-
-  const selectAllPanels = useCallback(() => {
-    setDisplayPanels(DEFAULT_DISPLAY_PANELS);
-  }, []);
 
   const plotAssets = useMemo(
     () => [...(plotsQ.data ?? [])].sort((left, right) => rankPlot(left) - rankPlot(right) || left.title.localeCompare(right.title)),
@@ -302,61 +272,10 @@ export function BrowsePage() {
     },
     [summaryPlotAssets]
   );
-  const visibleSummaryPlots = useMemo(
-    () => orderedSummaryPlots.filter((asset) => {
-      const kind = getPlotKind(asset);
-      return kind === "summary" || kind === "spectrum" || kind === "titv"
-        ? displayPanels[kind]
-        : true;
-    }),
-    [displayPanels, orderedSummaryPlots]
-  );
-  const loadedPanelCount = (oncoplottQ.data && oncoplottQ.data.genes.length > 0 ? 1 : 0) + orderedSummaryPlots.length;
-  const selectedPanelCount = DISPLAY_PANELS.filter((panel) => displayPanels[panel.key]).length;
   const refreshResults = useCallback(() => {
     void plotsQ.refetch();
     void oncoplottQ.refetch();
   }, [oncoplottQ, plotsQ]);
-  const downloadResultsCsv = useCallback(() => {
-    const rows = [
-      ["Panel", "Type", "Cohort", "Data Source", "File", "Genes", "Samples"],
-    ];
-
-    if (displayPanels.mutation && oncoplottQ.data && oncoplottQ.data.genes.length > 0) {
-      rows.push([
-        "Mutation plot",
-        "mutation",
-        formatCohortLabel(cancer),
-        selectedLabel,
-        "generated",
-        String(oncoplottQ.data.genes.length),
-        String(oncoplottQ.data.samples.length),
-      ]);
-    }
-
-    visibleSummaryPlots.forEach((asset) => {
-      rows.push([
-        asset.title,
-        getPlotKind(asset),
-        formatCohortLabel(cancer),
-        selectedLabel,
-        asset.fileName,
-        "",
-        "",
-      ]);
-    });
-
-    const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `browse-${cancer}-${activeSource}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  }, [activeSource, cancer, displayPanels.mutation, oncoplottQ.data, selectedLabel, visibleSummaryPlots]);
 
   return (
     <div className="page-stack rnabrowse-page">
@@ -428,21 +347,6 @@ export function BrowsePage() {
             {geneError ? <p className="rnabrowse-error">{geneError}</p> : null}
           </FilterSection>
 
-          <FilterSection title="Panel Type">
-            <div className="rnabrowse-check-list">
-              {DISPLAY_PANELS.map((panel) => (
-                <label key={panel.key}>
-                  <input
-                    type="checkbox"
-                    checked={displayPanels[panel.key]}
-                    onChange={() => toggleDisplayPanel(panel.key)}
-                  />
-                  <span>{panel.label}</span>
-                </label>
-              ))}
-            </div>
-          </FilterSection>
-
           <div className="rnabrowse-sidebar-actions">
             <button className="rnabrowse-submit" type="button" onClick={refreshResults}>
               Submit
@@ -459,62 +363,7 @@ export function BrowsePage() {
             <h2>Results</h2>
           </div>
 
-          <section className="rnabrowse-display-panel">
-            <div className="rnabrowse-bluebar">
-              <span className="rnabrowse-grid-icon" aria-hidden="true" />
-              <strong>Display Panels</strong>
-              <span className="rnabrowse-chevron" aria-hidden="true" />
-            </div>
-            <div className="rnabrowse-display-body">
-              {DISPLAY_PANELS.map((panel) => (
-                <label key={panel.key} className="rnabrowse-display-check">
-                  <input
-                    type="checkbox"
-                    checked={displayPanels[panel.key]}
-                    onChange={() => toggleDisplayPanel(panel.key)}
-                  />
-                  <span>{panel.label}</span>
-                </label>
-              ))}
-              <div className="rnabrowse-display-actions">
-                <button type="button" onClick={() => setDisplayPanels(DEFAULT_DISPLAY_PANELS)}>
-                  Reset Panels
-                </button>
-                <button type="button" onClick={selectAllPanels}>
-                  Select All Panels
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <p className="rnabrowse-total">
-            TOTAL OF <strong>{loadedPanelCount}</strong> RESULT PANELS,
-            <strong> {oncoplottQ.data?.samples.length ?? 0}</strong> SAMPLES,
-            <strong> {oncoplottQ.data?.genes.length ?? 0}</strong> GENES,
-            <strong> {selectedPanelCount}</strong> DISPLAYED PANEL TYPES.
-          </p>
-
-          <div className="rnabrowse-toolbar">
-            <button type="button" className="rnabrowse-light-btn" onClick={downloadResultsCsv}>Download CSV</button>
-            <button type="button" className="rnabrowse-light-btn" onClick={refreshResults}>
-              Refresh
-            </button>
-            <span>Show</span>
-            <select value={selectedPanelCount} onChange={() => undefined} aria-label="Displayed panel count">
-              <option>{selectedPanelCount}</option>
-            </select>
-            <span>entries</span>
-            <label>
-              Search:
-              <input
-                value={geneInput}
-                onChange={(event) => onGeneInputChange(event.target.value)}
-                aria-label="Search genes"
-              />
-            </label>
-          </div>
-
-          {activeSource && displayPanels.mutation ? (
+          {activeSource ? (
             <article className="stat-pdf-card stat-pdf-card--oncoplot statistics-oncoplot-card rnabrowse-result-card">
               <div className="statistics-panel-header statistics-panel-header--plot">
                 <div>
@@ -547,10 +396,10 @@ export function BrowsePage() {
               </div>
 
               {plotsQ.isLoading ? <p className="panel-note">Loading plots...</p> : null}
-              {visibleSummaryPlots.length > 0 ? (
+              {orderedSummaryPlots.length > 0 ? (
                 <div className="statistics-pdf-layout statistics-pdf-layout--browse">
                   <div className="statistics-pdf-stack">
-                    {visibleSummaryPlots.map((asset) => (
+                    {orderedSummaryPlots.map((asset) => (
                       <BrowsePlotCard
                         key={asset.fileName}
                         asset={asset}

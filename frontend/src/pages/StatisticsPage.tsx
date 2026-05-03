@@ -13,29 +13,29 @@ import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
 
 const PURPLE_SCALE = [
-  "#2d9cdb",
-  "#40c878",
-  "#6f9ee8",
-  "#74d69a",
-  "#1f77b4",
-  "#31a354",
-  "#8bbcf3",
-  "#9ae5b4",
+  "#2C3A85",
+  "#FC812F",
+  "#4ABEDC",
+  "#38A169",
+  "#5E72B9",
+  "#F3A15D",
+  "#7FD4E6",
+  "#7BC79A",
 ];
 
 const DONUT_SCALE = [
-  "#2d9cdb",
-  "#40c878",
-  "#6f9ee8",
-  "#74d69a",
-  "#1f77b4",
-  "#31a354",
-  "#b5d7f6",
+  "#2C3A85",
+  "#FC812F",
+  "#4ABEDC",
+  "#38A169",
+  "#5E72B9",
+  "#F3A15D",
+  "#C7D2F1",
 ];
 
 const CHART_LOADING_OPTION = {
   text: "Loading chart...",
-  color: "#2d9cdb",
+  color: "#2C3A85",
   textColor: "#5c6b86",
   maskColor: "rgba(255, 255, 255, 0.72)",
   zlevel: 0,
@@ -212,7 +212,7 @@ function buildCohortDonutOption(
       itemHeight: 8,
       itemGap: 10,
       type: "scroll",
-      pageIconColor: "#4b359a",
+      pageIconColor: "#2C3A85",
       pageTextStyle: { color: "#53627d", fontSize: 11 },
       textStyle: { color: "#53627d", fontSize: 11, fontWeight: 600 },
     },
@@ -281,7 +281,7 @@ function buildDonutOption(
       itemGap: 10,
       textStyle: { color: "#53627d", fontSize: 11, fontWeight: 600 },
       type: "scroll",
-      pageIconColor: "#4b359a",
+      pageIconColor: "#2C3A85",
       pageTextStyle: { color: "#53627d", fontSize: 11 },
     },
     series: [
@@ -374,8 +374,8 @@ function buildChromOption(data: LabelCount[]): EChartsOption {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: "#8a70d2" },
-              { offset: 1, color: "#4b359a" },
+              { offset: 0, color: "#FC812F" },
+              { offset: 1, color: "#2C3A85" },
             ],
           },
           borderRadius: [5, 5, 0, 0],
@@ -441,8 +441,8 @@ function buildCompositionBarOption(
             x2: 1,
             y2: 0,
             colorStops: [
-              { offset: 0, color: "#b7a0e5" },
-              { offset: 1, color: "#6548b8" },
+              { offset: 0, color: "#4ABEDC" },
+              { offset: 1, color: "#2C3A85" },
             ],
           },
           borderRadius: [0, 10, 10, 0],
@@ -450,7 +450,7 @@ function buildCompositionBarOption(
         label: {
           show: true,
           position: "right",
-          color: "#4b359a",
+          color: "#2C3A85",
           fontWeight: 700,
           fontSize: 11,
           formatter: (p: { value: number }) => formatNumber(p.value),

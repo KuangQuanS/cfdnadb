@@ -134,11 +134,22 @@ button, input, select { font: inherit; }
 
 /* Header */
 .site-header {
-  background: #ffffff;
+  background-color: #061f44;
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(3, 19, 46, 0.9) 0%,
+      rgba(5, 31, 70, 0.78) 48%,
+      rgba(4, 20, 48, 0.9) 100%
+    ),
+    var(--header-bg-image, none);
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
   color: var(--ink);
   padding: 0;
-  border-bottom: 1px solid #d8dde6;
-  box-shadow: none;
+  border-bottom: none;
+  box-shadow: 0 8px 18px rgba(18, 20, 42, 0.16);
   position: relative;
   z-index: 10;
 }
@@ -147,8 +158,8 @@ button, input, select { font: inherit; }
   width: 100%;
   max-width: none;
   margin: 0;
-  min-height: 74px;
-  padding: 10px 64px 10px 50px;
+  min-height: 92px;
+  padding: 14px 66px 14px 54px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -164,7 +175,7 @@ button, input, select { font: inherit; }
   transform: translateY(-50%);
   display: flex;
   align-items: center;
-  width: clamp(150px, 11vw, 210px);
+  width: clamp(162px, 12vw, 230px);
   text-decoration: none;
 }
 
@@ -177,7 +188,7 @@ button, input, select { font: inherit; }
   height: auto;
   display: block;
   object-fit: contain;
-  filter: none;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.22));
 }
 
 .title-stack {
@@ -228,11 +239,11 @@ button, input, select { font: inherit; }
 
 .site-title {
   font-size: 2rem;
-  color: #001d5a;
+  color: #ffffff;
   margin: 0;
 }
 .site-title:hover {
-  color: #001d5a;
+  color: #ffffff;
   text-decoration: none;
 }
 
@@ -251,25 +262,25 @@ button, input, select { font: inherit; }
 .nav-link {
   padding: 9px 2px 10px;
   border-radius: 0;
-  color: #001d5a;
+  color: rgba(255, 255, 255, 0.86);
   font-weight: 700;
   font-size: 0.98rem;
-  text-shadow: none;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.28);
   border-bottom: 3px solid transparent;
   transition: all 0.2s ease;
 }
 
 .nav-link:hover {
   background: transparent;
-  color: #001d5a;
-  border-bottom-color: rgba(0, 29, 90, 0.35);
+  color: #ffffff;
+  border-bottom-color: rgba(74, 190, 220, 0.55);
   text-decoration: none;
 }
 
 .nav-link.active {
   background: transparent;
-  color: #001d5a;
-  border-bottom-color: #001d5a;
+  color: #ffffff;
+  border-bottom-color: #52c7df;
   box-shadow: none;
 }
 
@@ -302,9 +313,9 @@ button, input, select { font: inherit; }
   gap: 2px;
   padding: 6px;
   border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid #d8dde6;
-  box-shadow: 0 12px 28px rgba(28, 40, 68, 0.12);
+  background: rgba(28, 22, 60, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 14px 28px rgba(10, 6, 30, 0.4);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
@@ -344,7 +355,7 @@ button, input, select { font: inherit; }
   display: block;
   padding: 8px 14px;
   border-radius: 6px;
-  color: #001d5a;
+  color: rgba(255, 255, 255, 0.88);
   font-weight: 600;
   font-size: 0.9rem;
   line-height: 1.2;
@@ -354,35 +365,38 @@ button, input, select { font: inherit; }
 }
 
 .site-nav-dropdown-link:hover {
-  color: #001d5a;
-  background: #eef2f7;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
   text-decoration: none;
 }
 
 .site-nav-dropdown-link.active {
-  color: #001d5a;
-  background: #d7dde6;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .site-breadcrumb-bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 48px;
+  min-height: 46px;
   padding: 0 54px;
-  background: #d7dde6;
-  color: #6e7887;
-  font-size: 0.98rem;
+  border-bottom: 1px solid #d7deea;
+  background:
+    linear-gradient(90deg, rgba(252, 129, 47, 0.12), transparent 260px),
+    #eef3f9;
+  color: #64748b;
+  font-size: 0.94rem;
   font-weight: 800;
 }
 
 .site-breadcrumb-bar a {
-  color: #001d5a;
+  color: var(--accent);
   text-decoration: none;
 }
 
 .site-breadcrumb-bar a:hover {
-  color: #001d5a;
+  color: var(--warm);
   text-decoration: underline;
 }
 
@@ -1503,44 +1517,48 @@ button, input, select { font: inherit; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 24px;
-  border-radius: var(--radius-pill);
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 3px;
   font-weight: 700;
-  font-size: 1rem;
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-size: 0.88rem;
+  line-height: 1.2;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: none;
+  text-decoration: none;
 }
 
 .button-primary {
-  background: var(--warm);
-  color: white;
-  border: 2px solid var(--warm);
-  box-shadow: 0 4px 10px rgba(252, 129, 47, 0.3);
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
 }
 .button-primary:hover {
-  background: var(--warm-hover);
-  border-color: var(--warm-hover);
-  color: white;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #fff;
   text-decoration: none;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(252, 129, 47, 0.4);
 }
 
 .button-secondary {
-  background: var(--accent);
-  color: white;
-  border: 2px solid var(--accent);
-  box-shadow: 0 4px 10px rgba(44, 58, 133, 0.2);
+  background: #f1f3f6;
+  color: #303843;
+  border: 1px solid #d2d7df;
 }
 .button-secondary:hover {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
-  color: white;
+  background: #e7ebf2;
+  border-color: #c7ced8;
+  color: #1f2937;
   text-decoration: none;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(44, 58, 133, 0.3);
+}
+
+.button-primary:disabled,
+.button-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .inline-button {
@@ -2856,7 +2874,7 @@ button, input, select { font: inherit; }
 .rnabrowse-page {
   max-width: none;
   gap: 24px;
-  padding: 0 42px 36px;
+  padding: 28px 34px 42px;
   background: #fff;
 }
 
@@ -2878,8 +2896,8 @@ button, input, select { font: inherit; }
 
 .rnabrowse-layout {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 28px;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 24px;
   align-items: start;
 }
 
@@ -2898,8 +2916,8 @@ button, input, select { font: inherit; }
 .rnabrowse-sidebar-title h2,
 .rnabrowse-results-title h2 {
   margin: 0;
-  color: #001d5a;
-  font-size: 1.7rem;
+  color: var(--accent);
+  font-size: 1.55rem;
   line-height: 1.1;
 }
 
@@ -2909,7 +2927,7 @@ button, input, select { font: inherit; }
   height: 44px;
   max-height: 120px;
   margin-bottom: 10px;
-  padding: 10px 14px;
+  padding: 9px 12px;
   border: 1px solid #d4d8df;
   border-radius: 0;
   resize: vertical;
@@ -2921,8 +2939,8 @@ button, input, select { font: inherit; }
 .rnabrowse-global-search:focus,
 .rnabrowse-filter-body select:focus,
 .rnabrowse-toolbar input:focus {
-  border-color: #001d5a;
-  box-shadow: 0 0 0 2px rgba(0, 29, 90, 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(44, 58, 133, 0.1);
 }
 
 .rnabrowse-filter-section {
@@ -2933,9 +2951,9 @@ button, input, select { font: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 50px;
-  padding: 0 24px;
-  background: #001d5a;
+  min-height: 44px;
+  padding: 0 16px;
+  background: var(--accent);
   color: #fff;
   font-weight: 800;
 }
@@ -2953,7 +2971,7 @@ button, input, select { font: inherit; }
 .rnabrowse-filter-body {
   display: grid;
   gap: 10px;
-  padding: 12px 14px 14px;
+  padding: 10px 11px 12px;
   border-right: 1px solid #d7dce5;
   border-left: 1px solid #d7dce5;
   background: #f7f8fa;
@@ -2981,7 +2999,7 @@ button, input, select { font: inherit; }
   border: 1px solid #cfd4dc;
   border-radius: 0;
   background: #fff;
-  color: #001d5a;
+  color: var(--accent);
   font-size: 0.82rem;
   font-weight: 700;
   text-align: left;
@@ -3031,16 +3049,22 @@ button, input, select { font: inherit; }
 }
 
 .rnabrowse-submit {
-  background: #eef0f2;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .rnabrowse-light-btn:hover,
 .rnabrowse-display-actions button:hover,
-.rnabrowse-submit:hover,
 .rnabrowse-reset:hover,
 .rnabrowse-example-btn:hover {
   background: #e7ebf2;
   text-decoration: none;
+}
+
+.rnabrowse-submit:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .rnabrowse-error {
@@ -3184,7 +3208,7 @@ button, input, select { font: inherit; }
 
 .rnabrowse-result-card,
 .rnabrowse-summary-section {
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .rnabrowse-page .statistics-oncoplot-card,
@@ -3206,7 +3230,7 @@ button, input, select { font: inherit; }
 
 .rnabrowse-page .stat-pdf-title,
 .rnabrowse-section-head h3 {
-  color: #001d5a;
+  color: var(--accent);
 }
 
 .rnabrowse-page .statistics-pdf-shell {
@@ -5507,33 +5531,35 @@ button, input, select { font: inherit; }
 .markerdb-detail-page .button-primary,
 .markerdb-detail-page .button-secondary {
   padding: 8px 14px;
-  border-radius: 2px;
+  border-radius: 3px;
   box-shadow: none;
   font-size: 0.84rem;
 }
 
 .markerdb-page .button-primary,
 .markerdb-detail-page .button-primary {
-  background: #7a7ac6;
-  border-color: #7a7ac6;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .markerdb-page .button-primary:hover,
 .markerdb-detail-page .button-primary:hover {
-  background: #6668b6;
-  border-color: #6668b6;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .markerdb-page .button-secondary,
 .markerdb-detail-page .button-secondary {
-  background: #4f3b93;
-  border-color: #4f3b93;
+  background: #f1f3f6;
+  border-color: #d2d7df;
+  color: #303843;
 }
 
 .markerdb-page .button-secondary:hover,
 .markerdb-detail-page .button-secondary:hover {
-  background: #442f86;
-  border-color: #442f86;
+  background: #e7ebf2;
+  border-color: #c7ced8;
+  color: #1f2937;
 }
 
 .markerdb-filter-panel {
@@ -5634,13 +5660,13 @@ button, input, select { font: inherit; }
   padding: 4px 8px;
   border-radius: 3px;
   background: #eef0fb;
-  color: #4f3b93;
+  color: var(--accent);
   font-weight: 700;
   text-decoration: none;
 }
 
 .markerdb-id-link:hover {
-  background: #4f3b93;
+  background: var(--accent);
   color: #fff;
 }
 
@@ -5653,7 +5679,7 @@ button, input, select { font: inherit; }
 
 .markerdb-condition-link {
   display: block;
-  color: #6c5aac;
+  color: var(--accent);
   font-size: 0.79rem;
   margin-bottom: 2px;
 }
@@ -5697,7 +5723,7 @@ button, input, select { font: inherit; }
 .markerdb-jump-links a {
   padding: 7px 12px;
   border-radius: 3px;
-  background: #37257f;
+  background: var(--accent);
   color: #fff;
   text-decoration: none;
   font-size: 0.84rem;
@@ -6575,7 +6601,7 @@ button:disabled:hover {
   min-width: 92px;
   padding: 8px 14px;
   border: 1px solid #c9d6ea;
-  border-radius: 4px;
+  border-radius: 3px;
   background: #f8fafc;
   color: #365995;
   font-size: 0.86rem;
@@ -6757,7 +6783,7 @@ button:disabled:hover {
 .maf-filter-pill {
   padding: 7px 11px;
   border: 1px solid #d7dfef;
-  border-radius: 999px;
+  border-radius: 3px;
   background: #fff;
   color: #41506a;
   font-size: 0.82rem;
@@ -6766,9 +6792,9 @@ button:disabled:hover {
 }
 
 .maf-filter-pill.active {
-  border-color: #4f73b8;
-  background: #eef4ff;
-  color: #284a87;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .maf-main {
@@ -7451,8 +7477,8 @@ button:disabled:hover {
 
 .gene-detail-primary-action {
   gap: 10px;
-  padding: 10px 18px;
-  border-radius: 999px;
+  padding: 8px 14px;
+  border-radius: 3px;
   box-shadow: none;
   text-transform: none;
   letter-spacing: 0;
@@ -7491,22 +7517,22 @@ button:disabled:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 10px 18px;
-  border-radius: 999px;
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 3px;
   border: 1px solid #d5dfef;
-  background: #fff;
-  color: #345a8a;
-  font-size: 0.94rem;
+  background: #f1f3f6;
+  color: #303843;
+  font-size: 0.88rem;
   font-weight: 700;
   text-decoration: none;
   transition: all 0.18s ease;
 }
 
 .gene-detail-secondary-action:hover {
-  background: #f5f9ff;
-  border-color: #bfd0ea;
-  color: #274c7b;
+  background: #e7ebf2;
+  border-color: #c7ced8;
+  color: #1f2937;
   text-decoration: none;
 }
 
@@ -7579,8 +7605,8 @@ button:disabled:hover {
   align-items: center;
   gap: 14px;
   padding: 12px 20px 12px 16px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #4b359a 0%, #6b4fd8 55%, #9d6cff 100%);
+  border-radius: 3px;
+  background: var(--accent);
   color: #fff;
   text-decoration: none;
   box-shadow: none;
@@ -7855,11 +7881,11 @@ button:disabled:hover {
 }
 
 .statistics-cohort-pill {
-  border: 1px solid rgba(75, 53, 154, 0.14);
-  background: rgba(75, 53, 154, 0.05);
+  border: 1px solid #d2d7df;
+  background: #f1f3f6;
   color: var(--accent);
-  padding: 10px 16px;
-  border-radius: 999px;
+  padding: 8px 14px;
+  border-radius: 3px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.18s ease;
@@ -7867,9 +7893,9 @@ button:disabled:hover {
 
 .statistics-cohort-pill.active,
 .statistics-cohort-pill:hover {
-  background: rgb(75, 53, 154);
+  background: var(--accent);
   color: #fff;
-  border-color: rgb(75, 53, 154);
+  border-color: var(--accent);
 }
 
 .statistics-dashboard-page .detail-card,
@@ -7976,9 +8002,9 @@ button:disabled:hover {
   padding: 14px 22px;
   min-width: 108px;
   border-radius: 3px;
-  background: linear-gradient(135deg, #4b359a 0%, #6548b8 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #4f73b8 100%);
   color: #fff;
-  box-shadow: 0 8px 18px -12px rgba(75, 53, 154, 0.55);
+  box-shadow: 0 8px 18px -12px rgba(44, 58, 133, 0.55);
 }
 
 .statistics-private-toolbar-badge span {
@@ -8031,7 +8057,7 @@ button:disabled:hover {
 
 .statistics-private-card-header .section-eyebrow {
   margin: 0;
-  color: #7258c6;
+  color: var(--warm);
   font-size: 0.68rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -8121,7 +8147,7 @@ button:disabled:hover {
 .statistics-rna-intro h1,
 .statistics-rna-section-title h2 {
   margin: 0;
-  color: #000;
+  color: var(--accent);
   font-size: 1.6rem;
   line-height: 1.2;
   letter-spacing: 0;
@@ -8130,7 +8156,7 @@ button:disabled:hover {
 .statistics-rna-intro p,
 .statistics-rna-section-title p {
   margin: 10px 0 0;
-  color: #0f1720;
+  color: #334155;
   font-size: 1rem;
   line-height: 1.45;
 }
@@ -8230,7 +8256,7 @@ button:disabled:hover {
 }
 
 .statistics-rna-table th {
-  color: #000;
+  color: var(--accent);
   font-weight: 800;
   background: #fff;
 }
@@ -8856,7 +8882,7 @@ button:disabled:hover {
   min-width: 0;
   height: 40px;
   border: 1px solid #d6e0ec;
-  border-radius: 6px;
+  border-radius: 3px;
   padding: 0 14px;
   color: #1f2d44;
   font: inherit;
@@ -8866,16 +8892,16 @@ button:disabled:hover {
 }
 .vaf-analysis-search-row input:focus {
   outline: none;
-  border-color: #3f9caf;
-  box-shadow: 0 0 0 3px rgba(63, 156, 175, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(44, 58, 133, 0.12);
 }
 
 .vaf-analysis-search-row button {
   height: 40px;
-  padding: 0 24px;
-  border-radius: 6px;
+  padding: 8px 14px;
+  border-radius: 3px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 .vaf-analysis-metrics-wrap {
@@ -9397,8 +9423,8 @@ button:disabled:hover {
 .survival-field input:focus,
 .survival-field select:focus,
 .survival-cohort-list:focus {
-  border-color: #6548b8;
-  box-shadow: 0 0 0 3px rgba(101, 72, 184, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(44, 58, 133, 0.12);
 }
 
 .survival-cohort-list {
@@ -9421,7 +9447,7 @@ button:disabled:hover {
 }
 
 .survival-check input {
-  accent-color: #6548b8;
+  accent-color: var(--accent);
   width: 15px;
   height: 15px;
 }
@@ -9432,21 +9458,22 @@ button:disabled:hover {
 }
 
 .survival-plot-btn {
-  min-height: 42px;
-  padding: 0 18px;
-  background: #4f3b93;
+  min-height: 38px;
+  padding: 8px 14px;
+  background: var(--accent);
   color: #fff;
-  font-size: 14px;
+  font-size: 0.88rem;
   font-weight: 700;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
   cursor: pointer;
   box-shadow: none;
   transition: background-color 0.12s ease;
 }
 
 .survival-plot-btn:hover:not(:disabled) {
-  background: #442f86;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
   transform: none;
   box-shadow: none;
 }
