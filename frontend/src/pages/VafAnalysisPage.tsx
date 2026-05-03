@@ -4,7 +4,6 @@ import { useSearchParams } from "react-router-dom";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import { getVafBodyMap } from "../api/client";
-import { SectionHeader } from "../components/SectionHeader";
 import { OrganIcon } from "../components/icons/OrganIcon";
 import type { VafBodyMapEntry } from "../types/api";
 
@@ -276,11 +275,12 @@ export function VafAnalysisPage() {
 
   return (
     <div className="page-stack vaf-analysis-page">
-      <SectionHeader
-        eyebrow="Tools"
-        title="VAF Analysis"
-        description="Gene-level variant allele frequency across mounted private cfDNA cohorts."
-      />
+      <section className="database-page-intro vaf-analysis-intro">
+        <div>
+          <h1>VAF Analysis</h1>
+          <p>Gene-level variant allele frequency across mounted private cfDNA cohorts.</p>
+        </div>
+      </section>
 
       <section className="detail-card vaf-analysis-shell">
         <div className="vaf-analysis-controls">

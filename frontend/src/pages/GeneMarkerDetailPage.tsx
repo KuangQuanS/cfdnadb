@@ -101,6 +101,7 @@ export function GeneMarkerDetailPage() {
       <section className="maf-hero maf-detail-header">
         <div className="maf-hero-copy">
           <h2>{geneSymbol}</h2>
+          <p>Gene detail with genome browser context, sample-level mutation records, and analysis links.</p>
         </div>
         <div className="maf-detail-actions">
           <Link className="button-secondary inline-button gene-detail-primary-action" to={`/survival?gene=${encodeURIComponent(geneSymbol)}`}>

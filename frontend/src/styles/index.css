@@ -442,6 +442,41 @@ button, input, select { font: inherit; }
   gap: 56px;
 }
 
+.database-wide-page,
+.maf-page,
+.maf-detail-page,
+.survival-page,
+.vaf-analysis-page,
+.downloads-page,
+.help-page {
+  max-width: none;
+  padding: 28px 34px 48px;
+}
+
+.database-page-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid #d7dfef;
+}
+
+.database-page-intro h1 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.62rem;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.database-page-intro p {
+  margin: 8px 0 0;
+  max-width: 820px;
+  color: #56657f;
+  line-height: 1.55;
+}
+
 .home-page-stack {
   margin-top: 0;
   padding-top: 56px;
@@ -6556,29 +6591,30 @@ button:disabled:hover {
    MAF Workbench
    ============================================================ */
 .maf-page {
-  gap: 18px;
+  gap: 16px;
 }
 
 .maf-hero {
   display: grid;
-  gap: 18px;
-  padding: 0 0 18px;
+  gap: 12px;
+  padding: 0 0 14px;
   background: transparent;
   border: none;
   border-bottom: 1px solid #d7dfef;
 }
 
 .maf-hero-copy h2 {
-  margin: 0 0 8px;
-  font-size: 1.72rem;
-  color: #21386f;
+  margin: 0 0 6px;
+  font-size: 1.62rem;
+  color: var(--accent);
+  letter-spacing: 0;
 }
 
 .maf-hero-copy p {
   margin: 0;
-  max-width: 920px;
+  max-width: 860px;
   color: #56657f;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 .maf-eyebrow {
@@ -6625,8 +6661,9 @@ button:disabled:hover {
 .maf-search-card .maf-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
+  gap: 14px;
   align-items: end;
+  padding: 18px 20px 0;
 }
 
 .maf-autocomplete {
@@ -6714,8 +6751,8 @@ button:disabled:hover {
 
 .maf-filter-board {
   display: grid;
-  gap: 14px;
-  padding: 14px 0 0;
+  gap: 12px;
+  padding: 12px 20px 18px;
   border-top: 1px solid #e0e6f0;
   background: transparent;
 }
@@ -7263,7 +7300,7 @@ button:disabled:hover {
 }
 
 .maf-detail-page {
-  gap: 18px;
+  gap: 16px;
 }
 
 /* ---- Gene lollipop plot panel ---- */
@@ -8324,7 +8361,7 @@ button:disabled:hover {
 }
 
 .downloads-page {
-  gap: 36px;
+  gap: 20px;
 }
 
 .downloads-grid {
@@ -8340,6 +8377,10 @@ button:disabled:hover {
   overflow: hidden;
 }
 
+.downloads-intro {
+  align-items: center;
+}
+
 .downloads-mode-card {
   padding: 0;
   border-left: none;
@@ -8351,13 +8392,27 @@ button:disabled:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 16px 18px 18px;
+  padding: 0;
   background: transparent;
+}
+
+.downloads-table-card {
+  display: grid;
+  gap: 12px;
+  border: none;
+  background: transparent;
+}
+
+.downloads-table-card h2 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.18rem;
+  letter-spacing: 0;
 }
 
 .downloads-table-shell {
   display: block;
-  padding: 16px 18px 18px;
+  padding: 0;
   background: #fff;
 }
 
@@ -8731,18 +8786,18 @@ button:disabled:hover {
 
 .help-layout {
   display: grid;
-  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
 }
 
 .help-toc {
   position: sticky;
   top: 96px;
-  background: #fff;
-  border: 1px solid #e1e8f2;
-  border-radius: 6px;
-  padding: 18px;
+  background: #f8fafc;
+  border: 1px solid #d8e1ef;
+  border-radius: 0;
+  padding: 14px 16px;
 }
 
 .help-toc nav {
@@ -8755,8 +8810,8 @@ button:disabled:hover {
   color: #42536d;
   font-weight: 700;
   text-decoration: none;
-  padding: 9px 10px;
-  border-radius: 6px;
+  padding: 7px 8px;
+  border-radius: 3px;
 }
 
 .help-toc a:hover {
@@ -8765,8 +8820,11 @@ button:disabled:hover {
 }
 
 .help-article {
-  max-width: 1060px;
-  padding: 34px 40px;
+  max-width: none;
+  padding: 0 0 20px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .help-article section {
@@ -8775,7 +8833,14 @@ button:disabled:hover {
 }
 
 .help-article section + section {
-  margin-top: 34px;
+  margin-top: 30px;
+}
+
+.help-article h3 {
+  margin-top: 0;
+  color: var(--accent);
+  font-size: 1.45rem;
+  letter-spacing: 0;
 }
 
 .help-article ol {
@@ -8798,7 +8863,7 @@ button:disabled:hover {
   margin: 4px 0 26px;
   padding: 14px;
   border: 1px solid #e1e8f2;
-  border-radius: 6px;
+  border-radius: 0;
   background: #f9fbfe;
 }
 
@@ -8844,7 +8909,7 @@ button:disabled:hover {
 }
 
 .vaf-analysis-shell {
-  padding: 32px 40px;
+  padding: 22px 24px;
 }
 
 .vaf-analysis-controls {
@@ -8853,7 +8918,7 @@ button:disabled:hover {
   justify-content: space-between;
   align-items: center;
   gap: 24px;
-  padding-bottom: 24px;
+  padding-bottom: 18px;
   border-bottom: 1px solid #e1e8f2;
 }
 
@@ -8968,9 +9033,9 @@ button:disabled:hover {
 .vaf-analysis-workspace {
   display: grid;
   grid-template-columns: minmax(360px, 0.85fr) minmax(420px, 1.15fr);
-  gap: 40px;
+  gap: 28px;
   align-items: start;
-  padding-top: 32px;
+  padding-top: 24px;
 }
 
 .vaf-bodymap-panel {
@@ -9171,7 +9236,7 @@ button:disabled:hover {
   }
 
   .help-article {
-    padding: 24px;
+    padding: 0 0 20px;
   }
 
   .help-definition-list {
@@ -9254,7 +9319,7 @@ button:disabled:hover {
    ============================================================ */
 .survival-page {
   gap: 18px;
-  max-width: 1320px;
+  max-width: none;
 }
 
 .survival-shell {
@@ -9269,8 +9334,8 @@ button:disabled:hover {
 
 .survival-masthead {
   display: grid;
-  gap: 14px;
-  padding: 10px 0 14px;
+  gap: 10px;
+  padding: 0 0 12px;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -9299,8 +9364,8 @@ button:disabled:hover {
 
 .survival-masthead-copy h1 {
   margin: 0;
-  color: #1f2c46;
-  font-size: clamp(1.55rem, 2.2vw, 2.15rem);
+  color: var(--accent);
+  font-size: 1.62rem;
   line-height: 1.12;
   letter-spacing: 0;
 }
@@ -9328,7 +9393,7 @@ button:disabled:hover {
 .survival-controls-header {
   display: grid;
   gap: 8px;
-  padding: 16px 0 12px;
+  padding: 12px 0 10px;
 }
 
 .survival-controls-header .section-eyebrow,
@@ -9340,7 +9405,7 @@ button:disabled:hover {
 .survival-results h2 {
   margin: 0;
   color: #20304b;
-  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+  font-size: 1.08rem;
   line-height: 1.22;
   font-weight: 750;
 }

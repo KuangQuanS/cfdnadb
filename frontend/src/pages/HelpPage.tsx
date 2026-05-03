@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { SectionHeader } from "../components/SectionHeader";
 import tutorialFlowchart from "../assets/tutorial.png";
 import browserTutorial from "../assets/tutorial/browser.png";
 import geneSearchTutorial from "../assets/tutorial/gene_search.png";
@@ -19,12 +18,6 @@ const GUIDE_LINKS = [
 export function HelpPage() {
   return (
     <div className="page-stack help-page">
-      <SectionHeader
-        eyebrow="Help"
-        title="Using ctDNAdb"
-        description="Guidance for cohort browsing, gene queries, database summaries, survival analysis, VAF analysis, and file downloads."
-      />
-
       <div className="help-layout">
         <aside className="help-toc" aria-label="Help contents">
           <p className="section-eyebrow">Contents</p>

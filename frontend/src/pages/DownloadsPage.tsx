@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listDataFiles, toApiUrl } from "../api/client";
 import { SampleBrowsePanel } from "../components/SampleBrowsePanel";
-import { SectionHeader } from "../components/SectionHeader";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatFileSize } from "../utils/format";
 
@@ -56,14 +55,12 @@ export function DownloadsPage() {
 
   return (
     <div className="page-stack downloads-page">
-      <SectionHeader
-        eyebrow="Download"
-        title="Aggregate and filtered downloads"
-      />
-
-      <section className="detail-card downloads-mode-card">
-        <div className="statistics-panel-header">
-          <h3 className="stat-pdf-title">Download mode</h3>
+      <section className="database-page-intro downloads-intro">
+        <div>
+          <h1>Download</h1>
+          <p>
+            Cohort-level resources and filtered sample exports for mounted ctDNA mutation datasets.
+          </p>
         </div>
         <div className="downloads-mode-switch">
           <button
@@ -85,10 +82,8 @@ export function DownloadsPage() {
 
       {mode === "all" ? (
         <section className="downloads-grid">
-          <article className="stat-pdf-card downloads-table-card">
-            <div className="statistics-panel-header">
-              <h3 className="stat-pdf-title">Whole-cohort file table</h3>
-            </div>
+          <article className="downloads-table-card">
+            <h2>Whole-cohort file table</h2>
             <div className="statistics-pdf-shell downloads-table-shell">
               {filesQuery.isLoading && <p className="panel-note">Scanning available files...</p>}
               {filesQuery.isError && (
