@@ -146,8 +146,7 @@ export function DownloadsPage() {
         <section className="downloads-cohort-layout">
           <aside className="downloads-cohort-sidebar tool-sidebar-panel" aria-label="Cohort-level file filters">
             <div className="downloads-sidebar-head">
-              <p className="section-eyebrow">Cohort-level filters</p>
-              <h3>Filter mounted files</h3>
+              <h3>Filter</h3>
             </div>
 
             {(selectedCohorts.length > 0 || selectedFileTypes.length > 0) ? (
@@ -312,8 +311,8 @@ export function DownloadsPage() {
           <SampleBrowsePanel
             compact
             mode="downloads"
-            eyebrow="Sample-level files"
-            title="Filter samples and export matching files"
+            eyebrow=""
+            title="Filter"
           />
         </section>
       ) : null}

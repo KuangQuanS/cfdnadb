@@ -388,7 +388,7 @@ export function SampleBrowsePanel({
         <section className={`detail-card downloads-filtered-hero-card${mode === "downloads" ? " downloads-filtered-hero-card--downloads" : ""}`}>
           <section className="browse-samples-hero browse-samples-hero--embedded">
             <div className="browse-samples-hero-copy">
-              <p className="section-eyebrow">{eyebrow}</p>
+              {eyebrow ? <p className="section-eyebrow">{eyebrow}</p> : null}
               <h2>{title}</h2>
             </div>
             <div className="browse-samples-hero-metrics">
@@ -475,7 +475,7 @@ export function SampleBrowsePanel({
         <>
           <section className="detail-card browse-samples-hero">
             <div className="browse-samples-hero-copy">
-              <p className="section-eyebrow">{eyebrow}</p>
+              {eyebrow ? <p className="section-eyebrow">{eyebrow}</p> : null}
               <h2>{title}</h2>
             </div>
             <div className="browse-samples-hero-metrics">
@@ -587,7 +587,6 @@ export function SampleBrowsePanel({
             <section className="browse-samples-top-filters browse-samples-top-filters--embedded">
               {isDownloadsCompact ? (
                 <div className="downloads-filtered-sidebar-copy">
-                  <p className="section-eyebrow">{eyebrow}</p>
                   <h3>{title}</h3>
                   {activeTags.length > 0 && (
                     <div className="browse-active-filters browse-active-filters--embedded browse-active-filters--sidebar">
@@ -601,9 +600,11 @@ export function SampleBrowsePanel({
                   )}
                 </div>
               ) : null}
-              <div className="browse-panel-header">
-                <h3>Filters</h3>
-              </div>
+              {!isDownloadsCompact ? (
+                <div className="browse-panel-header">
+                  <h3>Filters</h3>
+                </div>
+              ) : null}
               <div className="browse-samples-top-filter-grid">
                 {filterSections}
               </div>
