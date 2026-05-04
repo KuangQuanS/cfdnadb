@@ -527,6 +527,12 @@ button, input, select { font: inherit; }
   letter-spacing: 0;
 }
 
+.vaf-analysis-intro h1 {
+  display: grid;
+  width: fit-content;
+  gap: 8px;
+}
+
 .database-page-intro p {
   margin: 8px 0 0;
   max-width: 820px;
@@ -6661,10 +6667,23 @@ button:disabled:hover {
 }
 
 .maf-hero-copy h2 {
+  display: grid;
+  width: fit-content;
+  gap: 8px;
   margin: 0 0 6px;
   font-size: 1.62rem;
   color: var(--accent);
   letter-spacing: 0;
+}
+
+.maf-hero-copy h2::after,
+.survival-masthead-copy h1::after,
+.vaf-analysis-intro h1::after {
+  content: "";
+  width: 54px;
+  height: 3px;
+  border-radius: 999px;
+  background: #157da5;
 }
 
 .maf-hero-copy p {
@@ -6715,12 +6734,17 @@ button:disabled:hover {
   align-items: end;
 }
 
+.maf-search-card {
+  padding: 0;
+  overflow: visible;
+}
+
 .maf-search-card .maf-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
   align-items: end;
-  padding: 18px 20px 0;
+  padding: 18px 20px 10px;
 }
 
 .maf-autocomplete {
@@ -9527,6 +9551,9 @@ button:disabled:hover {
 }
 
 .survival-masthead-copy h1 {
+  display: grid;
+  width: fit-content;
+  gap: 8px;
   margin: 0;
   color: var(--accent);
   font-size: 1.62rem;
