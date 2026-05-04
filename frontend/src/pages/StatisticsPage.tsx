@@ -44,6 +44,8 @@ const CHART_LOADING_OPTION = {
   lineWidth: 3,
 };
 
+const STANDARD_STAT_CHART_STYLE = { width: "100%", height: 430 };
+
 function cleanLabels(items: LabelCount[]): LabelCount[] {
   return items.filter(
     (item) =>
@@ -188,7 +190,7 @@ function buildCohortDonutOption(
     title: {
       text: formatNumber(total),
       subtext: "samples",
-      left: "33%",
+      left: "38%",
       top: "39%",
       textAlign: "center",
       textStyle: {
@@ -205,7 +207,7 @@ function buildCohortDonutOption(
     },
     legend: {
       orient: "vertical",
-      right: 10,
+      right: 0,
       top: "middle",
       icon: "circle",
       itemWidth: 8,
@@ -219,8 +221,8 @@ function buildCohortDonutOption(
     series: [
       {
         type: "pie",
-        radius: ["52%", "72%"],
-        center: ["33%", "50%"],
+        radius: ["56%", "84%"],
+        center: ["38%", "50%"],
         avoidLabelOverlap: true,
         label: { show: false },
         labelLine: { show: false },
@@ -256,7 +258,7 @@ function buildDonutOption(
     title: {
       text: formatNumber(total),
       subtext: centerLabel,
-      left: "33%",
+      left: "38%",
       top: "39%",
       textAlign: "center",
       textStyle: {
@@ -273,7 +275,7 @@ function buildDonutOption(
     },
     legend: {
       orient: "vertical",
-      right: 10,
+      right: 0,
       top: "middle",
       icon: "circle",
       itemHeight: 8,
@@ -287,8 +289,8 @@ function buildDonutOption(
     series: [
       {
         type: "pie",
-        radius: ["50%", "72%"],
-        center: ["33%", "50%"],
+        radius: ["56%", "84%"],
+        center: ["38%", "50%"],
         avoidLabelOverlap: true,
         label: { show: false },
         labelLine: { show: false },
@@ -331,7 +333,7 @@ function buildChromOption(data: LabelCount[]): EChartsOption {
         return `chr${p.name}<br/>${formatNumber(p.value)} variants (${pct}%)`;
       },
     },
-    grid: { left: 56, right: 20, top: 24, bottom: 46, containLabel: true },
+    grid: { left: 54, right: 18, top: 26, bottom: 42, containLabel: true },
     xAxis: {
       type: "category",
       data: categories,
@@ -365,7 +367,7 @@ function buildChromOption(data: LabelCount[]): EChartsOption {
       {
         type: "bar",
         data: ordered.map((item) => item.count),
-        barMaxWidth: 18,
+        barMaxWidth: 24,
         itemStyle: {
           color: {
             type: "linear",
@@ -403,7 +405,7 @@ function buildCompositionBarOption(
         return `${p.name}<br/>${formatNumber(p.value)} ${unitLabel} (${pct}%)`;
       },
     },
-    grid: { left: 170, right: 80, top: 20, bottom: 24, containLabel: true },
+    grid: { left: 150, right: 64, top: 22, bottom: 30, containLabel: true },
     xAxis: {
       type: "value",
       splitLine: { lineStyle: { color: "rgba(80, 95, 128, 0.12)" } },
@@ -432,7 +434,7 @@ function buildCompositionBarOption(
       {
         type: "bar",
         data: normalized.map((item) => item.count),
-        barMaxWidth: 18,
+        barMaxWidth: 24,
         itemStyle: {
           color: {
             type: "linear",
@@ -901,7 +903,7 @@ export function StatisticsPage() {
             option={buildCohortDonutOption(activeCohorts, totalSamples)}
             showLoading={cohortChartLoading}
             loadingOption={CHART_LOADING_OPTION}
-            style={{ height: 360 }}
+            style={STANDARD_STAT_CHART_STYLE}
           />
         </StatisticsSplitSection>
       ) : null}
@@ -916,7 +918,7 @@ export function StatisticsPage() {
           option={buildDonutOption(overview?.funcDistribution ?? [], "variants")}
           showLoading={funcChartLoading}
           loadingOption={CHART_LOADING_OPTION}
-          style={{ height: 360 }}
+          style={STANDARD_STAT_CHART_STYLE}
         />
       </StatisticsSplitSection>
 
@@ -930,7 +932,7 @@ export function StatisticsPage() {
           option={buildCompositionBarOption(overview?.exonicDistribution ?? [], "variants")}
           showLoading={exonicChartLoading}
           loadingOption={CHART_LOADING_OPTION}
-          style={{ height: 360 }}
+          style={STANDARD_STAT_CHART_STYLE}
         />
       </StatisticsSplitSection>
 
@@ -944,7 +946,7 @@ export function StatisticsPage() {
           option={buildChromOption(overview?.chromDistribution ?? [])}
           showLoading={chromChartLoading}
           loadingOption={CHART_LOADING_OPTION}
-          style={{ height: 360 }}
+          style={STANDARD_STAT_CHART_STYLE}
         />
       </StatisticsSplitSection>
 

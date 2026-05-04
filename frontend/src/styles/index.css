@@ -8401,9 +8401,9 @@ button:disabled:hover {
 
 .statistics-rna-split {
   display: grid;
-  grid-template-columns: minmax(460px, 1.35fr) minmax(360px, 0.95fr);
-  gap: 44px;
-  align-items: start;
+  grid-template-columns: minmax(520px, 1fr) minmax(560px, 1.08fr);
+  gap: 36px;
+  align-items: stretch;
 }
 
 .statistics-rna-table-wrap {
@@ -8453,7 +8453,10 @@ button:disabled:hover {
 
 .statistics-rna-chart {
   min-width: 0;
-  padding-top: 6px;
+  display: flex;
+  align-items: stretch;
+  min-height: 430px;
+  padding-top: 0;
 }
 
 .statistics-rna-chart > div {
@@ -8467,7 +8470,7 @@ button:disabled:hover {
   padding-top: 14px;
 }
 
-@media (max-width: 1020px) {
+@media (max-width: 1180px) {
   .statistics-rna-intro {
     flex-direction: column;
   }
