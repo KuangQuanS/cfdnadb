@@ -2211,19 +2211,14 @@
   .portal-tool-tile:hover,
   .portal-data-card:hover,
   .portal-architecture-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 26px rgba(23, 36, 70, 0.08);
-  }
-
-  .gdc-hero-action-card:hover .gdc-hero-action-card-icon,
-  .gdc-hero-action-card:focus-visible .gdc-hero-action-card-icon {
-    transform: scale(1.04);
+    transform: none;
+    box-shadow: none;
   }
 
   .gdc-pipeline-frame:hover img,
   .gdc-tutorial-panel:hover img {
     filter: saturate(1.04) contrast(1.02);
-    transform: scale(1.01);
+    transform: none;
   }
 }
 

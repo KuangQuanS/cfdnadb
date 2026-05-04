@@ -9898,8 +9898,6 @@ button:disabled:hover {
 .statistics-private-toolbar-card {
   transition:
     border-color var(--motion-medium) ease,
-    box-shadow var(--motion-medium) ease,
-    transform var(--motion-medium) var(--motion-ease),
     background-color var(--motion-fast) ease;
 }
 
@@ -9949,13 +9947,6 @@ button:disabled:hover {
   .statistics-private-card:hover,
   .statistics-private-toolbar-card:hover {
     border-color: rgba(86, 120, 176, 0.36);
-    box-shadow: 0 10px 24px rgba(23, 36, 70, 0.08);
-    transform: translateY(-2px);
-  }
-
-  .survival-results:hover,
-  .survival-plot-card:hover,
-  .browse-dense-page .detail-card:hover {
     box-shadow: none;
     transform: none;
   }
@@ -9988,6 +9979,35 @@ button:disabled:hover {
 .maf-table tbody tr:hover,
 .statistics-rna-table tbody tr:hover {
   box-shadow: inset 3px 0 0 rgba(252, 129, 47, 0.82);
+}
+
+.detail-card:hover,
+.chart-card:hover,
+.filter-panel:hover,
+.table-shell:hover,
+.stat-card:hover,
+.feature-card:hover,
+.home-v2-feature-card:hover,
+.portal-tool-tile:hover,
+.portal-data-card:hover,
+.portal-architecture-card:hover,
+.stat-pdf-card:hover,
+.browse-pdf-card:hover,
+.gene-stat-card:hover,
+.maf-summary-card:hover,
+.downloads-mode-card:hover,
+.downloads-table-card:hover,
+.downloads-filtered-control-card:hover,
+.downloads-filtered-hero-card:hover,
+.downloads-filtered-workspace-card:hover,
+.statistics-private-card:hover,
+.statistics-private-toolbar-card:hover,
+.survival-shell:hover,
+.survival-results:hover,
+.survival-plot-card:hover,
+.gene-plot-card:hover {
+  box-shadow: none;
+  transform: none;
 }
 
 .page-stack > section,
