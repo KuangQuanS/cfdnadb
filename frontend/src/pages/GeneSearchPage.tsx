@@ -182,7 +182,7 @@ export function GeneSearchPage() {
           <h2>Gene Search</h2>
         </div>
 
-        <div className="detail-card maf-search-card">
+        <div className="detail-card maf-search-card tool-query-panel">
           <form className="maf-toolbar" onSubmit={submitSearch}>
             <AutocompleteField
               label="Gene Symbol"
@@ -248,7 +248,7 @@ export function GeneSearchPage() {
         </div>
       </section>
 
-      <section className="maf-summary-strip" aria-label="Summary">
+      <section className="maf-summary-strip tool-summary-strip" aria-label="Summary">
         <SummaryCard
           label="Matched Variants"
           value={summaryQ.isLoading ? "..." : formatNumber(summary?.totalVariants ?? 0)}
@@ -271,7 +271,7 @@ export function GeneSearchPage() {
         />
       </section>
 
-      <section className="maf-active-panel">
+      <section className="maf-active-panel tool-section-panel">
         <div className="maf-active-header">
           <h3>Current Query</h3>
           <span>{dataSources.length === 0 ? "All Internal Data" : dataSources.map((s) => DATA_SOURCE_LABELS[s] ?? s).join(" + ")}</span>
@@ -287,7 +287,7 @@ export function GeneSearchPage() {
         </div>
       </section>
 
-      <section className="maf-results-panel">
+      <section className="maf-results-panel tool-section-panel">
         <div className="maf-results-header">
           <div>
             <h3>Gene Summary Table</h3>

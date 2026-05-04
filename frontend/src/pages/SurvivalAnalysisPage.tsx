@@ -754,7 +754,7 @@ export function SurvivalAnalysisPage() {
 
         <div className="survival-shell-divider" />
 
-        <section className="survival-controls survival-workspace">
+        <section className="survival-controls survival-workspace tool-query-panel">
           <div className="survival-controls-header">
             <h2>{formatCohortLabel(cohort)} analysis controls</h2>
           </div>
@@ -832,7 +832,7 @@ export function SurvivalAnalysisPage() {
         </section>
       </section>
 
-      <section className="survival-results">
+      <section className="survival-results tool-section-panel">
         <div className="survival-masthead-copy">
           <h2>TCGA {formatCohortLabel(cohort)}</h2>
         </div>

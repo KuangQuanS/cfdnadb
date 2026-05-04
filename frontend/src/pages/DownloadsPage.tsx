@@ -144,7 +144,7 @@ export function DownloadsPage() {
 
       {mode === "cohort" ? (
         <section className="downloads-cohort-layout">
-          <aside className="downloads-cohort-sidebar" aria-label="Cohort-level file filters">
+          <aside className="downloads-cohort-sidebar tool-sidebar-panel" aria-label="Cohort-level file filters">
             <div className="downloads-sidebar-head">
               <p className="section-eyebrow">Cohort-level filters</p>
               <h3>Filter mounted files</h3>
@@ -203,7 +203,7 @@ export function DownloadsPage() {
             </button>
           </aside>
 
-          <article className="downloads-table-card">
+          <article className="downloads-table-card tool-section-panel">
             <h2>Cohort-level file table</h2>
             <div className="statistics-pdf-shell downloads-table-shell">
               {filesQuery.isLoading && <p className="panel-note">Scanning available files...</p>}

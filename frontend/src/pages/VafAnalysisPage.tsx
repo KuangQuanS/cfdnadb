@@ -282,7 +282,7 @@ export function VafAnalysisPage() {
         </div>
       </section>
 
-      <section className="detail-card vaf-analysis-shell">
+      <section className="detail-card vaf-analysis-shell tool-query-panel">
         <div className="vaf-analysis-controls">
           <form className="vaf-analysis-form" onSubmit={submitSearch}>
             <label htmlFor="vaf-gene-input">Gene Symbol</label>
@@ -395,7 +395,7 @@ export function VafAnalysisPage() {
         </div>
       </section>
 
-      <section className="survival-results survival-results--omics vaf-omics-results">
+      <section className="survival-results survival-results--omics vaf-omics-results tool-section-panel">
         <div className="survival-masthead-copy">
           <h2>Methylation and CTC</h2>
         </div>

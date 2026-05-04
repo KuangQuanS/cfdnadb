@@ -546,6 +546,56 @@ button, input, select { font: inherit; }
   background: #fff;
 }
 
+.tool-query-panel,
+.tool-summary-strip,
+.tool-section-panel,
+.tool-sidebar-panel {
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: none;
+}
+
+.tool-query-panel {
+  overflow: visible;
+}
+
+.tool-section-panel {
+  padding: 18px 20px;
+}
+
+.tool-sidebar-panel {
+  padding: 18px;
+}
+
+.tool-section-panel > h2,
+.tool-section-panel > h3,
+.tool-sidebar-panel h3,
+.maf-results-header h3,
+.maf-active-header h3,
+.survival-controls-header h2,
+.survival-masthead-copy h2 {
+  margin: 0;
+  color: #223a70;
+  font-size: 1.08rem;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.maf-results-header,
+.maf-active-header,
+.survival-controls-header,
+.survival-results .survival-masthead-copy,
+.vaf-omics-results .survival-masthead-copy {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e4ebf4;
+}
+
+.tool-section-panel .panel-note {
+  margin: 0;
+}
+
 
 
 /* ============================================================
@@ -6653,7 +6703,7 @@ button:disabled:hover {
    MAF Workbench
    ============================================================ */
 .maf-page {
-  gap: 16px;
+  gap: 20px;
 }
 
 .maf-hero {
@@ -6836,15 +6886,19 @@ button:disabled:hover {
 
 .maf-filter-board {
   display: grid;
-  gap: 12px;
-  padding: 12px 20px 18px;
+  gap: 10px;
+  padding: 14px 20px 18px;
   border-top: 1px solid #e0e6f0;
-  background: transparent;
+  background: #fbfdff;
 }
 
 .maf-filter-group-top {
   display: grid;
-  gap: 8px;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #e4ebf4;
+  border-radius: 6px;
+  background: #ffffff;
 }
 
 .maf-filter-loading {
@@ -6899,7 +6953,7 @@ button:disabled:hover {
 .maf-filter-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 
 .maf-filter-pill {
@@ -6928,9 +6982,8 @@ button:disabled:hover {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  border-top: 1px solid #d8e1ef;
-  border-bottom: 1px solid #d8e1ef;
-  background: #fbfcfe;
+  overflow: hidden;
+  padding: 0;
 }
 
 .maf-summary-card {
@@ -6968,9 +7021,6 @@ button:disabled:hover {
 .maf-active-panel {
   display: grid;
   gap: 12px;
-  padding: 14px 0;
-  border: none;
-  border-bottom: 1px solid #d8e1ef;
 }
 
 .maf-active-header {
@@ -7025,7 +7075,6 @@ button:disabled:hover {
 .maf-results-panel {
   display: grid;
   gap: 16px;
-  padding: 8px 0 0;
 }
 
 .maf-source-block {
@@ -8463,9 +8512,6 @@ button:disabled:hover {
 .downloads-cohort-sidebar {
   display: grid;
   gap: 18px;
-  padding: 18px;
-  border: 1px solid #e2e9f2;
-  border-radius: 8px;
   background: #f8fbff;
 }
 
@@ -8563,7 +8609,6 @@ button:disabled:hover {
 .downloads-table-card {
   display: grid;
   gap: 12px;
-  border: none;
   background: transparent;
 }
 
@@ -8578,6 +8623,9 @@ button:disabled:hover {
   display: block;
   padding: 0;
   background: #fff;
+  border: 1px solid #e4ebf4;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .downloads-table-toolbar {
@@ -9099,7 +9147,8 @@ button:disabled:hover {
 }
 
 .vaf-analysis-shell {
-  padding: 22px 24px;
+  padding: 0;
+  overflow: hidden;
 }
 
 .vaf-analysis-controls {
@@ -9108,8 +9157,9 @@ button:disabled:hover {
   justify-content: space-between;
   align-items: center;
   gap: 24px;
-  padding-bottom: 18px;
+  padding: 18px 20px;
   border-bottom: 1px solid #e1e8f2;
+  background: #fbfcfe;
 }
 
 .vaf-analysis-form {
@@ -9225,7 +9275,7 @@ button:disabled:hover {
   grid-template-columns: minmax(360px, 0.85fr) minmax(420px, 1.15fr);
   gap: 28px;
   align-items: start;
-  padding-top: 24px;
+  padding: 22px 20px 20px;
 }
 
 .vaf-bodymap-panel {
@@ -9577,17 +9627,15 @@ button:disabled:hover {
 }
 
 .survival-workspace {
-  padding: 0 0 4px;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  padding: 0;
+  overflow: hidden;
 }
 
 .survival-controls-header {
   display: grid;
   gap: 8px;
-  padding: 12px 0 10px;
+  padding: 16px 20px 14px;
+  background: #fbfcfe;
 }
 
 .survival-controls-header .section-eyebrow,
@@ -9614,8 +9662,8 @@ button:disabled:hover {
   grid-template-columns: minmax(260px, 0.95fr) minmax(260px, 0.9fr) minmax(260px, 1fr) minmax(220px, 0.8fr);
   gap: 0;
   align-items: start;
-  border-top: 1px solid #e4ebf4;
-  border-bottom: 1px solid #e4ebf4;
+  border-top: none;
+  border-bottom: none;
 }
 
 .survival-control-block {
