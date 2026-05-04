@@ -1,11 +1,12 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getGeneNcbiSummary, getMafGeneDetail, getMafSampleSuggestions, queryMafGeneMutations } from "../api/client";
 import type { MafMutation } from "../types/api";
-import { IgvBrowser } from "../components/IgvBrowser";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
+
+const IgvBrowser = lazy(() => import("../components/IgvBrowser").then((module) => ({ default: module.IgvBrowser })));
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
 const DEFAULT_PAGE_SIZE = 5;
@@ -476,7 +477,9 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
         {igvMutationsQ.isLoading ? (
           <p className="panel-note">Loading mutation map...</p>
         ) : (
-          <IgvBrowser gene={geneSymbol} mutations={igvMutations} cancerTypes={applied.cancerType} />
+          <Suspense fallback={<p className="panel-note">Loading genome browser...</p>}>
+            <IgvBrowser gene={geneSymbol} mutations={igvMutations} cancerTypes={applied.cancerType} />
+          </Suspense>
         )}
       </div>
 

@@ -1,6 +1,5 @@
-import { type CSSProperties, useMemo, useState } from "react";
+import { lazy, Suspense, type CSSProperties, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import { Link, useNavigate } from "react-router-dom";
 import { getCancerSummary, getSourceDistribution } from "../api/client";
@@ -10,6 +9,8 @@ import humanBodyImg from "../assets/body_simple_nohand.png";
 import indexMutectImg from "../assets/index_mutect.png";
 import tutorialImg from "../assets/tutorial.png";
 import "../styles/home.css";
+
+const ReactECharts = lazy(() => import("echarts-for-react"));
 
 const MOCK_COHORTS: CancerSummary[] = [
   { cancer: "Breast", sampleCount: 486, totalDataFiles: 972, avinputCount: 486, filteredCount: 486, annotatedCount: 486, somaticCount: 0, plotAssetCount: 12, externalAssetCount: 8, mutationCount: 1944000, rawImportStatus: "Completed", filteredStatus: "Completed", annotatedStatus: "Completed", somaticStatus: "Not started", plotStatus: "Completed", externalStatus: "Completed" },
@@ -358,22 +359,24 @@ function HeroRingChart({
         {displayTotal} {title}
       </h3>
       <div className="gdc-overview-chart-shell">
-        <ReactECharts
-          key={`${title}-${total}`}
-          option={option}
-          notMerge
-          lazyUpdate={false}
-          style={{ height: 280, width: "100%" }}
-          opts={{ renderer: "canvas" }}
-          onEvents={{
-            click: (params: { data?: { browseKey?: string; name?: string } }) => {
-              const browseKey = params.data?.browseKey;
-              if (browseKey) {
-                onSliceClick(browseKey);
-              }
-            },
-          }}
-        />
+        <Suspense fallback={<p className="panel-note">Loading chart...</p>}>
+          <ReactECharts
+            key={`${title}-${total}`}
+            option={option}
+            notMerge
+            lazyUpdate={false}
+            style={{ height: 280, width: "100%" }}
+            opts={{ renderer: "canvas" }}
+            onEvents={{
+              click: (params: { data?: { browseKey?: string; name?: string } }) => {
+                const browseKey = params.data?.browseKey;
+                if (browseKey) {
+                  onSliceClick(browseKey);
+                }
+              },
+            }}
+          />
+        </Suspense>
       </div>
     </article>
   );
@@ -548,7 +551,7 @@ export function HeroCarousel() {
 
           <div className="gdc-col-middle">
             <div className="body-map">
-              <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" />
+              <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" loading="eager" decoding="async" />
 
               {visibleCallouts.map((cfg) => (
                 <div key={cfg.id} className={`body-callout body-callout--${cfg.side}`}>
@@ -592,7 +595,7 @@ export function HeroCarousel() {
                 onClick={() => setIsTutorialOpen(true)}
                 aria-label="Enlarge ctDNAdb tutorial workflow"
               >
-                <img src={tutorialImg} alt="ctDNAdb tutorial workflow" />
+                <img src={tutorialImg} alt="ctDNAdb tutorial workflow" loading="lazy" decoding="async" />
               </button>
             </div>
           </article>
@@ -637,7 +640,7 @@ export function HeroCarousel() {
             Close
           </button>
           <div className="gdc-lightbox-frame" onClick={(event) => event.stopPropagation()}>
-            <img src={tutorialImg} alt="ctDNAdb tutorial workflow enlarged" />
+            <img src={tutorialImg} alt="ctDNAdb tutorial workflow enlarged" decoding="async" />
           </div>
         </div>
       ) : null}
@@ -648,7 +651,7 @@ export function HeroCarousel() {
             <p className="section-eyebrow">Pipeline</p>
           </div>
           <div className="gdc-pipeline-frame">
-            <img src={indexMutectImg} alt="ctDNAdb mutation analysis workflow" />
+            <img src={indexMutectImg} alt="ctDNAdb mutation analysis workflow" loading="lazy" decoding="async" />
           </div>
         </div>
       </section>

@@ -33,7 +33,7 @@ export function HelpPage() {
             <p className="section-eyebrow">Orientation</p>
             <h3>Workflow Overview</h3>
             <figure className="help-flowchart">
-              <img src={tutorialFlowchart} alt="ctDNAdb workflow overview" />
+              <img src={tutorialFlowchart} alt="ctDNAdb workflow overview" loading="lazy" decoding="async" />
             </figure>
             <p>
               ctDNAdb organizes cfDNA mutation data by cohort, gene, sample, and downloadable file. Select a workflow from the analysis
@@ -46,7 +46,7 @@ export function HelpPage() {
           <section id="browse">
             <h3>Browse</h3>
             <figure className="help-tutorial-figure">
-              <img src={browserTutorial} alt="Browse tutorial showing cohort, source, gene input, oncoplot, and summary plots" />
+              <img src={browserTutorial} alt="Browse tutorial showing cohort, source, gene input, oncoplot, and summary plots" loading="lazy" decoding="async" />
             </figure>
             <p>
               Browse is the cohort view. Choose a cancer cohort, select the data source, and optionally enter genes to focus the oncoplot.
@@ -64,7 +64,7 @@ export function HelpPage() {
           <section id="gene-search">
             <h3>Gene Search</h3>
             <figure className="help-tutorial-figure">
-              <img src={geneSearchTutorial} alt="Gene Search tutorial showing source filters, gene results, and gene detail records" />
+              <img src={geneSearchTutorial} alt="Gene Search tutorial showing source filters, gene results, and gene detail records" loading="lazy" decoding="async" />
             </figure>
             <p>
               Gene Search retrieves mutation records for a submitted gene symbol. Source, cancer type, chromosome, variant classification,
@@ -85,7 +85,7 @@ export function HelpPage() {
           <section id="survival">
             <h3>Survival Analysis</h3>
             <figure className="help-tutorial-figure">
-              <img src={survivalTutorial} alt="Survival tutorial showing gene detail entry, plot selection, TCGA cohort selection, and Kaplan-Meier results" />
+              <img src={survivalTutorial} alt="Survival tutorial showing gene detail entry, plot selection, TCGA cohort selection, and Kaplan-Meier results" loading="lazy" decoding="async" />
             </figure>
             <p>
               Survival Analysis can be opened from a gene detail page or accessed directly. Enter the gene symbol, select the time unit,
@@ -97,7 +97,7 @@ export function HelpPage() {
           <section id="vaf">
             <h3>VAF Analysis</h3>
             <figure className="help-tutorial-figure">
-              <img src={vafTutorial} alt="VAF tutorial showing VAF by stage, VAF by mutation type, methylation, and CTC expression plots" />
+              <img src={vafTutorial} alt="VAF tutorial showing VAF by stage, VAF by mutation type, methylation, and CTC expression plots" loading="lazy" decoding="async" />
             </figure>
             <p>
               VAF Analysis compares variant allele frequency by pathologic stage and mutation type for the selected gene and TCGA cohort.
