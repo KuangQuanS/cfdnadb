@@ -28,9 +28,11 @@ function rankByOrder(value: string, order: string[]) {
 }
 
 export function DownloadsPage() {
-  const [mode, setMode] = useState<"all" | "filtered">("all");
+  const [mode, setMode] = useState<"cohort" | "sample">("cohort");
+  const [selectedCohorts, setSelectedCohorts] = useState<string[]>([]);
+  const [selectedFileTypes, setSelectedFileTypes] = useState<string[]>([]);
   const [allDownloadsPage, setAllDownloadsPage] = useState(1);
-  const [allDownloadsPageSize, setAllDownloadsPageSize] = useState(25);
+  const [allDownloadsPageSize, setAllDownloadsPageSize] = useState(10);
   const filesQuery = useQuery({ queryKey: ["data-files"], queryFn: listDataFiles });
 
   const grouped = useMemo(() => {
@@ -51,7 +53,7 @@ export function DownloadsPage() {
     [grouped]
   );
 
-  const tableRows = useMemo(
+  const allTableRows = useMemo(
     () =>
       sortedGroups.flatMap(([cancer, files]) =>
         [...files]
@@ -59,6 +61,29 @@ export function DownloadsPage() {
           .map((file) => ({ ...file, cancer }))
       ),
     [sortedGroups]
+  );
+  const cohortOptions = useMemo(
+    () =>
+      Array.from(new Set(allTableRows.map((file) => file.cancer))).sort(
+        (a, b) => rankByOrder(a, COHORT_ORDER) - rankByOrder(b, COHORT_ORDER) || a.localeCompare(b)
+      ),
+    [allTableRows]
+  );
+  const fileTypeOptions = useMemo(
+    () =>
+      Array.from(new Set(allTableRows.map((file) => file.fileType))).sort(
+        (a, b) => rankByOrder(a, FILE_TYPE_ORDER) - rankByOrder(b, FILE_TYPE_ORDER) || a.localeCompare(b)
+      ),
+    [allTableRows]
+  );
+  const tableRows = useMemo(
+    () =>
+      allTableRows.filter((file) => {
+        const cohortMatches = selectedCohorts.length === 0 || selectedCohorts.includes(file.cancer);
+        const typeMatches = selectedFileTypes.length === 0 || selectedFileTypes.includes(file.fileType);
+        return cohortMatches && typeMatches;
+      }),
+    [allTableRows, selectedCohorts, selectedFileTypes]
   );
   const allDownloadsTotalPages = Math.max(1, Math.ceil(tableRows.length / allDownloadsPageSize));
   const allDownloadsPageStart = (allDownloadsPage - 1) * allDownloadsPageSize;
@@ -69,6 +94,26 @@ export function DownloadsPage() {
   useEffect(() => {
     setAllDownloadsPage((previous) => Math.min(previous, allDownloadsTotalPages));
   }, [allDownloadsTotalPages]);
+
+  const toggleCohortFilter = (cohort: string) => {
+    setSelectedCohorts((previous) =>
+      previous.includes(cohort) ? previous.filter((item) => item !== cohort) : [...previous, cohort]
+    );
+    setAllDownloadsPage(1);
+  };
+
+  const toggleFileTypeFilter = (fileType: string) => {
+    setSelectedFileTypes((previous) =>
+      previous.includes(fileType) ? previous.filter((item) => item !== fileType) : [...previous, fileType]
+    );
+    setAllDownloadsPage(1);
+  };
+
+  const resetCohortFileFilters = () => {
+    setSelectedCohorts([]);
+    setSelectedFileTypes([]);
+    setAllDownloadsPage(1);
+  };
 
   return (
     <div className="page-stack downloads-page">
@@ -82,25 +127,84 @@ export function DownloadsPage() {
         <div className="downloads-mode-switch">
           <button
             type="button"
-            className={`statistics-cohort-pill${mode === "all" ? " active" : ""}`}
-            onClick={() => setMode("all")}
+            className={`statistics-cohort-pill${mode === "cohort" ? " active" : ""}`}
+            onClick={() => setMode("cohort")}
           >
-            All downloads
+            Cohort-level files
           </button>
           <button
             type="button"
-            className={`statistics-cohort-pill${mode === "filtered" ? " active" : ""}`}
-            onClick={() => setMode("filtered")}
+            className={`statistics-cohort-pill${mode === "sample" ? " active" : ""}`}
+            onClick={() => setMode("sample")}
           >
-            Filtered downloads
+            Sample-level files
           </button>
         </div>
       </section>
 
-      {mode === "all" ? (
-        <section className="downloads-grid">
+      {mode === "cohort" ? (
+        <section className="downloads-cohort-layout">
+          <aside className="downloads-cohort-sidebar" aria-label="Cohort-level file filters">
+            <div className="downloads-sidebar-head">
+              <p className="section-eyebrow">Cohort-level filters</p>
+              <h3>Filter mounted files</h3>
+            </div>
+
+            {(selectedCohorts.length > 0 || selectedFileTypes.length > 0) ? (
+              <div className="browse-active-filters downloads-cohort-active-filters">
+                <span className="browse-filters-label">Active filters</span>
+                {selectedCohorts.map((cohort) => (
+                  <button key={cohort} className="browse-filter-pill" type="button" onClick={() => toggleCohortFilter(cohort)}>
+                    Cohort: {formatCohortLabel(cohort)} &times;
+                  </button>
+                ))}
+                {selectedFileTypes.map((fileType) => (
+                  <button key={fileType} className="browse-filter-pill" type="button" onClick={() => toggleFileTypeFilter(fileType)}>
+                    Type: {fileType} &times;
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="downloads-cohort-filter-group">
+              <span>Cohort</span>
+              <div className="downloads-cohort-filter-list">
+                {cohortOptions.map((cohort) => (
+                  <button
+                    key={cohort}
+                    type="button"
+                    className={`downloads-cohort-filter-option${selectedCohorts.includes(cohort) ? " active" : ""}`}
+                    onClick={() => toggleCohortFilter(cohort)}
+                  >
+                    {formatCohortLabel(cohort)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="downloads-cohort-filter-group">
+              <span>File type</span>
+              <div className="downloads-cohort-filter-list">
+                {fileTypeOptions.map((fileType) => (
+                  <button
+                    key={fileType}
+                    type="button"
+                    className={`downloads-cohort-filter-option${selectedFileTypes.includes(fileType) ? " active" : ""}`}
+                    onClick={() => toggleFileTypeFilter(fileType)}
+                  >
+                    {fileType}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button className="button-secondary downloads-filter-reset" type="button" onClick={resetCohortFileFilters}>
+              Reset filters
+            </button>
+          </aside>
+
           <article className="downloads-table-card">
-            <h2>Whole-cohort file table</h2>
+            <h2>Cohort-level file table</h2>
             <div className="statistics-pdf-shell downloads-table-shell">
               {filesQuery.isLoading && <p className="panel-note">Scanning available files...</p>}
               {filesQuery.isError && (
@@ -111,8 +215,17 @@ export function DownloadsPage() {
               )}
               {tableRows.length === 0 && !filesQuery.isLoading && !filesQuery.isError && (
                 <section className="detail-card empty-card">
-                  <h3>No files available yet</h3>
-                  <p>Data files will appear here as pipeline processing completes for each cohort.</p>
+                  {allTableRows.length === 0 ? (
+                    <>
+                      <h3>No cohort-level files available yet</h3>
+                      <p>Data files will appear here as pipeline processing completes for each cohort.</p>
+                    </>
+                  ) : (
+                    <>
+                      <h3>No cohort-level files match the filters</h3>
+                      <p>Reset the cohort or file-type filters to review all mounted cohort resources.</p>
+                    </>
+                  )}
                 </section>
               )}
               {tableRows.length > 0 ? (
@@ -194,12 +307,12 @@ export function DownloadsPage() {
         </section>
       ) : null}
 
-      {mode === "filtered" ? (
+      {mode === "sample" ? (
         <section className="downloads-filtered-section">
           <SampleBrowsePanel
             compact
             mode="downloads"
-            eyebrow="Filtered export"
+            eyebrow="Sample-level files"
             title="Filter samples and export matching files"
           />
         </section>
