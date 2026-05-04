@@ -179,7 +179,12 @@ export function AppShell({ children }: PropsWithChildren) {
         </div>
       ) : null}
 
-      <main className={`page-content${showLoader ? " page-content-loading" : ""}`}>{children}</main>
+      <main
+        key={location.key}
+        className={`page-content page-content-route${showLoader ? " page-content-loading" : ""}`}
+      >
+        {children}
+      </main>
 
       <footer className="site-footer">
         <div className="footer-bottom">

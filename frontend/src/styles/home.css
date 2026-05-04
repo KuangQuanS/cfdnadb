@@ -1994,3 +1994,242 @@
   transform: none;
   box-shadow: none;
 }
+
+/* Home motion layer */
+@keyframes gdcHomeFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gdcHomeScaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gdcCalloutLabelIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 12px)) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes gdcBodyFloat {
+  0%, 100% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes gdcDotPulse {
+  0% {
+    box-shadow: 0 0 0 3px rgba(62, 123, 181, 0.2), 0 0 0 0 rgba(62, 123, 181, 0.28);
+  }
+  70% {
+    box-shadow: 0 0 0 3px rgba(62, 123, 181, 0.2), 0 0 0 10px rgba(62, 123, 181, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(62, 123, 181, 0.2), 0 0 0 0 rgba(62, 123, 181, 0);
+  }
+}
+
+@keyframes gdcNetworkDrift {
+  0% {
+    background-position: center top;
+  }
+  100% {
+    background-position: center 18px;
+  }
+}
+
+.gdc-hero::after,
+.gdc-stat-section::after,
+.gdc-pipeline-section::after {
+  animation: gdcNetworkDrift 18s ease-in-out infinite alternate;
+}
+
+.gdc-title,
+.gdc-title-rule,
+.gdc-subtitle p,
+.gdc-hero-actions-grid,
+.gdc-col-middle,
+.gdc-card-head,
+.gdc-tutorial-panel,
+.gdc-overview-grid,
+.gdc-pipeline-frame {
+  animation: gdcHomeFadeUp 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.gdc-title {
+  animation-delay: 80ms;
+}
+
+.gdc-title-rule {
+  animation-delay: 150ms;
+}
+
+.gdc-subtitle p:nth-child(1) {
+  animation-delay: 210ms;
+}
+
+.gdc-subtitle p:nth-child(2) {
+  animation-delay: 270ms;
+}
+
+.gdc-hero-actions-grid {
+  animation-delay: 330ms;
+}
+
+.gdc-col-middle {
+  animation-name: gdcHomeScaleIn;
+  animation-delay: 220ms;
+}
+
+.gdc-body-img {
+  animation: gdcBodyFloat 7s ease-in-out infinite;
+}
+
+.body-callout .callout-label {
+  animation: gdcCalloutLabelIn 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.body-callout .callout-dot {
+  animation: gdcDotPulse 2.8s ease-out infinite;
+}
+
+.body-callout:nth-of-type(1) .callout-label {
+  animation-delay: 360ms;
+}
+
+.body-callout:nth-of-type(2) .callout-label {
+  animation-delay: 410ms;
+}
+
+.body-callout:nth-of-type(3) .callout-label {
+  animation-delay: 460ms;
+}
+
+.body-callout:nth-of-type(4) .callout-label {
+  animation-delay: 510ms;
+}
+
+.body-callout:nth-of-type(5) .callout-label {
+  animation-delay: 560ms;
+}
+
+.body-callout:nth-of-type(6) .callout-label {
+  animation-delay: 610ms;
+}
+
+.body-callout:nth-of-type(n + 7) .callout-label {
+  animation-delay: 660ms;
+}
+
+.body-callout:nth-of-type(2) .callout-dot {
+  animation-delay: 180ms;
+}
+
+.body-callout:nth-of-type(3) .callout-dot {
+  animation-delay: 360ms;
+}
+
+.body-callout:nth-of-type(4) .callout-dot {
+  animation-delay: 540ms;
+}
+
+.body-callout:nth-of-type(5) .callout-dot {
+  animation-delay: 720ms;
+}
+
+.body-callout:nth-of-type(6) .callout-dot {
+  animation-delay: 900ms;
+}
+
+.body-callout:nth-of-type(n + 7) .callout-dot {
+  animation-delay: 1080ms;
+}
+
+.callout-connector polyline {
+  stroke-dasharray: 1.4 1.4;
+}
+
+.gdc-card-head {
+  animation-delay: 80ms;
+}
+
+.gdc-tutorial-panel,
+.gdc-overview-grid {
+  animation-delay: 150ms;
+}
+
+.gdc-pipeline-frame {
+  animation-delay: 150ms;
+}
+
+.gdc-overview-chart {
+  animation: gdcHomeScaleIn 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.gdc-overview-chart:nth-child(1) {
+  animation-delay: 160ms;
+}
+
+.gdc-overview-chart:nth-child(2) {
+  animation-delay: 220ms;
+}
+
+.gdc-overview-chart:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+.gdc-overview-chart:nth-child(4) {
+  animation-delay: 340ms;
+}
+
+@media (hover: hover) {
+  .gdc-hero-action-card:hover,
+  .gdc-hero-action-card:focus-visible,
+  .gdc-overview-media:hover,
+  .gdc-overview-media:focus-visible,
+  .portal-tool-tile:hover,
+  .portal-data-card:hover,
+  .portal-architecture-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 26px rgba(23, 36, 70, 0.08);
+  }
+
+  .gdc-hero-action-card:hover .gdc-hero-action-card-icon,
+  .gdc-hero-action-card:focus-visible .gdc-hero-action-card-icon {
+    transform: scale(1.04);
+  }
+
+  .gdc-pipeline-frame:hover img,
+  .gdc-tutorial-panel:hover img {
+    filter: saturate(1.04) contrast(1.02);
+    transform: scale(1.01);
+  }
+}
+
+.gdc-pipeline-frame img,
+.gdc-tutorial-panel img {
+  transition:
+    filter 220ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}

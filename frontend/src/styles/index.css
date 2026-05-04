@@ -30,6 +30,10 @@
   --radius: 8px;
   --radius-sm: 8px;
   --radius-pill: 9999px;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-fast: 140ms;
+  --motion-medium: 240ms;
+  --motion-page: 420ms;
 }
 
 * { box-sizing: border-box; }
@@ -60,6 +64,26 @@ button, input, select { font: inherit; }
 
 .page-content-loading {
   pointer-events: none;
+}
+
+.page-content-route {
+  animation: pageRouteIn var(--motion-page) var(--motion-ease) both;
+}
+
+.page-content-route > * {
+  animation: motionFadeUp 520ms var(--motion-ease) both;
+}
+
+.page-content-route > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.page-content-route > *:nth-child(3) {
+  animation-delay: 110ms;
+}
+
+.page-content-route > *:nth-child(4) {
+  animation-delay: 150ms;
 }
 
 .page-loader {
@@ -129,6 +153,39 @@ button, input, select { font: inherit; }
   40% {
     transform: translateY(-4px);
     opacity: 1;
+  }
+}
+
+@keyframes pageRouteIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motionFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motionScaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -9820,4 +9877,181 @@ button:disabled:hover {
 .gene-stat-card:hover {
   transform: none;
   box-shadow: none;
+}
+
+/* Global motion layer */
+.detail-card,
+.chart-card,
+.filter-panel,
+.table-shell,
+.stat-card,
+.stat-pdf-card,
+.browse-pdf-card,
+.gene-stat-card,
+.maf-summary-card,
+.downloads-mode-card,
+.downloads-table-card,
+.downloads-filtered-control-card,
+.downloads-filtered-hero-card,
+.downloads-filtered-workspace-card,
+.statistics-private-card,
+.statistics-private-toolbar-card {
+  transition:
+    border-color var(--motion-medium) ease,
+    box-shadow var(--motion-medium) ease,
+    transform var(--motion-medium) var(--motion-ease),
+    background-color var(--motion-fast) ease;
+}
+
+.button-primary,
+.button-secondary,
+.browse-samples-chip,
+.browse-filter-pill,
+.maf-filter-pill,
+.maf-tag,
+.status-chip,
+.browse-preset-load,
+.browse-preset-delete {
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    transform var(--motion-fast) var(--motion-ease);
+}
+
+.button-primary:focus-visible,
+.button-secondary:focus-visible,
+.browse-samples-chip:focus-visible,
+.browse-filter-pill:focus-visible,
+.maf-filter-pill:focus-visible,
+.nav-link:focus-visible,
+.site-nav-dropdown-link:focus-visible {
+  outline: 2px solid rgba(82, 199, 223, 0.95);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .detail-card:hover,
+  .chart-card:hover,
+  .filter-panel:hover,
+  .table-shell:hover,
+  .stat-card:hover,
+  .stat-pdf-card:hover,
+  .browse-pdf-card:hover,
+  .gene-stat-card:hover,
+  .maf-summary-card:hover,
+  .downloads-mode-card:hover,
+  .downloads-table-card:hover,
+  .downloads-filtered-control-card:hover,
+  .downloads-filtered-hero-card:hover,
+  .downloads-filtered-workspace-card:hover,
+  .statistics-private-card:hover,
+  .statistics-private-toolbar-card:hover {
+    border-color: rgba(86, 120, 176, 0.36);
+    box-shadow: 0 10px 24px rgba(23, 36, 70, 0.08);
+    transform: translateY(-2px);
+  }
+
+  .survival-results:hover,
+  .survival-plot-card:hover,
+  .browse-dense-page .detail-card:hover {
+    box-shadow: none;
+    transform: none;
+  }
+
+  .button-primary:hover,
+  .button-secondary:hover,
+  .browse-samples-chip:hover,
+  .browse-filter-pill:hover,
+  .maf-filter-pill:hover,
+  .browse-preset-load:hover,
+  .browse-preset-delete:hover {
+    transform: translateY(-1px);
+  }
+
+  .button-primary:disabled:hover,
+  .button-secondary:disabled:hover {
+    transform: none;
+  }
+}
+
+.data-table tbody tr,
+.maf-table tbody tr,
+.statistics-rna-table tbody tr {
+  transition:
+    background-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+.data-table tbody tr:hover,
+.maf-table tbody tr:hover,
+.statistics-rna-table tbody tr:hover {
+  box-shadow: inset 3px 0 0 rgba(252, 129, 47, 0.82);
+}
+
+.page-stack > section,
+.page-stack > article,
+.help-layout,
+.statistics-rna-intro,
+.statistics-rna-section,
+.maf-hero,
+.maf-summary-strip,
+.maf-active-panel,
+.maf-results-panel,
+.browse-samples-hero,
+.browse-samples-toolbar,
+.browse-samples-main {
+  animation: motionFadeUp 520ms var(--motion-ease) both;
+}
+
+.page-stack > section:nth-child(2),
+.page-stack > article:nth-child(2),
+.maf-summary-strip,
+.browse-samples-toolbar {
+  animation-delay: 70ms;
+}
+
+.page-stack > section:nth-child(3),
+.page-stack > article:nth-child(3),
+.maf-active-panel,
+.browse-samples-main {
+  animation-delay: 120ms;
+}
+
+.page-stack > section:nth-child(4),
+.page-stack > article:nth-child(4),
+.maf-results-panel {
+  animation-delay: 170ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+
+  .page-content-route,
+  .page-content-route > *,
+  .page-stack > section,
+  .page-stack > article,
+  .help-layout,
+  .statistics-rna-intro,
+  .statistics-rna-section,
+  .maf-hero,
+  .maf-summary-strip,
+  .maf-active-panel,
+  .maf-results-panel,
+  .browse-samples-hero,
+  .browse-samples-toolbar,
+  .browse-samples-main {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
