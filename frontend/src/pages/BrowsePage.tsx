@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -6,11 +6,12 @@ import {
   getStatisticsPlots,
   toApiUrl,
 } from "../api/client";
-import { PdfPagePreview } from "../components/PdfPagePreview";
-import { WaterfallChart } from "../components/WaterfallChart";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
 import type { CancerAsset } from "../types/api";
 import { formatCohortLabel } from "../utils/cohortLabels";
+
+const PdfPagePreview = lazy(() => import("../components/PdfPagePreview").then((module) => ({ default: module.PdfPagePreview })));
+const WaterfallChart = lazy(() => import("../components/WaterfallChart").then((module) => ({ default: module.WaterfallChart })));
 
 const MAX_ONCOPLOT_GENES = 30;
 const DEFAULT_ONCOPLOT_LIMIT = 40;
@@ -381,7 +382,9 @@ export function BrowsePage() {
               {oncoplottQ.isError ? <p className="panel-note" style={{ color: "#c0392b" }}>Failed to load oncoplot data.</p> : null}
               {oncoplottQ.data && oncoplottQ.data.genes.length > 0 ? (
                 <div className="statistics-pdf-shell statistics-pdf-shell--oncoplot">
-                  <WaterfallChart data={oncoplottQ.data} />
+                  <Suspense fallback={<p className="panel-note">Loading mutation plot...</p>}>
+                    <WaterfallChart data={oncoplottQ.data} />
+                  </Suspense>
                 </div>
               ) : oncoplottQ.data && !oncoplottQ.isLoading ? (
                 <p className="panel-note">No mutation data available for this cohort / source.</p>
@@ -451,14 +454,16 @@ function InlinePdfPage({
 }) {
   return (
     <div className={`statistics-inline-pdf${className ? ` ${className}` : ""}`}>
-      <PdfPagePreview
-        file={url}
-        autoWidth
-        minWidth={320}
-        padding={32}
-        pageClassName="statistics-inline-pdf-page"
-        loadingLabel={loadingLabel}
-      />
+      <Suspense fallback={<p className="panel-note">{loadingLabel}</p>}>
+        <PdfPagePreview
+          file={url}
+          autoWidth
+          minWidth={320}
+          padding={32}
+          pageClassName="statistics-inline-pdf-page"
+          loadingLabel={loadingLabel}
+        />
+      </Suspense>
       {showCaption ? <p className="statistics-inline-pdf-caption">{title}</p> : null}
     </div>
   );
