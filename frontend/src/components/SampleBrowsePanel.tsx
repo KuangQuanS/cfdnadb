@@ -12,7 +12,8 @@ import type { LabelCount, SampleBrowseItem, SampleSelection } from "../types/api
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatFileSize, formatNumber } from "../utils/format";
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100];
+const BROWSE_PAGE_SIZE_OPTIONS = [25, 50, 100];
+const DOWNLOAD_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const PRESETS_KEY = "cfdnadb-browse-sample-presets";
 const SOURCE_OPTIONS = [
   { value: "private", label: "Internal Data" },
@@ -136,7 +137,7 @@ export function SampleBrowsePanel({
   const [draft, setDraft] = useState<BrowseDraft>(() => defaultDraft(mode));
   const [submitted, setSubmitted] = useState<BrowseDraft>(() => defaultDraft(mode));
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(() => (mode === "downloads" ? 10 : 25));
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
     new Set(availableColumns.map((item) => item.key))
   );
@@ -148,6 +149,7 @@ export function SampleBrowsePanel({
   const [detailTarget, setDetailTarget] = useState<SampleSelection | null>(null);
   const [downloadingType, setDownloadingType] = useState<string | null>(null);
   const sourceOptions = mode === "downloads" ? DOWNLOAD_SOURCE_OPTIONS : SOURCE_OPTIONS;
+  const pageSizeOptions = mode === "downloads" ? DOWNLOAD_PAGE_SIZE_OPTIONS : BROWSE_PAGE_SIZE_OPTIONS;
   const showSomaticFilter = mode !== "downloads";
   const includeTopGenes = mode !== "downloads";
   const isDownloadsCompact = compact && mode === "downloads";
@@ -414,7 +416,7 @@ export function SampleBrowsePanel({
               <label className="browse-field-inline">
                 <span>Rows</span>
                 <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
-                  {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
+                  {pageSizeOptions.map((size) => <option key={size} value={size}>{size}</option>)}
                 </select>
               </label>
 
@@ -501,7 +503,7 @@ export function SampleBrowsePanel({
               <label className="browse-field-inline">
                 <span>Rows</span>
                 <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
-                  {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
+                  {pageSizeOptions.map((size) => <option key={size} value={size}>{size}</option>)}
                 </select>
               </label>
 
@@ -646,7 +648,7 @@ export function SampleBrowsePanel({
                       <label className="browse-field-inline">
                         <span>Rows</span>
                         <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
-                          {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
+                          {pageSizeOptions.map((size) => <option key={size} value={size}>{size}</option>)}
                         </select>
                       </label>
 
