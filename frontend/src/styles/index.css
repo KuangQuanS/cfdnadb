@@ -528,9 +528,17 @@ button, input, select { font: inherit; }
 }
 
 .vaf-analysis-intro h1 {
-  display: grid;
-  width: fit-content;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(100%, 680px);
+}
+
+.vaf-analysis-intro h1::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(31, 95, 159, 0.4), rgba(31, 95, 159, 0));
 }
 
 .database-page-intro p {
@@ -6667,9 +6675,10 @@ button:disabled:hover {
 }
 
 .maf-hero-copy h2 {
-  display: grid;
-  width: fit-content;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(100%, 680px);
   margin: 0 0 6px;
   font-size: 1.62rem;
   color: var(--accent);
@@ -6677,13 +6686,11 @@ button:disabled:hover {
 }
 
 .maf-hero-copy h2::after,
-.survival-masthead-copy h1::after,
-.vaf-analysis-intro h1::after {
+.survival-masthead-copy h1::after {
   content: "";
-  width: 54px;
-  height: 3px;
-  border-radius: 999px;
-  background: #157da5;
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(31, 95, 159, 0.4), rgba(31, 95, 159, 0));
 }
 
 .maf-hero-copy p {
@@ -9551,9 +9558,10 @@ button:disabled:hover {
 }
 
 .survival-masthead-copy h1 {
-  display: grid;
-  width: fit-content;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(100%, 680px);
   margin: 0;
   color: var(--accent);
   font-size: 1.62rem;
