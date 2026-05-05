@@ -17,6 +17,7 @@ import {
 export function OrganIcon({ organ, ...props }: { organ: string } & SVGProps<SVGSVGElement>) {
   switch (organ) {
     case "brain":
+    case "headAndNeck":
       return <NeurologyOutline {...props} />;
     case "lung":
       return <LungsOutline {...props} />;
@@ -27,6 +28,7 @@ export function OrganIcon({ organ, ...props }: { organ: string } & SVGProps<SVGS
     case "kidney":
       return <KidneysOutline {...props} />;
     case "ovarian":
+    case "endometrial":
       return <FemaleReproductiveSystemOutline {...props} />;
     case "bladder":
       return <BladderOutline {...props} />;
@@ -42,4 +44,3 @@ export function OrganIcon({ organ, ...props }: { organ: string } & SVGProps<SVGS
       return <HeartOrganOutline {...props} />;
   }
 }
-
