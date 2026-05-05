@@ -18,8 +18,7 @@ type CohortNode = {
 };
 
 const COHORT_NODES: CohortNode[] = [
-  { organKey: "brain", label: "Brain", code: "CNS", left: 50, top: 9 },
-  { organKey: "headAndNeck", label: "Head & Neck", code: "HNSC", left: 50, top: 22 },
+  { organKey: "headAndNeck", label: "Head & Neck", code: "HNSC", left: 50, top: 9 },
   { organKey: "lung", label: "Lung", code: "LUNG", left: 22, top: 20 },
   { organKey: "breast", label: "Breast", code: "BRCA", left: 78, top: 20 },
   { organKey: "thyroid", label: "Thyroid", code: "THYR", left: 90, top: 43 },
