@@ -9872,7 +9872,14 @@ button:disabled:hover {
 .survival-results--omics.vaf-omics-results .survival-masthead-copy {
   background: transparent;
   border-bottom: none;
-  padding: 0 0 20px 0;
+  padding: 0 0 20px 16px;
+}
+
+.survival-results--omics.vaf-omics-results .survival-masthead-copy::before {
+  left: 0;
+  top: 0.05em;
+  height: 1.35em;
+  transform: none;
 }
 
 .survival-results--omics.vaf-omics-results .survival-masthead-copy h2 {
@@ -9923,9 +9930,16 @@ button:disabled:hover {
 }
 
 .survival-results .survival-masthead-copy {
-  padding: 16px 20px 14px;
+  padding: 16px 20px 14px 36px;
   border-bottom: 1px solid #e4ebf4;
   background: #fbfcfe;
+}
+
+.survival-results .survival-masthead-copy::before {
+  left: 20px;
+  top: 50%;
+  height: 1.35em;
+  transform: translateY(-50%);
 }
 
 .survival-plot-card {

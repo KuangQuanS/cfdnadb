@@ -7,7 +7,7 @@ import { getVafBodyMap } from "../api/client";
 import { OrganIcon } from "../components/icons/OrganIcon";
 import type { VafBodyMapEntry, VafBoxplot } from "../types/api";
 
-const DEFAULT_GENE = "TP53";
+const DEFAULT_GENE = "TTN";
 
 type CohortNode = {
   organKey: string;
@@ -235,7 +235,7 @@ export function VafAnalysisPage() {
                 id="vaf-gene-input"
                 value={geneInput}
                 onChange={(event) => setGeneInput(event.target.value)}
-                placeholder="TP53, PIK3CA, ERBB2..."
+                placeholder="TTN, TP53, PIK3CA..."
               />
               <button className="button-primary" type="submit">PLOT</button>
             </div>
