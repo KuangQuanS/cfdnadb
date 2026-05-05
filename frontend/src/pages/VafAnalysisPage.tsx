@@ -5,10 +5,9 @@ import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import { getVafBodyMap } from "../api/client";
 import { OrganIcon } from "../components/icons/OrganIcon";
-import type { VafBodyMapEntry } from "../types/api";
+import type { VafBodyMapEntry, VafBoxplot } from "../types/api";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "")) as string;
-const DEFAULT_GENE = "ERBB2";
+const DEFAULT_GENE = "TP53";
 
 type CohortNode = {
   organKey: string;
@@ -32,31 +31,14 @@ const COHORT_NODES: CohortNode[] = [
   { organKey: "pancreatic", label: "Pancreatic", code: "PDAC", left: 70, top: 57 },
 ];
 
-interface BoxStats {
-  n: number;
-  min: number;
-  q1: number;
-  median: number;
-  q3: number;
-  max: number;
-  whiskerLow: number;
-  whiskerHigh: number;
-  points: number[];
-}
-
-interface OmicsResult {
-  cohort: string;
-  gene: string;
-  title?: string;
-  xLabel: string;
-  yLabel?: string;
-  yScale?: "value" | "log";
-  groups: Record<string, BoxStats>;
-  pairwiseP?: Record<string, number | string | null> | null;
-  overallP?: number | string | null;
-}
-
 const GROUP_COLORS: Record<string, string> = {
+  Frameshift: "#E74C3C",
+  Missense: "#2E86AB",
+  Nonsense: "#F4B942",
+  Synonymous: "#16A085",
+  Splice_Site: "#9B59B6",
+  Inframe: "#B8C34B",
+  Other: "#C0392B",
   I: "#7FC4E6",
   II: "#56B6A6",
   III: "#E6C656",
@@ -75,13 +57,6 @@ const BOX_PALETTE = [
   "#E56B8A",
   "#5DAF8B"
 ];
-
-async function apiGet<T>(path: string): Promise<T> {
-  const resp = await fetch(`${API_BASE}${path}`);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const payload = await resp.json();
-  return payload.data as T;
-}
 
 function formatVaf(value: number) {
   if (!Number.isFinite(value)) return "-";
@@ -110,20 +85,7 @@ function markerColor(ratio: number) {
   return "#3f9caf";
 }
 
-function toFiniteNumber(value: number | string | null | undefined): number | null {
-  if (value == null) return null;
-  const numeric = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-}
-
-function formatP(p: number | string | null | undefined): string {
-  const value = toFiniteNumber(p);
-  if (value == null) return "-";
-  if (value < 0.0001) return "< 0.0001";
-  return value.toFixed(4);
-}
-
-function boxOption(result: OmicsResult, title: string): EChartsOption {
+function boxOption(result: VafBoxplot, title: string): EChartsOption {
   const names = Object.keys(result.groups);
   const colors = names.map((n, i) => GROUP_COLORS[n] ?? BOX_PALETTE[i % BOX_PALETTE.length]);
   const hasLongLabels = names.some((name) => name.length > 10);
@@ -143,11 +105,9 @@ function boxOption(result: OmicsResult, title: string): EChartsOption {
       scatterData.push({ value: [n, v], symbolOffset: [jitterPx, 0] });
     });
   });
-  const subtitle = toFiniteNumber(result.overallP) != null ? `p = ${formatP(result.overallP)}` : "";
   return {
     title: {
       text: title,
-      subtext: subtitle,
       left: "center",
       textStyle: { fontSize: 15, fontWeight: 600 },
       subtextStyle: { fontSize: 12 }
@@ -182,8 +142,7 @@ function boxOption(result: OmicsResult, title: string): EChartsOption {
       axisTick: { show: true, lineStyle: { color: "#202020" } }
     },
     yAxis: {
-      type: result.yScale === "log" ? "log" : "value",
-      min: result.yScale === "log" ? 0.01 : undefined,
+      type: "value",
       name: result.yLabel ?? "Variant Allele Frequency (VAF)",
       nameLocation: "middle",
       nameGap: 48,
@@ -209,7 +168,7 @@ function boxOption(result: OmicsResult, title: string): EChartsOption {
   };
 }
 
-function hasBoxGroups(result: OmicsResult | undefined) {
+function hasBoxGroups(result: VafBoxplot | null | undefined) {
   return Boolean(result && Object.keys(result.groups ?? {}).length > 0);
 }
 
@@ -227,41 +186,26 @@ export function VafAnalysisPage() {
     queryFn: () => getVafBodyMap(queryGene),
     staleTime: 5 * 60_000,
   });
-  const cfMethQ = useQuery({
-    queryKey: ["vaf-analysis-omics", "cfMethDB", queryGene],
-    queryFn: () => apiGet<OmicsResult>(`/api/survival/multiomics/cfmethdb?gene=${encodeURIComponent(queryGene)}`),
-    enabled: Boolean(queryGene),
-    staleTime: 5 * 60_000,
-  });
-  const cfOmicsMethQ = useQuery({
-    queryKey: ["vaf-analysis-omics", "cfOmics", queryGene],
-    queryFn: () => apiGet<OmicsResult>(`/api/survival/multiomics/cfomics-methylation?gene=${encodeURIComponent(queryGene)}`),
-    enabled: Boolean(queryGene),
-    staleTime: 5 * 60_000,
-  });
-  const ctcExprQ = useQuery({
-    queryKey: ["vaf-analysis-omics", "ctc", queryGene],
-    queryFn: () => apiGet<OmicsResult>(`/api/survival/multiomics/ctc-expression?gene=${encodeURIComponent(queryGene)}`),
-    enabled: Boolean(queryGene),
-    staleTime: 5 * 60_000,
-  });
-
   const entries = vafQ.data?.entries ?? [];
   const maxMean = vafQ.data?.maxMeanVaf ?? 0;
   const organEntries = useMemo(() => buildOrganEntryMap(entries), [entries]);
   const totalRecords = entries.reduce((sum, entry) => sum + entry.recordCount, 0);
   const totalSamples = entries.reduce((sum, entry) => sum + entry.sampleCount, 0);
-  const cfMethOpt = useMemo(
-    () => (hasBoxGroups(cfMethQ.data) ? boxOption(cfMethQ.data!, `${cfMethQ.data!.gene} cfMethDB methylation across cancer types`) : null),
-    [cfMethQ.data]
+  const cancerTypeBoxplot = vafQ.data?.cancerTypeBoxplot;
+  const mutationTypeBoxplot = vafQ.data?.mutationTypeBoxplot;
+  const cancerTypeOpt = useMemo(
+    () =>
+      hasBoxGroups(cancerTypeBoxplot)
+        ? boxOption(cancerTypeBoxplot!, cancerTypeBoxplot!.title || `${queryGene.toUpperCase()} VAF by cancer type`)
+        : null,
+    [cancerTypeBoxplot, queryGene]
   );
-  const cfOmicsMethOpt = useMemo(
-    () => (hasBoxGroups(cfOmicsMethQ.data) ? boxOption(cfOmicsMethQ.data!, `${cfOmicsMethQ.data!.gene} cfOmics methylation across cancer types`) : null),
-    [cfOmicsMethQ.data]
-  );
-  const ctcExprOpt = useMemo(
-    () => (hasBoxGroups(ctcExprQ.data) ? boxOption(ctcExprQ.data!, `${ctcExprQ.data!.gene} CTC expression across cancer types`) : null),
-    [ctcExprQ.data]
+  const mutationTypeOpt = useMemo(
+    () =>
+      hasBoxGroups(mutationTypeBoxplot)
+        ? boxOption(mutationTypeBoxplot!, mutationTypeBoxplot!.title || `${queryGene.toUpperCase()} VAF by mutation type`)
+        : null,
+    [mutationTypeBoxplot, queryGene]
   );
 
   const submitSearch = (event: FormEvent) => {
@@ -291,7 +235,7 @@ export function VafAnalysisPage() {
                 id="vaf-gene-input"
                 value={geneInput}
                 onChange={(event) => setGeneInput(event.target.value)}
-                placeholder="ERBB2, TP53, PIK3CA..."
+                placeholder="TP53, PIK3CA, ERBB2..."
               />
               <button className="button-primary" type="submit">PLOT</button>
             </div>
@@ -397,23 +341,23 @@ export function VafAnalysisPage() {
 
       <section className="survival-results survival-results--omics vaf-omics-results tool-section-panel">
         <div className="survival-masthead-copy">
-          <h2>Methylation and CTC</h2>
+          <h2>VAF boxplots</h2>
         </div>
 
         <section className="survival-plots vaf-omics-plots">
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <h3>cfMethDB methylation</h3>
+                <h3>VAF by cancer type</h3>
               </div>
             </div>
-            <div className="survival-chart-frame survival-chart-frame--omics">
-              {cfMethQ.isLoading ? (
-                <p className="panel-note">Loading cfMethDB methylation...</p>
-              ) : cfMethOpt ? (
-                <ReactECharts option={cfMethOpt} style={{ width: "100%", height: "100%" }} />
+            <div className="survival-chart-frame survival-chart-frame--vaf">
+              {vafQ.isLoading ? (
+                <p className="panel-note">Loading VAF by cancer type...</p>
+              ) : cancerTypeOpt ? (
+                <ReactECharts option={cancerTypeOpt} style={{ width: "100%", height: "100%" }} />
               ) : (
-                <p className="panel-note">No cfMethDB methylation data available</p>
+                <p className="panel-note">No VAF by cancer type data available</p>
               )}
             </div>
           </article>
@@ -421,33 +365,16 @@ export function VafAnalysisPage() {
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <h3>cfOmics methylation</h3>
+                <h3>VAF by mutation type</h3>
               </div>
             </div>
-            <div className="survival-chart-frame survival-chart-frame--omics">
-              {cfOmicsMethQ.isLoading ? (
-                <p className="panel-note">Loading cfOmics methylation...</p>
-              ) : cfOmicsMethOpt ? (
-                <ReactECharts option={cfOmicsMethOpt} style={{ width: "100%", height: "100%" }} />
+            <div className="survival-chart-frame survival-chart-frame--vaf">
+              {vafQ.isLoading ? (
+                <p className="panel-note">Loading VAF by mutation type...</p>
+              ) : mutationTypeOpt ? (
+                <ReactECharts option={mutationTypeOpt} style={{ width: "100%", height: "100%" }} />
               ) : (
-                <p className="panel-note">No cfOmics methylation data available</p>
-              )}
-            </div>
-          </article>
-
-          <article className="survival-plot-card">
-            <div className="survival-plot-card-header">
-              <div>
-                <h3>CTC FPKM expression</h3>
-              </div>
-            </div>
-            <div className="survival-chart-frame survival-chart-frame--omics">
-              {ctcExprQ.isLoading ? (
-                <p className="panel-note">Loading CTC FPKM expression...</p>
-              ) : ctcExprOpt ? (
-                <ReactECharts option={ctcExprOpt} style={{ width: "100%", height: "100%" }} />
-              ) : (
-                <p className="panel-note">No CTC FPKM expression data available</p>
+                <p className="panel-note">No VAF by mutation type data available</p>
               )}
             </div>
           </article>

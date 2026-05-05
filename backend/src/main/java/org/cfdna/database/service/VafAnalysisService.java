@@ -2,6 +2,8 @@ package org.cfdna.database.service;
 
 import org.cfdna.database.dto.VafBodyMapDto;
 import org.cfdna.database.dto.VafBodyMapEntryDto;
+import org.cfdna.database.dto.VafBoxStatsDto;
+import org.cfdna.database.dto.VafBoxplotDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -66,6 +69,8 @@ public class VafAnalysisService {
         }
 
         List<VafBodyMapEntryDto> entries = new ArrayList<>();
+        Map<String, List<Double>> cancerTypeVafs = new HashMap<>();
+        Map<String, List<Double>> mutationTypeVafs = new HashMap<>();
         try (Stream<Path> cohortDirs = Files.list(vafRootDir)) {
             List<Path> sortedDirs = cohortDirs
                     .filter(Files::isDirectory)
@@ -89,6 +94,12 @@ public class VafAnalysisService {
 
                 String cohort = cohortDir.getFileName().toString();
                 String cancerType = normalizeCancerType(cohort);
+                cancerTypeVafs.computeIfAbsent(cancerType, key -> new ArrayList<>()).addAll(values.vafs);
+                for (VafObservation observation : values.observations) {
+                    mutationTypeVafs
+                            .computeIfAbsent(observation.mutationType, key -> new ArrayList<>())
+                            .add(observation.vaf);
+                }
                 entries.add(new VafBodyMapEntryDto(
                         cohort,
                         cancerType,
@@ -107,7 +118,13 @@ public class VafAnalysisService {
 
         entries.sort((a, b) -> Double.compare(b.getMeanVaf(), a.getMeanVaf()));
         double maxMean = entries.stream().mapToDouble(VafBodyMapEntryDto::getMeanVaf).max().orElse(0);
-        return new VafBodyMapDto(normalizedGene, entries, maxMean);
+        return new VafBodyMapDto(
+                normalizedGene,
+                entries,
+                maxMean,
+                buildBoxplot(normalizedGene + " VAF by cancer type", "Cancer type", cancerTypeVafs),
+                buildBoxplot(normalizedGene + " VAF by mutation type", "Mutation type", mutationTypeVafs)
+        );
     }
 
     private String normalizeGene(String gene) {
@@ -138,6 +155,7 @@ public class VafAnalysisService {
     private VafValues readVafValues(Path file) {
         List<Double> values = new ArrayList<>();
         Set<String> samples = new HashSet<>();
+        List<VafObservation> observations = new ArrayList<>();
         try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
             String header = reader.readLine();
             if (header == null) {
@@ -146,6 +164,7 @@ public class VafAnalysisService {
             Map<String, Integer> headerIndex = headerIndex(header);
             Integer vafIndex = headerIndex.get("vaf");
             Integer sampleIndex = headerIndex.get("sample");
+            Integer exonicFuncIndex = headerIndex.get("exonicfunc");
             if (vafIndex == null) {
                 return new VafValues(values, samples);
             }
@@ -157,10 +176,15 @@ public class VafAnalysisService {
                     continue;
                 }
                 try {
-                    values.add(Double.parseDouble(parts[vafIndex]));
+                    double vaf = Double.parseDouble(parts[vafIndex]);
+                    values.add(vaf);
                     if (sampleIndex != null && parts.length > sampleIndex && !parts[sampleIndex].isBlank()) {
                         samples.add(parts[sampleIndex]);
                     }
+                    String mutationType = exonicFuncIndex != null && parts.length > exonicFuncIndex
+                            ? normalizeMutationType(parts[exonicFuncIndex])
+                            : "Other";
+                    observations.add(new VafObservation(vaf, mutationType));
                 } catch (NumberFormatException ignored) {
                     // Skip malformed rows.
                 }
@@ -168,7 +192,7 @@ public class VafAnalysisService {
         } catch (IOException ignored) {
             return new VafValues(List.of(), Set.of());
         }
-        return new VafValues(values, samples);
+        return new VafValues(values, samples, observations);
     }
 
     private Map<String, Integer> headerIndex(String header) {
@@ -182,6 +206,97 @@ public class VafAnalysisService {
 
     private String normalizeCancerType(String cancerType) {
         return CANCER_TYPE_ALIASES.getOrDefault(cancerType, cancerType);
+    }
+
+    private String normalizeMutationType(String exonicFunc) {
+        String value = exonicFunc == null ? "" : exonicFunc.trim().toLowerCase(Locale.ROOT);
+        if (value.isBlank() || value.equals(".") || value.equals("unknown")) {
+            return "Other";
+        }
+        if (value.contains("nonframeshift") || value.contains("inframe")) {
+            return "Inframe";
+        }
+        if (value.contains("frameshift")) {
+            return "Frameshift";
+        }
+        if (value.contains("nonsynonymous") || value.contains("missense")) {
+            return "Missense";
+        }
+        if (value.contains("stopgain") || value.contains("stoploss") || value.contains("nonsense")) {
+            return "Nonsense";
+        }
+        if (value.contains("synonymous")) {
+            return "Synonymous";
+        }
+        if (value.contains("splic")) {
+            return "Splice_Site";
+        }
+        return "Other";
+    }
+
+    private VafBoxplotDto buildBoxplot(String title, String xLabel, Map<String, List<Double>> buckets) {
+        Map<String, VafBoxStatsDto> groups = buckets.entrySet().stream()
+                .filter(entry -> !entry.getValue().isEmpty())
+                .sorted((a, b) -> {
+                    int byMedian = Double.compare(median(b.getValue()), median(a.getValue()));
+                    return byMedian != 0 ? byMedian : a.getKey().compareTo(b.getKey());
+                })
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> boxplotStats(entry.getValue()),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
+        return new VafBoxplotDto(title, xLabel, "Variant Allele Frequency (VAF)", groups);
+    }
+
+    private VafBoxStatsDto boxplotStats(List<Double> values) {
+        List<Double> sorted = new ArrayList<>(values);
+        Collections.sort(sorted);
+        double[] arr = sorted.stream().mapToDouble(Double::doubleValue).toArray();
+        double min = arr[0];
+        double max = arr[arr.length - 1];
+        double q1 = quantile(arr, 0.25);
+        double med = quantile(arr, 0.5);
+        double q3 = quantile(arr, 0.75);
+        double iqr = q3 - q1;
+        double lowFence = q1 - 1.5 * iqr;
+        double highFence = q3 + 1.5 * iqr;
+        double whiskerLow = min;
+        for (double value : arr) {
+            if (value >= lowFence) {
+                whiskerLow = value;
+                break;
+            }
+        }
+        double whiskerHigh = max;
+        for (int i = arr.length - 1; i >= 0; i -= 1) {
+            if (arr[i] <= highFence) {
+                whiskerHigh = arr[i];
+                break;
+            }
+        }
+        return new VafBoxStatsDto(
+                sorted.size(),
+                min,
+                q1,
+                med,
+                q3,
+                max,
+                whiskerLow,
+                whiskerHigh,
+                sorted
+        );
+    }
+
+    private double quantile(double[] sorted, double q) {
+        if (sorted.length == 0) return Double.NaN;
+        if (sorted.length == 1) return sorted[0];
+        double position = q * (sorted.length - 1);
+        int low = (int) Math.floor(position);
+        int high = (int) Math.ceil(position);
+        if (low == high) return sorted[low];
+        return sorted[low] + (position - low) * (sorted[high] - sorted[low]);
     }
 
     private double mean(List<Double> values) {
@@ -202,10 +317,26 @@ public class VafAnalysisService {
     private static class VafValues {
         private final List<Double> vafs;
         private final Set<String> samples;
+        private final List<VafObservation> observations;
 
         private VafValues(List<Double> vafs, Set<String> samples) {
+            this(vafs, samples, List.of());
+        }
+
+        private VafValues(List<Double> vafs, Set<String> samples, List<VafObservation> observations) {
             this.vafs = vafs;
             this.samples = samples;
+            this.observations = observations;
+        }
+    }
+
+    private static class VafObservation {
+        private final double vaf;
+        private final String mutationType;
+
+        private VafObservation(double vaf, String mutationType) {
+            this.vaf = vaf;
+            this.mutationType = mutationType;
         }
     }
 }

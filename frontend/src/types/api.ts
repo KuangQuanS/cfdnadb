@@ -191,10 +191,31 @@ export interface VafBodyMapEntry {
   sampleCount: number;
 }
 
+export interface VafBoxStats {
+  n: number;
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+  whiskerLow: number;
+  whiskerHigh: number;
+  points: number[];
+}
+
+export interface VafBoxplot {
+  title: string;
+  xLabel: string;
+  yLabel: string;
+  groups: Record<string, VafBoxStats>;
+}
+
 export interface VafBodyMap {
   gene: string;
   entries: VafBodyMapEntry[];
   maxMeanVaf: number;
+  cancerTypeBoxplot?: VafBoxplot | null;
+  mutationTypeBoxplot?: VafBoxplot | null;
 }
 
 export interface CancerSummary {
