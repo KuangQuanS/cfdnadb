@@ -44,7 +44,7 @@ class CfDnaEndpointsIntegrationTest {
     void cancerSummaryReflectsFilesystemProgress() throws Exception {
         mockMvc.perform(get("/api/v1/summary/cancers"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(16)))
+                .andExpect(jsonPath("$.data", hasSize(15)))
                 .andExpect(jsonPath("$.data[0].cancer").value("Breast"))
                 .andExpect(jsonPath("$.data[0].sampleCount").value(2))
                 .andExpect(jsonPath("$.data[0].rawImportStatus").value("Completed"))
@@ -56,7 +56,10 @@ class CfDnaEndpointsIntegrationTest {
                 .andExpect(jsonPath("$.data[3].rawImportStatus").value("Completed"))
                 .andExpect(jsonPath("$.data[3].annotatedStatus").value("Not started"))
                 .andExpect(jsonPath("$.data[4].cancer").value("Pancreatic"))
-                .andExpect(jsonPath("$.data[4].rawImportStatus").value("Not started"));
+                .andExpect(jsonPath("$.data[4].rawImportStatus").value("Not started"))
+                .andExpect(jsonPath("$.data[9].cancer").value("Gastric"))
+                .andExpect(jsonPath("$.data[9].sampleCount").value(1))
+                .andExpect(jsonPath("$.data[9].rawImportStatus").value("Completed"));
     }
 
     @Test
@@ -151,7 +154,7 @@ class CfDnaEndpointsIntegrationTest {
                         .param("limit", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.genes", hasItem("TTN")))
-                .andExpect(jsonPath("$.data.samples", hasItem("MKN28_cfDNA_5h")));
+                .andExpect(jsonPath("$.data.samples", hasItem("LC-cell-line-1")));
 
         mockMvc.perform(get("/api/v1/maf-mutations/genes/TP53")
                         .param("source", "private")
@@ -188,7 +191,13 @@ class CfDnaEndpointsIntegrationTest {
                     panCancerDir.toString(),
                     "cfdnadb.duckdb");
             importService.rebuildDatabase();
-            return new DuckDbService(TEST_DATA_DIR, "cfdnadb.duckdb", TEST_DATA_DIR.resolve("tcga_maf.txt"), panCancerDir);
+            return new DuckDbService(
+                    TEST_DATA_DIR,
+                    "cfdnadb.duckdb",
+                    TEST_DATA_DIR.resolve("tcga_maf.txt"),
+                    panCancerDir,
+                    TEST_DATA_DIR.resolve("vaf"),
+                    TEST_DATA_DIR.resolve("Healthy").resolve("Vcf"));
         }
     }
 
@@ -199,6 +208,7 @@ class CfDnaEndpointsIntegrationTest {
             createPanCancerInputs(root);
             createBreastData(root.resolve("Breast"));
             createLungData(root.resolve("Lung"));
+            createCellLineData(root.resolve("Cell_Line"));
             // create empty dirs for all remaining cancers
             for (String cancer : new String[]{
                     "Colorectal", "Liver", "Pancreatic", "Bladder", "Cervical",
@@ -217,7 +227,7 @@ class CfDnaEndpointsIntegrationTest {
                 "Cancer_Type\tChromosome\tStart_Position\tEnd_Position\tReference_Allele\tTumor_Seq_Allele2\tTumor_Sample_Barcode\tHugo_Symbol\tVariant_Classification\ttx\texon\ttxChange\taaChange\tVariant_Type\tFunc.refGene\tGene.refGene\tGeneDetail.refGene\tExonicFunc.refGene\tAAChange.refGene\tLocation\n" +
                         "Breast\tchr17\t7579472\t7579472\tC\tT\tBR-001\tTP53\tMissense_Mutation\t\t\t\t\tSNP\texonic\tTP53\t\tnonsynonymous SNV\tTP53:p.R175H\tchr17:7579472\n" +
                         "Breast\tchr12\t25245350\t25245350\tG\tA\tBR-002\tKRAS\tMissense_Mutation\t\t\t\t\tSNP\texonic\tKRAS\t\tnonsynonymous SNV\tKRAS:p.G12D\tchr12:25245350\n" +
-                        "Experiment\tchr2\t179650000\t179650000\tA\tG\tMKN28_cfDNA_5h\tTTN\tMissense_Mutation\t\t\t\t\tSNP\texonic\tTTN\t\tnonsynonymous SNV\tTTN:p.K1R\tchr2:179650000\n" +
+                        "Cell_Line\tchr2\t179650000\t179650000\tA\tG\tLC-cell-line-1\tTTN\tMissense_Mutation\t\t\t\t\tSNP\texonic\tTTN\t\tnonsynonymous SNV\tTTN:p.K1R\tchr2:179650000\n" +
                         "NGY\tchr17\t7579472\t7579472\tC\tT\tNGYX000027\tTP53\tMissense_Mutation\t\t\t\t\tSNP\texonic\tTP53\t\tnonsynonymous SNV\tTP53:p.R175H\tchr17:7579472\n");
         Files.writeString(root.resolve("TCGA_maf_mutation.tsv"),
                 "Hugo_Symbol\tChromosome\tStart_Position\tEnd_Position\tReference_Allele\tTumor_Seq_Allele2\tTumor_Sample_Barcode\tVariant_Classification\tVariant_Type\n" +
@@ -279,6 +289,14 @@ class CfDnaEndpointsIntegrationTest {
 
         Files.writeString(cancerDir.resolve("private/avinput/LU-001.avinput"), "sample");
         Files.writeString(cancerDir.resolve("private/vcf/LU-001.filtered.vcf.gz"), "vcf");
+    }
+
+    private static void createCellLineData(Path cancerDir) throws IOException {
+        Files.createDirectories(cancerDir.resolve("private/avinput"));
+        Files.createDirectories(cancerDir.resolve("private/vcf"));
+
+        Files.writeString(cancerDir.resolve("private/avinput/CL-001.avinput"), "sample");
+        Files.writeString(cancerDir.resolve("private/vcf/CL-001.filtered.vcf.gz"), "vcf");
     }
 
     private static void createEmptyCancer(Path cancerDir) throws IOException {

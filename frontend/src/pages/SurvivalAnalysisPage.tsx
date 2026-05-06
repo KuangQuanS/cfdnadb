@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "")) as string;
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.VITE_APP_BASE_PATH ?? "/ctdnadb/").replace(/\/$/, "")) as string;
 
 interface KmGroup {
   name: string;

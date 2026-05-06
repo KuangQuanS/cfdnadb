@@ -28,6 +28,8 @@ springdoc:
 
 server:
   port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: ${SERVER_SERVLET_CONTEXT_PATH:/ctdnadb}
 
 app:
   data-dir: ${APP_DATA_DIR:/400T/cfdnaweb}

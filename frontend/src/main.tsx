@@ -13,7 +13,7 @@ const queryClient = new QueryClient({
     }
   }
 });
-const basePath = (import.meta.env.VITE_APP_BASE_PATH ?? import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "/";
+const basePath = (import.meta.env.VITE_APP_BASE_PATH ?? "/ctdnadb/").replace(/\/$/, "") || "/";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
