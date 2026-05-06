@@ -182,6 +182,7 @@ function buildHeroSunburstOption(
   total: number,
   entries: HeroRingEntry[],
   palette: readonly string[],
+  centerSampleCount: number,
 ): EChartsOption {
   const isMutations = title === "Variant Classification";
   const children = buildSunburstEntries(entries, palette, 7, isMutations ? "Bladder" : undefined);
@@ -218,7 +219,7 @@ function buildHeroSunburstOption(
         },
         label: {
           position: "center",
-          formatter: `{title|${title}}\n{value|${formatPercent(total, total)}}`,
+          formatter: `{title|Samples}\n{value|${formatNumber(centerSampleCount)}}`,
           rich: {
             title: {
               color: "#ffffff",
@@ -300,25 +301,24 @@ function HeroRingChart({
   total,
   entries,
   palette,
+  centerSampleCount,
   onSliceClick,
 }: {
   title: string;
   total: number;
   entries: HeroRingEntry[];
   palette: readonly string[];
+  centerSampleCount: number;
   onSliceClick: (browseKey: string) => void;
 }) {
-  const displayTotal = formatPercent(total, total);
   const option = useMemo(
-    () => buildHeroSunburstOption(title, total, entries, palette),
-    [entries, palette, title, total],
+    () => buildHeroSunburstOption(title, total, entries, palette, centerSampleCount),
+    [centerSampleCount, entries, palette, title, total],
   );
 
   return (
     <article className="gdc-overview-chart" aria-label={title}>
-      <h3 className="gdc-overview-chart-title">
-        {displayTotal} {title}
-      </h3>
+      <h3 className="gdc-overview-chart-title">{title}</h3>
       <div className="gdc-overview-chart-shell">
         <Suspense fallback={<p className="panel-note">Loading chart...</p>}>
           <ReactECharts
@@ -450,6 +450,7 @@ export function HeroCarousel() {
         total: totalSourceSamples,
         entries: sourceRingEntries,
         palette: RING_PALETTES.sourceSamples,
+        centerSampleCount: totalSourceSamples,
       },
       {
         id: "cancer-samples",
@@ -457,6 +458,7 @@ export function HeroCarousel() {
         total: totalSamples,
         entries: sampleRingEntries,
         palette: RING_PALETTES.cancerSamples,
+        centerSampleCount: totalSamples,
       },
       {
         id: "genome-distribution",
@@ -464,6 +466,7 @@ export function HeroCarousel() {
         total: totalGenomeDistribution,
         entries: genomeRingEntries,
         palette: RING_PALETTES.annotated,
+        centerSampleCount: overview?.mafSummary.totalSamples ?? totalSamples,
       },
       {
         id: "variant-classification",
@@ -471,9 +474,10 @@ export function HeroCarousel() {
         total: totalVariantClassification,
         entries: variantClassRingEntries,
         palette: RING_PALETTES.mutations,
+        centerSampleCount: overview?.mafSummary.totalSamples ?? totalSamples,
       },
     ],
-    [genomeRingEntries, sampleRingEntries, sourceRingEntries, totalGenomeDistribution, totalSamples, totalSourceSamples, totalVariantClassification, variantClassRingEntries],
+    [genomeRingEntries, overview?.mafSummary.totalSamples, sampleRingEntries, sourceRingEntries, totalGenomeDistribution, totalSamples, totalSourceSamples, totalVariantClassification, variantClassRingEntries],
   );
   const heroStatistics = [
     { value: ">10,000", label: "Samples" },
@@ -602,6 +606,7 @@ export function HeroCarousel() {
                   total={card.total}
                   entries={card.entries}
                   palette={card.palette}
+                  centerSampleCount={card.centerSampleCount}
                   onSliceClick={goToOverviewSlice}
                 />
               ))}
