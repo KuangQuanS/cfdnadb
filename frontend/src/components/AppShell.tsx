@@ -17,7 +17,7 @@ const breadcrumbLabels: Array<[string, string]> = [
   ["/statistics", "Statistic"],
   ["/gene-search", "Gene Search"],
   ["/survival", "Survival Analysis"],
-  ["/vaf-analysis", "VAF Analysis"],
+  ["/vaf-analysis", "cf-vaf Analysis"],
   ["/downloads", "Download"],
   ["/help", "Help"],
   ["/studies", "Study Detail"],
@@ -74,7 +74,7 @@ function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
           onClick={dismiss}
           className={({ isActive }) => `site-nav-dropdown-link${isActive ? " active" : ""}`}
         >
-          VAF Analysis
+          cf-vaf Analysis
         </NavLink>
       </div>
     </div>
