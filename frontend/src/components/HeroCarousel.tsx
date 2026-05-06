@@ -2,7 +2,7 @@ import { lazy, Suspense, type CSSProperties, type FormEvent, useMemo, useState }
 import { useQuery } from "@tanstack/react-query";
 import type { EChartsOption } from "echarts";
 import { useNavigate } from "react-router-dom";
-import { getCancerSummary, getSourceDistribution } from "../api/client";
+import { getCancerSummary, getSourceDistribution, getStatisticsOverview } from "../api/client";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/body_simple_man.png";
@@ -63,6 +63,25 @@ function formatRingLabel(name: string, value: string) {
   return `${label}\n${value}`;
 }
 
+function formatPercent(value: number, total: number) {
+  if (!Number.isFinite(total) || total <= 0) return "0.0%";
+  return `${((value / total) * 100).toFixed(1)}%`;
+}
+
+function formatDistributionLabel(label: string) {
+  const normalized = label.replace(/_/g, " ").trim();
+  if (!normalized) return label;
+  return normalized
+    .split(/\s+/)
+    .map((word) => {
+      if (/^utr\d+/i.test(word)) return word.toUpperCase();
+      if (word.toUpperCase() === word) return word;
+      if (/[A-Z]/.test(word.slice(1))) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
 function normalizeSourceKey(source: string): typeof SOURCE_RING_ORDER[number] | "" {
   const normalized = source.trim().toLowerCase();
   if (normalized === "private" || normalized === "internal" || normalized === "cfdna") return "internal";
@@ -90,14 +109,14 @@ const ALL_CALLOUTS = [
   { id: "Lung", label: "Lung", side: "left", labelTopPct: 26, labelXPct: 10, pointXPct: 34, pointYPct: 29.5, browseKey: "Lung" },
   { id: "Liver", label: "Liver", side: "left", labelTopPct: 36, labelXPct: 10, pointXPct: 36, pointYPct: 37.3, browseKey: "Liver" },
   { id: "Pancreatic", label: "Pancreas", side: "left", labelTopPct: 46, labelXPct: 10, pointXPct: 35.5, pointYPct: 39.6, browseKey: "Pancreatic" },
-  { id: "Endometrial", label: "Endometrial", side: "left", labelTopPct: 56, labelXPct: 10, pointXPct: 64, pointYPct: 53, browseKey: "Endometrial" },
+  { id: "Colorectal", label: "Colorectal", side: "left", labelTopPct: 56, labelXPct: 10, pointXPct: 64, pointYPct: 53, browseKey: "Colorectal" },
   { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 66, labelXPct: 10, pointXPct: 39, pointYPct: 54, browseKey: "Bladder" },
   /* ── right side (top → bottom) ── */
   { id: "Brain", label: "Brain", side: "right", labelTopPct: 15.0, labelXPct: 90, pointXPct: 39, pointYPct: 15, browseKey: "Brain" },
   { id: "Breast", label: "Breast", side: "right", labelTopPct: 26, labelXPct: 90, pointXPct: 72, pointYPct: 33.5, browseKey: "Breast" },
   { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 36, labelXPct: 90, pointXPct: 44, pointYPct: 39.5, browseKey: "Gastric" },
   { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 46, labelXPct: 90, pointXPct: 47.5, pointYPct: 41, browseKey: "Kidney" },
-  { id: "Colorectal", label: "Colorectal", side: "right", labelTopPct: 56, labelXPct: 90, pointXPct: 46.5, pointYPct: 46.8, browseKey: "Colorectal" },
+  { id: "Endometrial", label: "Endometrial", side: "right", labelTopPct: 56, labelXPct: 90, pointXPct: 46.5, pointYPct: 46.8, browseKey: "Endometrial" },
   { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 66, labelXPct: 90, pointXPct: 69.5, pointYPct: 53.5, browseKey: "Ovarian" },
 ] as const satisfies readonly BodyCalloutConfig[];
 
@@ -199,7 +218,7 @@ function buildHeroSunburstOption(
         },
         label: {
           position: "center",
-          formatter: `{title|${title}}\n{value|${formatValue(total)}}`,
+          formatter: `{title|${title}}\n{value|${formatPercent(total, total)}}`,
           rich: {
             title: {
               color: "#ffffff",
@@ -256,10 +275,11 @@ function buildHeroSunburstOption(
           overflow: "break",
           formatter: (params: { name?: string; value?: number }) => {
             const value = params.value ?? 0;
+            const pct = formatPercent(value, total);
             if (!params.name || params.name === "Other") {
-              return value > 0 ? `Other\n${formatValue(value)}` : "";
+              return value > 0 ? `Other\n${pct}` : "";
             }
-            return formatRingLabel(params.name, formatValue(value));
+            return formatRingLabel(params.name, pct);
           },
         },
         data: children,
@@ -288,7 +308,7 @@ function HeroRingChart({
   palette: readonly string[];
   onSliceClick: (browseKey: string) => void;
 }) {
-  const displayTotal = title === "Variant Classification" ? formatMutationValue(total) : formatNumber(total);
+  const displayTotal = formatPercent(total, total);
   const option = useMemo(
     () => buildHeroSunburstOption(title, total, entries, palette),
     [entries, palette, title, total],
@@ -329,8 +349,10 @@ export function HeroCarousel() {
   const [quickGene, setQuickGene] = useState("");
   const cancerQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary, staleTime: 5 * 60_000 });
   const sourceQuery = useQuery({ queryKey: ["source-distribution", "all"], queryFn: () => getSourceDistribution(), staleTime: 5 * 60_000 });
+  const overviewQuery = useQuery({ queryKey: ["statistics-overview"], queryFn: getStatisticsOverview, staleTime: 5 * 60_000 });
   const cohorts = cancerQuery.data?.length ? cancerQuery.data : MOCK_COHORTS;
   const sourceDistribution = sourceQuery.data ?? [];
+  const overview = overviewQuery.data;
   const countMap = useMemo(
     () => Object.fromEntries(cohorts.map((c) => [c.cancer, c.sampleCount])),
     [cohorts],
@@ -391,22 +413,34 @@ export function HeroCarousel() {
     () => sourceRingEntries.reduce((sum, entry) => sum + entry.value, 0),
     [sourceRingEntries],
   );
-  const totalAnnotated = useMemo(
-    () => ringEntries.reduce((sum, entry) => sum + entry.annotatedCount, 0),
-    [ringEntries],
+  const genomeDistribution = overview?.funcDistribution ?? [];
+  const variantClassDistribution = overview?.exonicDistribution ?? [];
+  const totalGenomeDistribution = useMemo(
+    () => genomeDistribution.reduce((sum, entry) => sum + entry.count, 0),
+    [genomeDistribution],
   );
-  const totalMutations = useMemo(
-    () => ringEntries.reduce((sum, entry) => sum + entry.mutationCount, 0),
-    [ringEntries],
+  const totalVariantClassification = useMemo(
+    () => variantClassDistribution.reduce((sum, entry) => sum + entry.count, 0),
+    [variantClassDistribution],
   );
   const visibleCallouts = ALL_CALLOUTS;
-  const annotatedRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, annotatedCount }) => ({ id, label, value: annotatedCount, browseKey: id })),
-    [ringEntries],
+  const genomeRingEntries = useMemo(
+    () => genomeDistribution.map((entry, index) => ({
+      id: `genome-${index}-${entry.label}`,
+      label: formatDistributionLabel(entry.label),
+      value: entry.count,
+      browseKey: "",
+    })),
+    [genomeDistribution],
   );
-  const mutationRingEntries = useMemo(
-    () => ringEntries.map(({ id, label, mutationCount }) => ({ id, label, value: mutationCount, browseKey: id })),
-    [ringEntries],
+  const variantClassRingEntries = useMemo(
+    () => variantClassDistribution.map((entry, index) => ({
+      id: `variant-class-${index}-${entry.label}`,
+      label: formatDistributionLabel(entry.label),
+      value: entry.count,
+      browseKey: "",
+    })),
+    [variantClassDistribution],
   );
   const overviewCards = useMemo(
     () => [
@@ -425,21 +459,21 @@ export function HeroCarousel() {
         palette: RING_PALETTES.cancerSamples,
       },
       {
-        id: "annotated",
+        id: "genome-distribution",
         title: "Genome distribution",
-        total: totalAnnotated,
-        entries: annotatedRingEntries,
+        total: totalGenomeDistribution,
+        entries: genomeRingEntries,
         palette: RING_PALETTES.annotated,
       },
       {
-        id: "mutations",
+        id: "variant-classification",
         title: "Variant Classification",
-        total: totalMutations,
-        entries: mutationRingEntries,
+        total: totalVariantClassification,
+        entries: variantClassRingEntries,
         palette: RING_PALETTES.mutations,
       },
     ],
-    [annotatedRingEntries, mutationRingEntries, sampleRingEntries, sourceRingEntries, totalAnnotated, totalMutations, totalSamples, totalSourceSamples],
+    [genomeRingEntries, sampleRingEntries, sourceRingEntries, totalGenomeDistribution, totalSamples, totalSourceSamples, totalVariantClassification, variantClassRingEntries],
   );
   const heroStatistics = [
     { value: ">10,000", label: "Samples" },
