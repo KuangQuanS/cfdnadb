@@ -11,7 +11,8 @@ permissions:
   contents: read
 
 env:
-  APP_WAR_FILE: cfdnadb.war
+  APP_WAR_FILE: ctdnadb.war
+  LEGACY_APP_WAR_FILE: cfdnadb.war
   TOMCAT_WEBAPPS_DIR: /webapps/apache-tomcat-9.0.96/webapps
   DEPLOY_TMP_DIR: /webapps/tmp/github-deploy
   BACKUP_DIR: /webapps/tomcat-war-backup
@@ -91,11 +92,17 @@ jobs:
             cp "${TOMCAT_WEBAPPS_DIR}/${APP_WAR_FILE}" \
                "${BACKUP_DIR}/${APP_WAR_FILE%.war}-$(date +%F_%H-%M-%S).war"
           fi
+          if [ -f "${TOMCAT_WEBAPPS_DIR}/${LEGACY_APP_WAR_FILE}" ]; then
+            cp "${TOMCAT_WEBAPPS_DIR}/${LEGACY_APP_WAR_FILE}" \
+               "${BACKUP_DIR}/${LEGACY_APP_WAR_FILE%.war}-$(date +%F_%H-%M-%S).war"
+          fi
 
-      - name: Replace WAR only
+      - name: Replace WAR and remove legacy context
         run: |
           set -euo pipefail
           mv -f "${DEPLOY_TMP_DIR}/${APP_WAR_FILE}" "${TOMCAT_WEBAPPS_DIR}/${APP_WAR_FILE}"
+          rm -rf "${TOMCAT_WEBAPPS_DIR}/${LEGACY_APP_WAR_FILE}" \
+                 "${TOMCAT_WEBAPPS_DIR}/${LEGACY_APP_WAR_FILE%.war}"
           touch "${TOMCAT_WEBAPPS_DIR}/${APP_WAR_FILE}"
 
       - name: Verify deployed WAR

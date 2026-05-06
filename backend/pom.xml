@@ -12,17 +12,17 @@
     </parent>
 
     <groupId>org.cfdna</groupId>
-    <artifactId>cfdna-database-backend</artifactId>
+    <artifactId>ctdnadb-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>war</packaging>
-    <name>cfdna-database-backend</name>
-    <description>cfDNA academic database backend</description>
+    <name>ctdnadb-backend</name>
+    <description>ctDNA Database backend</description>
 
     <properties>
         <java.version>11</java.version>
         <frontend.workingDirectory>${project.basedir}/../frontend</frontend.workingDirectory>
-        <frontend.basePath>/cfdnadb/</frontend.basePath>
-        <frontend.apiBase>/cfdnadb</frontend.apiBase>
+        <frontend.basePath>/ctdnadb/</frontend.basePath>
+        <frontend.apiBase>/ctdnadb</frontend.apiBase>
     </properties>
 
     <dependencies>
@@ -79,7 +79,7 @@
     </dependencies>
 
     <build>
-        <finalName>cfdnadb</finalName>
+        <finalName>ctdnadb</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
