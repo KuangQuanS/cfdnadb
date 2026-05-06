@@ -139,13 +139,26 @@ public class VafAnalysisService {
     }
 
     private Optional<Path> findGeneFile(Path geneDir, String gene) throws IOException {
-        String exact = gene.toLowerCase(Locale.ROOT) + ".txt";
-        String exonic = gene.toLowerCase(Locale.ROOT) + "_exonic_vaf.txt";
+        List<String> candidates = List.of(
+                gene + ".txt",
+                gene.toLowerCase(Locale.ROOT) + ".txt",
+                gene + "_exonic_vaf.txt",
+                gene.toLowerCase(Locale.ROOT) + "_exonic_vaf.txt"
+        );
+        for (String fileName : candidates) {
+            Path candidate = geneDir.resolve(fileName);
+            if (Files.isRegularFile(candidate)) {
+                return Optional.of(candidate);
+            }
+        }
+
         try (Stream<Path> files = Files.list(geneDir)) {
             return files
                     .filter(Files::isRegularFile)
                     .filter(path -> {
                         String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+                        String exact = gene.toLowerCase(Locale.ROOT) + ".txt";
+                        String exonic = gene.toLowerCase(Locale.ROOT) + "_exonic_vaf.txt";
                         return fileName.equals(exact) || fileName.equals(exonic);
                     })
                     .findFirst();
