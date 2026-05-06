@@ -41,7 +41,7 @@ jobs:
 
       - name: Build WAR
         working-directory: backend
-        run: mvn -B clean package -DskipTests
+        run: ./mvnw -B clean package -DskipTests
 
       - name: Prepare WAR artifact
         run: |
