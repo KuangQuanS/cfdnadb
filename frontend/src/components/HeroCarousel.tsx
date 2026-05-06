@@ -86,18 +86,19 @@ type BodyCalloutConfig = {
 
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 14, labelXPct: 14, pointXPct: 60, pointYPct: 14, browseKey: "HeadAndNeck" },
-  { id: "Lung", label: "Lung", side: "left", labelTopPct: 24.5, labelXPct: 14, pointXPct: 56, pointYPct: 28.8, browseKey: "Lung" },
-  { id: "Liver", label: "Liver", side: "left", labelTopPct: 34.2, labelXPct: 14, pointXPct: 56, pointYPct: 37.3, browseKey: "Liver" },
-  { id: "Pancreatic", label: "Pancreas", side: "left", labelTopPct: 43.6, labelXPct: 14, pointXPct: 55.5, pointYPct: 39.6, browseKey: "Pancreatic" },
-  { id: "Endometrial", label: "Endometrial", side: "left", labelTopPct: 53, labelXPct: 14, pointXPct: 59.5, pointYPct: 53, browseKey: "Endometrial" },
-  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 66.8, labelXPct: 14, pointXPct: 59.7, pointYPct: 55.6, browseKey: "Bladder" },
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 15, labelXPct: 10, pointXPct: 39, pointYPct: 20, browseKey: "HeadAndNeck" },
+  { id: "Lung", label: "Lung", side: "left", labelTopPct: 24.5, labelXPct: 10, pointXPct: 34, pointYPct: 29.5, browseKey: "Lung" },
+  { id: "Liver", label: "Liver", side: "left", labelTopPct: 34.2, labelXPct: 10, pointXPct: 36, pointYPct: 37.3, browseKey: "Liver" },
+  { id: "Pancreatic", label: "Pancreas", side: "left", labelTopPct: 43.6, labelXPct: 10, pointXPct: 35.5, pointYPct: 39.6, browseKey: "Pancreatic" },
+  { id: "Endometrial", label: "Endometrial", side: "left", labelTopPct: 53, labelXPct: 10, pointXPct: 64, pointYPct: 53, browseKey: "Endometrial" },
+  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 62, labelXPct: 10, pointXPct: 39, pointYPct: 54, browseKey: "Bladder" },
   /* ── right side (top → bottom) ── */
-  { id: "Breast", label: "Breast", side: "right", labelTopPct: 26.0, labelXPct: 86, pointXPct: 68, pointYPct: 33, browseKey: "Breast" },
-  { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 35.2, labelXPct: 86, pointXPct: 64, pointYPct: 39.5, browseKey: "Gastric" },
-  { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 44.2, labelXPct: 86, pointXPct: 67.5, pointYPct: 41, browseKey: "Kidney" },
-  { id: "Colorectal", label: "Colorectal", side: "right", labelTopPct: 54.8, labelXPct: 86, pointXPct: 67.5, pointYPct: 46.8, browseKey: "Colorectal" },
-  { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 66.0, labelXPct: 86, pointXPct: 65, pointYPct: 53.2, browseKey: "Ovarian" },
+  { id: "Brain", label: "Brain", side: "right", labelTopPct: 15.0, labelXPct: 90, pointXPct: 39, pointYPct: 15, browseKey: "Brain" },
+  { id: "Breast", label: "Breast", side: "right", labelTopPct: 24.5, labelXPct: 90, pointXPct: 72, pointYPct: 33.5, browseKey: "Breast" },
+  { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 34.2, labelXPct: 90, pointXPct: 44, pointYPct: 39.5, browseKey: "Gastric" },
+  { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 43.6, labelXPct: 90, pointXPct: 47.5, pointYPct: 41, browseKey: "Kidney" },
+  { id: "Colorectal", label: "Colorectal", side: "right", labelTopPct: 53, labelXPct: 90, pointXPct: 46.5, pointYPct: 46.8, browseKey: "Colorectal" },
+  { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 62, labelXPct: 90, pointXPct: 69.5, pointYPct: 53.5, browseKey: "Ovarian" },
 ] as const satisfies readonly BodyCalloutConfig[];
 
 function getLabelCenterX(cfg: BodyCalloutConfig) {
@@ -107,11 +108,11 @@ function getLabelCenterX(cfg: BodyCalloutConfig) {
 function buildCalloutPolyline(cfg: BodyCalloutConfig) {
   const labelCenterX = getLabelCenterX(cfg);
   const labelEdgeX = cfg.side === "left" ? labelCenterX + 10 : labelCenterX - 10;
-  const elbowX = labelEdgeX + (cfg.pointXPct - labelEdgeX) * 0.62;
+  const elbowX = labelEdgeX + (cfg.pointXPct - labelEdgeX) * 0.45;
   return `${labelEdgeX},${cfg.labelTopPct} ${elbowX},${cfg.labelTopPct} ${elbowX},${cfg.pointYPct} ${cfg.pointXPct},${cfg.pointYPct}`;
 }
 
-type HeroRingEntry = {
+type HeroRingEntry = { 
   id: string;
   label: string;
   value: number;

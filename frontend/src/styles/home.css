@@ -2190,7 +2190,8 @@
 }
 
 .gdc-body-img {
-  animation: gdcBodyFloat 7s ease-in-out infinite;
+  /* Disable automatic floating animation for easier manual positioning */
+  animation: none !important;
 }
 
 .body-callout .callout-label {
