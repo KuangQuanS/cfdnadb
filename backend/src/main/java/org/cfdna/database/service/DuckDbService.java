@@ -76,7 +76,8 @@ public class DuckDbService {
     private static final List<String> CANCERS = List.of(
             "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
             "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
-            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor");
+            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Brain", "Benign_Tumor");
+    private static final long CANCER_SUMMARY_CACHE_TTL_MS = 10 * 60_000L;
     private static final List<String> REQUIRED_MULTIANNO_COLUMNS = List.of(
             "Chr",
             "Start",
@@ -94,6 +95,9 @@ public class DuckDbService {
     private final Path panCancerDir;
     private final Path vafDataDir;
     private final Path healthyVcfDir;
+    private volatile List<CancerSummaryDto> cachedCancerSummary;
+    private volatile long cachedCancerSummaryAtMillis;
+    private volatile long cachedCancerSummaryDbModifiedMillis;
 
     @Autowired
     public DuckDbService(@Value("${app.data-dir:/400T/cfdnaweb}") String dataDir,
@@ -140,6 +144,32 @@ public class DuckDbService {
     }
 
     public List<CancerSummaryDto> getCancerSummary() {
+        Path dbPath = resolveDuckDbPath();
+        long dbModifiedMillis = safeLastModifiedMillis(dbPath);
+        List<CancerSummaryDto> snapshot = cachedCancerSummary;
+        long age = System.currentTimeMillis() - cachedCancerSummaryAtMillis;
+        if (snapshot != null && age <= CANCER_SUMMARY_CACHE_TTL_MS && cachedCancerSummaryDbModifiedMillis == dbModifiedMillis) {
+            return snapshot;
+        }
+
+        synchronized (this) {
+            snapshot = cachedCancerSummary;
+            age = System.currentTimeMillis() - cachedCancerSummaryAtMillis;
+            if (snapshot != null && age <= CANCER_SUMMARY_CACHE_TTL_MS && cachedCancerSummaryDbModifiedMillis == dbModifiedMillis) {
+                return snapshot;
+            }
+
+            long start = System.currentTimeMillis();
+            List<CancerSummaryDto> computed = computeCancerSummary();
+            cachedCancerSummary = computed;
+            cachedCancerSummaryAtMillis = System.currentTimeMillis();
+            cachedCancerSummaryDbModifiedMillis = dbModifiedMillis;
+            log.info("[CancerSummary] Refreshed cache in {} ms", cachedCancerSummaryAtMillis - start);
+            return computed;
+        }
+    }
+
+    private List<CancerSummaryDto> computeCancerSummary() {
         Map<String, Long> mutationCounts = loadMutationCountsByMafCancerType();
         List<CancerSummaryDto> summaries = CANCERS.stream()
                 .map(cancer -> buildCancerSummary(cancer, mutationCounts))
@@ -149,6 +179,15 @@ public class DuckDbService {
             summaries.add(buildHealthySummary(healthyVcfCount));
         }
         return summaries;
+    }
+
+    private long safeLastModifiedMillis(Path path) {
+        try {
+            return Files.exists(path) ? Files.getLastModifiedTime(path).toMillis() : -1L;
+        } catch (IOException exception) {
+            log.debug("Failed to inspect last-modified time for {}", path, exception);
+            return -1L;
+        }
     }
 
     public List<TopGeneDto> getTopGenes(String cancer, int limit) {

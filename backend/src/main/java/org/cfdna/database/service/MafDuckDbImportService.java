@@ -54,7 +54,7 @@ public class MafDuckDbImportService {
     private static final List<String> CANCERS = List.of(
             "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
             "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
-            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor");
+            "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Brain", "Benign_Tumor");
     private static final Map<String, List<String>> CANCER_DIRECTORY_ALIASES = Map.of(
             "Gastric", List.of("Gastric", "Cell_Line")
     );
