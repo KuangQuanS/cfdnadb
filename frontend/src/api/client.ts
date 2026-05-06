@@ -50,7 +50,7 @@ import {
   vafDistributionMock
 } from "./mockData";
 
-const derivedBase = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+const derivedBase = (import.meta.env.VITE_APP_BASE_PATH ?? "/ctdnadb/").replace(/\/$/, "");
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (derivedBase === "/" ? "" : derivedBase);
 
 function resolveMock(path: string): unknown {

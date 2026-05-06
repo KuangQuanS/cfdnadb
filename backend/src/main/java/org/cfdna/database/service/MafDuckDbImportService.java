@@ -55,6 +55,9 @@ public class MafDuckDbImportService {
             "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
             "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
             "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor");
+    private static final Map<String, List<String>> CANCER_DIRECTORY_ALIASES = Map.of(
+            "Gastric", List.of("Gastric", "Cell_Line")
+    );
     private static final List<String> REQUIRED_AGGREGATE_COLUMNS = List.of(
             "Chr", "Start", "End", "Ref", "Alt",
             "Func.refGene", "Gene.refGene", "ExonicFunc.refGene",
@@ -305,12 +308,14 @@ public class MafDuckDbImportService {
         }
 
         for (String cancer : CANCERS) {
-            Path aggregateFile = dataDir.resolve(cancer).resolve(cancer + "_all_sample_multianno.txt").toAbsolutePath();
-            if (Files.isRegularFile(aggregateFile)) {
-                validateAggregateColumns(aggregateFile);
-                plan.aggregateFiles.add(new AggregateFile(cancer, aggregateFile));
+            for (String directoryName : physicalCancerDirectoryNames(cancer)) {
+                Path aggregateFile = dataDir.resolve(directoryName).resolve(directoryName + "_all_sample_multianno.txt").toAbsolutePath();
+                if (Files.isRegularFile(aggregateFile)) {
+                    validateAggregateColumns(aggregateFile);
+                    plan.aggregateFiles.add(new AggregateFile(cancer, aggregateFile));
+                }
+                inspectCancerFiles(cancer, directoryName, plan);
             }
-            inspectCancerFiles(cancer, plan);
         }
 
         for (SampleRow row : plan.sampleRows.values()) {
@@ -328,9 +333,13 @@ public class MafDuckDbImportService {
         return plan;
     }
 
-    private void inspectCancerFiles(String cancer, ImportPlan plan) {
+    private List<String> physicalCancerDirectoryNames(String cancer) {
+        return CANCER_DIRECTORY_ALIASES.getOrDefault(cancer, List.of(cancer));
+    }
+
+    private void inspectCancerFiles(String cancer, String directoryName, ImportPlan plan) {
         for (String source : List.of("private", "public")) {
-            Path sourceDir = dataDir.resolve(cancer).resolve(source);
+            Path sourceDir = dataDir.resolve(directoryName).resolve(source);
             collectSampleFiles(plan, cancer, source, sourceDir.resolve("avinput"), "avinput");
             collectSampleFiles(plan, cancer, source, sourceDir.resolve("multianno"), "multianno");
             collectSampleFiles(plan, cancer, source, sourceDir.resolve("vcf"), "vcf");
@@ -338,7 +347,7 @@ public class MafDuckDbImportService {
         }
 
         // GEO: scan {cancer}/geo/{GSE*}/ for sample-level files
-        Path geoBaseDir = dataDir.resolve(cancer).resolve("geo");
+        Path geoBaseDir = dataDir.resolve(directoryName).resolve("geo");
         if (Files.isDirectory(geoBaseDir)) {
             try (Stream<Path> datasets = Files.list(geoBaseDir)) {
                 datasets.filter(Files::isDirectory)
@@ -354,7 +363,7 @@ public class MafDuckDbImportService {
             }
         }
 
-        Path mutationsFile = dataDir.resolve(cancer).resolve(cancer + "_mutations.txt");
+        Path mutationsFile = dataDir.resolve(directoryName).resolve(directoryName + "_mutations.txt");
         if (Files.isRegularFile(mutationsFile)) {
             plan.cohortFileRows.add(new CohortFileRow(
                     cancer,
@@ -367,13 +376,15 @@ public class MafDuckDbImportService {
                     safeFileSize(mutationsFile)));
         }
 
-        collectStatisticsAssets(plan, cancer, "private", dataDir.resolve(cancer).resolve("private").resolve("stats"));
-        collectStatisticsAssets(plan, cancer, "public", dataDir.resolve(cancer).resolve("public").resolve("stats"));
-        collectStatisticsAssets(plan, cancer, "tcga", dataDir.resolve(cancer).resolve("tcga").resolve("stats"));
-        collectStatisticsAssets(plan, cancer, "geo", dataDir.resolve(cancer).resolve("geo").resolve("stats"));
-        collectStatisticsAssets(plan, cancer, "Overview", dataDir.resolve(cancer).resolve("stats"));
-        collectTcgaSamples(plan, cancer);
-        collectGeoSamples(plan, cancer);
+        collectStatisticsAssets(plan, cancer, "private", dataDir.resolve(directoryName).resolve("private").resolve("stats"));
+        collectStatisticsAssets(plan, cancer, "public", dataDir.resolve(directoryName).resolve("public").resolve("stats"));
+        collectStatisticsAssets(plan, cancer, "tcga", dataDir.resolve(directoryName).resolve("tcga").resolve("stats"));
+        collectStatisticsAssets(plan, cancer, "geo", dataDir.resolve(directoryName).resolve("geo").resolve("stats"));
+        collectStatisticsAssets(plan, cancer, "Overview", dataDir.resolve(directoryName).resolve("stats"));
+        if (cancer.equals(directoryName)) {
+            collectTcgaSamples(plan, cancer);
+        }
+        collectGeoSamples(plan, cancer, directoryName);
     }
 
     private void collectSampleFiles(ImportPlan plan, String cancer, String source, Path directory, String category) {
@@ -434,8 +445,8 @@ public class MafDuckDbImportService {
         }
     }
 
-    private void collectGeoSamples(ImportPlan plan, String cancer) {
-        Path geoBaseDir = dataDir.resolve(cancer).resolve("geo");
+    private void collectGeoSamples(ImportPlan plan, String cancer, String directoryName) {
+        Path geoBaseDir = dataDir.resolve(directoryName).resolve("geo");
         if (!Files.isDirectory(geoBaseDir)) {
             return;
         }

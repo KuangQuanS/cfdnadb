@@ -1,11 +1,11 @@
-import { lazy, Suspense, type CSSProperties, useMemo, useState } from "react";
+import { lazy, Suspense, type CSSProperties, type FormEvent, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { EChartsOption } from "echarts";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { getCancerSummary, getSourceDistribution } from "../api/client";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
-import humanBodyImg from "../assets/body_simple_nohand.png";
+import humanBodyImg from "../assets/body_simple_man.png";
 import indexMutectImg from "../assets/index_mutect.png";
 import tutorialImg from "../assets/tutorial.png";
 import "../styles/home.css";
@@ -25,19 +25,15 @@ const MOCK_COHORTS: CancerSummary[] = [
 ];
 
 const RING_PALETTES = {
-  sourceSamples: ["#173b68", "#23589c", "#2d74cc", "#458ddb", "#62a1e3", "#7eb3ea"],
-  cancerSamples: ["#1a4f7a", "#1d5b8c", "#2168a0", "#277ebf", "#2e92db", "#4aa3e0", "#6ab3e5", "#8dc2eb"],
-  annotated: ["#176146", "#1c7353", "#228a63", "#29a376", "#32c28c", "#4ed1a0", "#6fdcb6", "#90e6ca"],
-  mutations: ["#0f5a43", "#137356", "#188c68", "#1ca379", "#22c28f", "#44d1a4", "#6adbb6", "#8de5c6"],
+  sourceSamples: ["#143d79", "#1d56a7", "#2872cf", "#4b90df", "#75afe9", "#a7cff2"],
+  cancerSamples: ["#8a2d12", "#b9471b", "#df6828", "#f08b3e", "#f5a85f", "#f8c187", "#fbd6ad"],
+  annotated: ["#0f5a43", "#16805f", "#20a77c", "#45bf94", "#6ed2ae", "#9de3ca", "#c2eee0"],
+  mutations: ["#4b247f", "#6731a7", "#8648c7", "#a66add", "#bf8fec", "#d4b3f3", "#e6d3f8"],
 } as const;
 
-const OTHER_SLICE_COLOR = "#7b4bb7";
+const OTHER_SLICE_COLOR = "#6b7280";
 
 const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
-
-const INTRO_TOTAL_SAMPLES = 3293;
-const INTRO_TOTAL_FILES = 8995;
-const INTRO_TOTAL_MUTATIONS = 48403074;
 
 const SOURCE_RING_ORDER = ["internal", "public", "tcga"] as const;
 
@@ -46,15 +42,6 @@ const SOURCE_RING_LABELS: Record<typeof SOURCE_RING_ORDER[number], { label: stri
   public: { label: "Public Cohorts", browseSource: "Public" },
   tcga: { label: "TCGA", browseSource: "tcga" },
 };
-
-const HERO_ACTIONS = [
-  { label: "Gene Search", to: "/gene-search", icon: "gene" },
-  { label: "Survival Analysis", to: "/survival", icon: "survival" },
-  { label: "Downloads", to: "/downloads", icon: "download" },
-  { label: "Tutorials", to: "/help", icon: "tutorial" },
-] as const;
-
-type HeroActionIcon = typeof HERO_ACTIONS[number]["icon"];
 
 const COHORT_DISPLAY_LABELS: Record<string, string> = {
   HeadAndNeck: "Head & Neck",
@@ -82,51 +69,6 @@ function normalizeSourceKey(source: string): typeof SOURCE_RING_ORDER[number] | 
   if (normalized === "public" || normalized === "geo") return "public";
   if (normalized === "tcga") return "tcga";
   return "";
-}
-
-function HeroIcon({ icon }: { icon: HeroActionIcon }) {
-  if (icon === "gene") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10.26 3.27A6.6 6.6 0 0 1 12 3c1.86 0 3.5.76 4.67 2.02" />
-        <path d="M18.8 8.41a6.6 6.6 0 0 1-.36 9.87" />
-        <path d="M15.4 20.63a6.6 6.6 0 0 1-9.86.04" />
-        <path d="M4.6 15.6A6.6 6.6 0 0 1 5.05 5.5" />
-        <path d="m6.5 13 4 4" />
-        <path d="m13.5 17 4-4" />
-        <path d="m17.5 11-4-4" />
-        <path d="m10.5 7-4 4" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    );
-  }
-
-  if (icon === "survival") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 3v18h18" />
-        <path d="m19 9-5 5-4-4-3 3" />
-        <path d="M21 6h-6v6" />
-      </svg>
-    );
-  }
-
-  if (icon === "download") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="7 10 12 15 17 10" />
-        <line x1="12" x2="12" y1="15" y2="3" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-    </svg>
-  );
 }
 
 type BodyCalloutConfig = {
@@ -278,7 +220,7 @@ function buildHeroSunburstOption(
           show: false,
         },
         itemStyle: {
-          color: "#1d5f38",
+          color: palette[1] ?? palette[0],
           borderColor: "#ffffff",
           borderWidth: 2,
         },
@@ -336,14 +278,12 @@ function HeroRingChart({
   title,
   total,
   entries,
-  caption,
   palette,
   onSliceClick,
 }: {
   title: string;
   total: number;
   entries: HeroRingEntry[];
-  caption: string;
   palette: readonly string[];
   onSliceClick: (browseKey: string) => void;
 }) {
@@ -385,6 +325,7 @@ function HeroRingChart({
 export function HeroCarousel() {
   const navigate = useNavigate();
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [quickGene, setQuickGene] = useState("");
   const cancerQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary, staleTime: 5 * 60_000 });
   const sourceQuery = useQuery({ queryKey: ["source-distribution", "all"], queryFn: () => getSourceDistribution(), staleTime: 5 * 60_000 });
   const cohorts = cancerQuery.data?.length ? cancerQuery.data : MOCK_COHORTS;
@@ -473,7 +414,6 @@ export function HeroCarousel() {
         title: "Source samples",
         total: totalSourceSamples,
         entries: sourceRingEntries,
-        caption: "Curated samples grouped by Internal Data, Public Cohorts, and TCGA.",
         palette: RING_PALETTES.sourceSamples,
       },
       {
@@ -481,7 +421,6 @@ export function HeroCarousel() {
         title: "Sample categories",
         total: totalSamples,
         entries: sampleRingEntries,
-        caption: "Curated plasma samples grouped by cohort category.",
         palette: RING_PALETTES.cancerSamples,
       },
       {
@@ -489,7 +428,6 @@ export function HeroCarousel() {
         title: "Annotated",
         total: totalAnnotated,
         entries: annotatedRingEntries,
-        caption: "Variants with functional annotations per cohort.",
         palette: RING_PALETTES.annotated,
       },
       {
@@ -497,12 +435,17 @@ export function HeroCarousel() {
         title: "Mutations",
         total: totalMutations,
         entries: mutationRingEntries,
-        caption: "Somatic mutation records per cohort.",
         palette: RING_PALETTES.mutations,
       },
     ],
     [annotatedRingEntries, mutationRingEntries, sampleRingEntries, sourceRingEntries, totalAnnotated, totalMutations, totalSamples, totalSourceSamples],
   );
+  const heroStatistics = [
+    { value: ">10,000", label: "Samples" },
+    { value: ">51M", label: "Variants" },
+    { value: "18", label: "Cancer types" },
+    { value: "EGA / TCGA / GEO", label: "Public sources" },
+  ];
 
   const goToBrowse = (browseKey: string) => {
     navigate(`/browse?cancer=${encodeURIComponent(browseKey)}&source=cfDNA`);
@@ -516,6 +459,12 @@ export function HeroCarousel() {
     goToBrowse(browseKey);
   };
 
+  const submitQuickSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const gene = quickGene.trim();
+    navigate(gene ? `/gene-search?gene=${encodeURIComponent(gene)}` : "/gene-search");
+  };
+
   return (
     <>
       <section className="gdc-hero">
@@ -525,28 +474,34 @@ export function HeroCarousel() {
             <div className="gdc-title-rule" aria-hidden="true" />
             <div className="gdc-subtitle">
               <p>
-                ctDNAdb represents a comprehensive plasma circulating tumor DNA somatic mutation resource encompassing <strong>{formatNumber(INTRO_TOTAL_SAMPLES)}</strong> curated samples across major cancer cohorts, including <strong>breast, colorectal, gastric, liver, lung, pancreatic, head and neck, kidney, and ovarian malignancies</strong>.
-              </p>
-              <p>
-                The database integrates cohort-level sample metadata, annotated variant profiles, and downloadable analysis resources, currently comprising <strong>{formatNumber(INTRO_TOTAL_FILES)}</strong> data files, functional annotations, and <strong>{formatNumber(INTRO_TOTAL_MUTATIONS)}</strong> imported mutation records.
-              </p>
-              <p>
-                The platform provides anatomical browsing, sample exploration, gene-oriented querying, cohort statistics, visualization modules, and download workflows to support cross-cohort comparison, cohort-level interpretation, and biomarker-focused liquid biopsy research.
+                ctDNA Database is a comprehensive pan-cancer resource for exploring circulating tumor DNA variants across diverse cancer types. By integrating in-house sequencing data with publicly available datasets from EGA, TCGA, and GEO, the database currently curates more than 10,000 samples, over 51 million variants, and 18 cancer types. It provides standardized variant annotation, clinical information, and interactive analysis modules, enabling users to investigate mutation landscapes, variant allele frequency patterns, genome distributions, mutation types, cancer-specific oncoplots, Ti/Tv profiles, and survival associations. ctDNA Database aims to support liquid biopsy biomarker discovery, tumor evolution research, treatment resistance analysis, and precision oncology studies.
               </p>
             </div>
 
-            <nav className="gdc-hero-actions-grid" aria-label="Primary ctDNAdb tools">
-              {HERO_ACTIONS.map((action) => (
-                <Link key={action.to} to={action.to} className="gdc-hero-action-card">
-                  <div className="gdc-hero-action-card-icon">
-                    <HeroIcon icon={action.icon} />
+            <div className="gdc-quick-panel">
+              <form className="gdc-quick-search" onSubmit={submitQuickSearch}>
+                <label htmlFor="home-quick-gene">Quick Search</label>
+                <div className="gdc-quick-search-row">
+                  <input
+                    id="home-quick-gene"
+                    value={quickGene}
+                    onChange={(event) => setQuickGene(event.target.value)}
+                    placeholder="TP53, KRAS, PIK3CA..."
+                    autoComplete="off"
+                  />
+                  <button type="submit">Search</button>
+                </div>
+              </form>
+
+              <div className="gdc-quick-stat-grid" aria-label="ctDNA Database statistics">
+                {heroStatistics.map((item) => (
+                  <div className="gdc-quick-stat" key={item.label}>
+                    <strong>{item.value}</strong>
+                    <span>{item.label}</span>
                   </div>
-                  <div className="gdc-hero-action-card-content">
-                    <span className="gdc-hero-action-card-title">{action.label}</span>
-                  </div>
-                </Link>
-              ))}
-            </nav>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="gdc-col-middle">
@@ -611,7 +566,6 @@ export function HeroCarousel() {
                   title={card.title}
                   total={card.total}
                   entries={card.entries}
-                  caption={card.caption}
                   palette={card.palette}
                   onSliceClick={goToOverviewSlice}
                 />

@@ -1016,7 +1016,12 @@ public class DuckDbService {
             Map.entry("Brain",       "Brain"),
             Map.entry("Benign_Tumor", "NGY"),
             Map.entry("NGY",          "NGY"),
+            Map.entry("Cell_Line",    "Cell_Line"),
             Map.entry("Experiment",   "Gastric")
+    );
+
+    private static final Map<String, List<String>> CANCER_TO_CFDNA_TYPE_ALIASES = Map.ofEntries(
+            Map.entry("Gastric", List.of("Gastric", "Cell_Line"))
     );
 
     private static final Map<String, String> CFDNA_TYPE_TO_CLIENT_CANCER = Map.ofEntries(
@@ -1080,16 +1085,17 @@ public class DuckDbService {
             Map.entry("Cervical",    List.of("CFDNA_Cervical")),
             Map.entry("Endometrial", List.of("CFDNA_Endometrium")),
             Map.entry("Esophageal",  List.of("CFDNA_Esophageal")),
-            Map.entry("Gastric",     List.of("CFDNA_Gastric")),
+            Map.entry("Gastric",     List.of("CFDNA_Gastric", "CFDNA_Cell_Line")),
             Map.entry("HeadAndNeck", List.of("CFDNA_Head_and_neck")),
             Map.entry("Kidney",      List.of("CFDNA_Kidney")),
             Map.entry("Ovarian",     List.of("CFDNA_Ovarian")),
             Map.entry("Thyroid",     List.of("CFDNA_Thyriod")),
             Map.entry("Brain",       List.of("CFDNA_Brain")),
             Map.entry("Benign_Tumor", List.of("CFDNA_Benign_Tumor")),
-            Map.entry("Cell_Line",    List.of("CFDNA_Gastric"))
+            Map.entry("Cell_Line",    List.of("CFDNA_Gastric", "CFDNA_Cell_Line"))
     );
     private static final Map<String, String> VAF_CANCER_TYPE_ALIASES = Map.ofEntries(
+            Map.entry("Cell_Line", "Gastric"),
             Map.entry("Colonrector", "Colorectal"),
             Map.entry("Endometrium", "Endometrial"),
             Map.entry("Experiment", "Gastric"),
@@ -1210,19 +1216,35 @@ public class DuckDbService {
 
     private List<String> normalizeMafCancerFiltersForQuery(String source, List<String> cancerTypes) {
         List<String> normalized = normalizeFilterValues(cancerTypes);
-        if (isTcga(source) || isGeo(source) || isPublic(source)) {
+        if (isTcga(source)) {
             return normalized;
+        }
+        if (isGeo(source) || isPublic(source)) {
+            return normalized.stream()
+                    .flatMap(value -> clientCancerAliasesForQuery(value).stream())
+                    .distinct()
+                    .collect(Collectors.toList());
         }
         if (isCombinedCfdna(source)) {
             return normalized.stream()
-                    .flatMap(value -> java.util.stream.Stream.of(CANCER_TO_CFDNA_TYPE.getOrDefault(value, value), value))
+                    .flatMap(value -> Stream.concat(cfdnaTypesForQuery(value).stream(), Stream.of(value)))
                     .distinct()
                     .collect(Collectors.toList());
         }
         return normalized.stream()
-                .map(value -> CANCER_TO_CFDNA_TYPE.getOrDefault(value, value))
+                .flatMap(value -> cfdnaTypesForQuery(value).stream())
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    private List<String> cfdnaTypesForQuery(String cancerType) {
+        return CANCER_TO_CFDNA_TYPE_ALIASES.getOrDefault(
+                cancerType,
+                List.of(CANCER_TO_CFDNA_TYPE.getOrDefault(cancerType, cancerType)));
+    }
+
+    private List<String> clientCancerAliasesForQuery(String cancerType) {
+        return CANCER_TO_CFDNA_TYPE_ALIASES.getOrDefault(cancerType, List.of(cancerType));
     }
 
     private List<String> normalizeMafCancerFiltersForSampleInventory(List<String> cancerTypes) {
@@ -2200,7 +2222,13 @@ public class DuckDbService {
     private List<String> normalizeOncoplotCancerTypesForMaf(String source, List<String> cancerTypes) {
         if (isPrivate(source)) {
             return cancerTypes.stream()
-                    .map(value -> CANCER_TO_CFDNA_TYPE.getOrDefault(value, value))
+                    .flatMap(value -> cfdnaTypesForQuery(value).stream())
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+        if (isGeo(source) || isPublic(source)) {
+            return cancerTypes.stream()
+                    .flatMap(value -> clientCancerAliasesForQuery(value).stream())
                     .distinct()
                     .collect(Collectors.toList());
         }
