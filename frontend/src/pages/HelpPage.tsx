@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import tutorialFlowchart from "../assets/tutorial.png";
+import tutorialFlowchart from "../assets/ctdnadb.png";
 import browserTutorial from "../assets/tutorial/browser.png";
 import geneSearchTutorial from "../assets/tutorial/gene_search.png";
 import survivalTutorial from "../assets/tutorial/survival.png";

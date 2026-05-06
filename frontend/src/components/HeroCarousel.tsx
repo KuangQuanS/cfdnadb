@@ -7,7 +7,7 @@ import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/body_simple_man.png";
 import indexMutectImg from "../assets/index_mutect.png";
-import tutorialImg from "../assets/tutorial.png";
+import tutorialImg from "../assets/ctdnadb.png";
 import "../styles/home.css";
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
