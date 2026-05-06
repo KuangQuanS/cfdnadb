@@ -22,11 +22,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
 public class VafAnalysisService {
+    private static final long BODY_MAP_CACHE_TTL_MS = 10 * 60_000L;
 
     private static final Map<String, String> CANCER_TYPE_ALIASES = Map.ofEntries(
             Map.entry("Colonrector", "Colorectal"),
@@ -57,6 +60,8 @@ public class VafAnalysisService {
     );
 
     private final Path vafRootDir;
+    private final ConcurrentMap<Path, DirectoryGeneIndex> geneIndexCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, CachedBodyMap> bodyMapCache = new ConcurrentHashMap<>();
 
     public VafAnalysisService(@Value("${app.vaf-gene-root-dir:/400T/cfdnadb}") String vafGeneRootDir) {
         this.vafRootDir = Path.of(vafGeneRootDir);
@@ -64,6 +69,18 @@ public class VafAnalysisService {
 
     public VafBodyMapDto getBodyMap(String gene) {
         String normalizedGene = normalizeGene(gene);
+        CachedBodyMap cached = bodyMapCache.get(normalizedGene);
+        long now = System.currentTimeMillis();
+        if (cached != null && now - cached.cachedAtMillis <= BODY_MAP_CACHE_TTL_MS) {
+            return cached.value;
+        }
+
+        VafBodyMapDto computed = buildBodyMap(normalizedGene);
+        bodyMapCache.put(normalizedGene, new CachedBodyMap(computed, now));
+        return computed;
+    }
+
+    private VafBodyMapDto buildBodyMap(String normalizedGene) {
         if (!Files.isDirectory(vafRootDir)) {
             return new VafBodyMapDto(normalizedGene, List.of(), 0);
         }
@@ -139,30 +156,32 @@ public class VafAnalysisService {
     }
 
     private Optional<Path> findGeneFile(Path geneDir, String gene) throws IOException {
-        List<String> candidates = List.of(
-                gene + ".txt",
-                gene.toLowerCase(Locale.ROOT) + ".txt",
-                gene + "_exonic_vaf.txt",
-                gene.toLowerCase(Locale.ROOT) + "_exonic_vaf.txt"
-        );
-        for (String fileName : candidates) {
-            Path candidate = geneDir.resolve(fileName);
-            if (Files.isRegularFile(candidate)) {
-                return Optional.of(candidate);
+        String geneKey = gene.toLowerCase(Locale.ROOT);
+        Map<String, Path> fileIndex = getOrBuildGeneIndex(geneDir);
+        for (String candidate : List.of(geneKey + ".txt", geneKey + "_exonic_vaf.txt")) {
+            Path match = fileIndex.get(candidate);
+            if (match != null && Files.isRegularFile(match)) {
+                return Optional.of(match);
             }
         }
+        return Optional.empty();
+    }
 
-        try (Stream<Path> files = Files.list(geneDir)) {
-            return files
-                    .filter(Files::isRegularFile)
-                    .filter(path -> {
-                        String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
-                        String exact = gene.toLowerCase(Locale.ROOT) + ".txt";
-                        String exonic = gene.toLowerCase(Locale.ROOT) + "_exonic_vaf.txt";
-                        return fileName.equals(exact) || fileName.equals(exonic);
-                    })
-                    .findFirst();
+    private Map<String, Path> getOrBuildGeneIndex(Path geneDir) throws IOException {
+        long lastModifiedMillis = Files.getLastModifiedTime(geneDir).toMillis();
+        DirectoryGeneIndex cached = geneIndexCache.get(geneDir);
+        if (cached != null && cached.lastModifiedMillis == lastModifiedMillis) {
+            return cached.filesByLowerName;
         }
+
+        Map<String, Path> indexedFiles = new HashMap<>();
+        try (Stream<Path> files = Files.list(geneDir)) {
+            files.filter(Files::isRegularFile)
+                    .forEach(path -> indexedFiles.put(path.getFileName().toString().toLowerCase(Locale.ROOT), path));
+        }
+        Map<String, Path> immutableIndex = Map.copyOf(indexedFiles);
+        geneIndexCache.put(geneDir, new DirectoryGeneIndex(lastModifiedMillis, immutableIndex));
+        return immutableIndex;
     }
 
     private VafValues readVafValues(Path file) {
@@ -350,6 +369,26 @@ public class VafAnalysisService {
         private VafObservation(double vaf, String mutationType) {
             this.vaf = vaf;
             this.mutationType = mutationType;
+        }
+    }
+
+    private static class DirectoryGeneIndex {
+        private final long lastModifiedMillis;
+        private final Map<String, Path> filesByLowerName;
+
+        private DirectoryGeneIndex(long lastModifiedMillis, Map<String, Path> filesByLowerName) {
+            this.lastModifiedMillis = lastModifiedMillis;
+            this.filesByLowerName = filesByLowerName;
+        }
+    }
+
+    private static class CachedBodyMap {
+        private final VafBodyMapDto value;
+        private final long cachedAtMillis;
+
+        private CachedBodyMap(VafBodyMapDto value, long cachedAtMillis) {
+            this.value = value;
+            this.cachedAtMillis = cachedAtMillis;
         }
     }
 }
