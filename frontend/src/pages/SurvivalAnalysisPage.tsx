@@ -157,7 +157,7 @@ function kmOption(result: KmResult, title: string): EChartsOption {
     });
   }
   return {
-    title: { text: title, left: "center", textStyle: { fontSize: 15, fontWeight: 600 } },
+    title: { text: title, left: "center", textStyle: { fontSize: 15, fontWeight: 600, fontStyle: "italic" } },
     tooltip: {
       trigger: "axis",
       valueFormatter: (v: any) => (typeof v === "number" ? v.toFixed(3) : v)
@@ -318,7 +318,7 @@ function boxOption(result: VafResult, title: string): EChartsOption {
       text: title,
       subtext: subtitle,
       left: "center",
-      textStyle: { fontSize: 15, fontWeight: 600 },
+      textStyle: { fontSize: 15, fontWeight: 600, fontStyle: "italic" },
       subtextStyle: { fontSize: 12 }
     },
     tooltip: { trigger: "item" },

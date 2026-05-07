@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import { getVafBodyMap } from "../api/client";
+import { GeneSymbol } from "../components/GeneSymbol";
 import { OrganIcon } from "../components/icons/OrganIcon";
 import type { VafBodyMapEntry, VafBoxplot } from "../types/api";
 
@@ -18,14 +19,16 @@ type CohortNode = {
 };
 
 const COHORT_NODES: CohortNode[] = [
-  { organKey: "brain", label: "Brain", code: "BRAIN", left: 50, top: 1 },
-  { organKey: "headAndNeck", label: "Head & Neck", code: "HNSC", left: 50, top: 18 },
-  { organKey: "lung", label: "Lung", code: "LUNG", left: 22, top: 20 },
-  { organKey: "breast", label: "Breast", code: "BRCA", left: 78, top: 20 },
+  { organKey: "brain", label: "Brain", code: "BRAIN", left: 50, top: 8 },
+  { organKey: "breast", label: "Breast", code: "BRCA", left: 50, top: 28 },
+  { organKey: "esophageal", label: "Esophageal", code: "ESCA", left: 22, top: 20 },
+  { organKey: "lung", label: "Lung", code: "LUNG", left: 34, top: 35 },
+  { organKey: "headAndNeck", label: "Head & Neck", code: "HNSC", left: 78, top: 23 },
   { organKey: "thyroid", label: "Thyroid", code: "THYR", left: 90, top: 43 },
   { organKey: "kidney", label: "Kidney", code: "KIDN", left: 84, top: 68 },
   { organKey: "ovarian", label: "Ovarian", code: "OV", left: 78, top: 87 },
-  { organKey: "endometrial", label: "Endometrial", code: "UCEC", left: 50, top: 87 },
+  { organKey: "cervical", label: "Cervical", code: "CESC", left: 50, top: 74 },
+  { organKey: "endometrial", label: "Endometrial", code: "UCEC", left: 50, top: 94 },
   { organKey: "bladder", label: "Bladder", code: "BLCA", left: 22, top: 87 },
   { organKey: "colorectal", label: "Colorectal", code: "CRC", left: 16, top: 68 },
   { organKey: "liver", label: "Liver", code: "LIHC", left: 10, top: 43 },
@@ -111,7 +114,7 @@ function boxOption(result: VafBoxplot, title: string): EChartsOption {
     title: {
       text: title,
       left: "center",
-      textStyle: { fontSize: 15, fontWeight: 600 },
+      textStyle: { fontSize: 15, fontWeight: 600, fontStyle: "italic" },
       subtextStyle: { fontSize: 12 }
     },
     tooltip: { trigger: "item" },
@@ -223,8 +226,8 @@ export function VafAnalysisPage() {
     <div className="page-stack vaf-analysis-page">
       <section className="database-page-intro vaf-analysis-intro">
         <div>
-          <h1>VAF Analysis</h1>
-          <p>Gene-level variant allele frequency across mounted private cfDNA cohorts.</p>
+          <h1>ctDNA VAF</h1>
+          <p>Gene-level variant allele frequency across mounted private ctDNA cohorts.</p>
         </div>
       </section>
 
@@ -247,7 +250,7 @@ export function VafAnalysisPage() {
             <div className="vaf-analysis-metrics" aria-label="VAF summary">
               <div>
                 <span>Gene</span>
-                <strong>{vafQ.data?.gene ?? queryGene.toUpperCase()}</strong>
+                <strong><GeneSymbol symbol={vafQ.data?.gene ?? queryGene.toUpperCase()} /></strong>
               </div>
               <div>
                 <span>Cohorts</span>
@@ -275,7 +278,7 @@ export function VafAnalysisPage() {
           <div className="vaf-bodymap-panel">
             <div className="vaf-icon-map" aria-label={`${queryGene} VAF organ map`}>
               <div className="vaf-icon-map-core">
-                <strong>{vafQ.data?.gene ?? queryGene.toUpperCase()}</strong>
+                <strong><GeneSymbol symbol={vafQ.data?.gene ?? queryGene.toUpperCase()} /></strong>
                 <span>mean VAF map</span>
               </div>
               {COHORT_NODES.map((node) => {
@@ -335,7 +338,9 @@ export function VafAnalysisPage() {
                 </tbody>
               </table>
             ) : (
-              <p className="panel-note">No mounted gene-level VAF file was found for {queryGene.toUpperCase()}.</p>
+              <p className="panel-note">
+                No mounted gene-level VAF file was found for <GeneSymbol symbol={queryGene.toUpperCase()} />.
+              </p>
             )}
           </div>
         </div>

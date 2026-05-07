@@ -3,6 +3,7 @@ package org.cfdna.database.controller;
 import org.cfdna.database.dto.ApiResponse;
 import org.cfdna.database.dto.CohortFileDto;
 import org.cfdna.database.dto.LabelCountDto;
+import org.cfdna.database.service.CsvStatisticsService;
 import org.cfdna.database.service.DuckDbService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -21,9 +22,11 @@ import java.util.List;
 public class CohortFileController {
 
     private final DuckDbService duckDbService;
+    private final CsvStatisticsService csvStatisticsService;
 
-    public CohortFileController(DuckDbService duckDbService) {
+    public CohortFileController(DuckDbService duckDbService, CsvStatisticsService csvStatisticsService) {
         this.duckDbService = duckDbService;
+        this.csvStatisticsService = csvStatisticsService;
     }
 
     @GetMapping("/files")
@@ -36,7 +39,10 @@ public class CohortFileController {
 
     @GetMapping("/source-distribution")
     public ApiResponse<List<LabelCountDto>> getSourceDistribution(@RequestParam(required = false) String cancer) {
-        return ApiResponse.success(duckDbService.getSourceDistribution(cancer));
+        if (cancer == null || cancer.isBlank()) {
+            return ApiResponse.success(csvStatisticsService.readHomeSourceSamples().orElseGet(List::of));
+        }
+        return ApiResponse.success(List.of());
     }
 
     @GetMapping("/files/download/{cancer}/{source}/{category}/{fileName:.+}")

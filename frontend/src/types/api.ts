@@ -237,6 +237,19 @@ export interface CancerSummary {
   externalStatus: string;
 }
 
+export interface HomeBodyCallout {
+  id: string;
+  label: string;
+  side: "left" | "right";
+  labelTopPct: number;
+  labelXPct: number;
+  pointXPct: number;
+  pointYPct: number;
+  browseKey: string;
+  showConnector: boolean;
+  count: number;
+}
+
 export interface TopGene {
   gene: string;
   count: number;

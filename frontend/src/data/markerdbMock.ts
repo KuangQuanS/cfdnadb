@@ -81,7 +81,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     cancer: "Lung",
     specimen: "Plasma",
     markerClass: "Single Nucleotide Mutation",
-    omics: "cfDNA",
+    omics: "ctDNA",
     featureType: "Mutation hotspot",
     collection: "CFD-LU-017",
     element: "Genes",
@@ -89,7 +89,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     genomeLocation: "chr2, 141086316-142889469, +",
     ensemblId: "ENSG00000168702",
     ncbiId: "53353",
-    description: "LRP1B is frequently altered in smoking-associated lung cancer and is often detected together with TP53/KRAS signatures in plasma cfDNA."
+    description: "LRP1B is frequently altered in smoking-associated lung cancer and is often detected together with TP53/KRAS signatures in plasma ctDNA."
   },
   {
     markerDbId: "MDB00595092",
@@ -103,7 +103,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     cancer: "Breast",
     specimen: "Plasma",
     markerClass: "Single Nucleotide Mutation",
-    omics: "cfDNA",
+    omics: "ctDNA",
     featureType: "Mutation hotspot",
     collection: "CFD-BR-102",
     element: "Genes",
@@ -125,7 +125,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     cancer: "Colonrector",
     specimen: "Plasma",
     markerClass: "Single Nucleotide Mutation",
-    omics: "cfDNA",
+    omics: "ctDNA",
     featureType: "Mutation hotspot",
     collection: "CFD-CO-067",
     element: "Genes",
@@ -147,7 +147,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     cancer: "Lung",
     specimen: "Plasma",
     markerClass: "Single Nucleotide Mutation",
-    omics: "cfDNA",
+    omics: "ctDNA",
     featureType: "Mutation hotspot",
     collection: "CFD-LU-041",
     element: "Genes",
@@ -169,7 +169,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     cancer: "Colonrector",
     specimen: "Plasma",
     markerClass: "Insertion / Deletion",
-    omics: "cfDNA",
+    omics: "ctDNA",
     featureType: "Coding truncation",
     collection: "CFD-CO-071",
     element: "Genes",
@@ -177,7 +177,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     genomeLocation: "chr5, 112043201-112181936, +",
     ensemblId: "ENSG00000134982",
     ncbiId: "324",
-    description: "APC truncating events remain among the most informative coding disruptions in colorectal cfDNA variant panels."
+    description: "APC truncating events remain among the most informative coding disruptions in colorectal ctDNA variant panels."
   },
   {
     markerDbId: "MDB00595096",
@@ -191,7 +191,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     cancer: "Liver",
     specimen: "Plasma",
     markerClass: "Single Nucleotide Mutation",
-    omics: "cfDNA",
+    omics: "ctDNA",
     featureType: "Promoter mutation",
     collection: "CFD-LI-029",
     element: "Promoters",
@@ -199,7 +199,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     genomeLocation: "chr5, 1253147-1295761, -",
     ensemblId: "ENSG00000164362",
     ncbiId: "7015",
-    description: "TERT promoter variants can be detected in cfDNA and contribute to liver cancer surveillance signatures."
+    description: "TERT promoter variants can be detected in ctDNA and contribute to liver cancer surveillance signatures."
   },
   {
     markerDbId: "MDB00595097",
@@ -213,7 +213,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     cancer: "Breast",
     specimen: "Plasma",
     markerClass: "Single Nucleotide Mutation",
-    omics: "cfDNA",
+    omics: "ctDNA",
     featureType: "Mutation hotspot",
     collection: "CFD-BR-088",
     element: "Genes",
@@ -235,7 +235,7 @@ const MARKER_RECORDS: MarkerRecord[] = [
     cancer: "Pdac",
     specimen: "Plasma",
     markerClass: "Deletion",
-    omics: "cfDNA",
+    omics: "ctDNA",
     featureType: "Copy number loss",
     collection: "CFD-PA-014",
     element: "Genes",
@@ -316,13 +316,13 @@ function buildDetail(record: MarkerRecord): MarkerDetail {
     updatedAt: "2026-03-14 18:21:10 UTC",
     organism: "Homo sapiens",
     conditionsHierarchy: ["Cardiovascular / Thoracic Disorder", normalizeCancerLabel(record.cancer), record.associatedConditions[0]],
-    sources: ["cfDNA Atlas curated release", "ANNOVAR annotation", "ClinVar / COSMIC harmonized tags"],
+    sources: ["ctDNA Atlas curated release", "ANNOVAR annotation", "ClinVar / COSMIC harmonized tags"],
     links: [
       { label: "NCBI", url: `https://www.ncbi.nlm.nih.gov/gene/${record.ncbiId}` },
       { label: "Ensembl", url: `https://www.ensembl.org/Homo_sapiens/Gene/Summary?g=${record.ensemblId}` },
       { label: "ClinVar", url: "https://www.ncbi.nlm.nih.gov/clinvar/" }
     ],
-    omicsOptions: ["cfDNA", "cfRNA", "Proteome"],
+    omicsOptions: ["ctDNA", "cfRNA", "Proteome"],
     featureTypeOptions: ["Mutation hotspot", "Methylation (BS-seq)", "Fragment Size", "Nucleosomal Occupancy"],
     collectionOptions: [record.collection, "GSE112679", "GSE126676", "GSE152631"],
     specimenOptions: [record.specimen, "Serum", "PBMC"],
@@ -335,15 +335,15 @@ function buildDetail(record: MarkerRecord): MarkerDetail {
     profileGroups,
     comparisonGroups: profileGroups.slice(0, 2),
     trackFeatures: [
-      "cfDNA Methylation (BS-seq)",
-      "cfDNA Fragment Size",
-      "cfDNA Nucleosomal Occupancy",
+      "ctDNA Methylation (BS-seq)",
+      "ctDNA Fragment Size",
+      "ctDNA Nucleosomal Occupancy",
       "cfRNA Align",
       "cfRNA Editing",
       "cfRNA RNA SNP"
     ],
     trackLanes: buildTrackLanes(record),
-    selectedFeature: "cfDNA Methylation (BS-seq)",
+    selectedFeature: "ctDNA Methylation (BS-seq)",
     selectedChromosome: record.chromosome,
     relatedMarkers: MARKER_RECORDS.filter((item) => item.cancer === record.cancer && item.markerDbId !== record.markerDbId)
       .map((item) => item.markerDbId)

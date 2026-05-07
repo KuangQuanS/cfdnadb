@@ -6,6 +6,7 @@ import {
   getStatisticsPlots,
   toApiUrl,
 } from "../api/client";
+import { GeneSymbol } from "../components/GeneSymbol";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
 import type { CancerAsset } from "../types/api";
 import { formatCohortLabel } from "../utils/cohortLabels";
@@ -330,7 +331,12 @@ export function BrowsePage() {
                     onClick={() => fillGeneExample(example)}
                     title="Click to fill"
                   >
-                    {text}
+                    {example.map((gene, index) => (
+                      <span key={gene}>
+                        {index > 0 ? ", " : ""}
+                        <GeneSymbol symbol={gene} />
+                      </span>
+                    ))}
                   </button>
                 );
               })}

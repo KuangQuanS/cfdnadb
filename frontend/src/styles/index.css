@@ -37,6 +37,11 @@
 }
 
 * { box-sizing: border-box; }
+
+.gene-symbol {
+  font-style: italic;
+}
+
 body {
   margin: 0;
   font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -3081,6 +3086,11 @@ button, input, select { font: inherit; }
   outline: none;
   color: #263247;
   background: #fff;
+  font-style: italic;
+}
+
+.rnabrowse-global-search::placeholder {
+  font-style: italic;
 }
 
 .rnabrowse-global-search:focus,
@@ -3149,6 +3159,7 @@ button, input, select { font: inherit; }
   color: var(--accent);
   font-size: 0.82rem;
   font-weight: 700;
+  font-style: italic;
   text-align: left;
   cursor: pointer;
 }
@@ -6830,6 +6841,17 @@ button:disabled:hover {
   color: #203046;
   font-size: 0.95rem;
   font-weight: 600;
+  font-style: italic;
+}
+
+.maf-autocomplete input::placeholder,
+.statistics-gene-textarea,
+.statistics-gene-textarea::placeholder,
+.browse-field-gene .autocomplete-wrapper input,
+.browse-field-gene .autocomplete-wrapper input::placeholder,
+.gene-hero-form .autocomplete-wrapper input,
+.gene-hero-form .autocomplete-wrapper input::placeholder {
+  font-style: italic;
 }
 
 .maf-autocomplete input:focus {
@@ -8512,6 +8534,10 @@ button:disabled:hover {
   align-items: start;
 }
 
+.downloads-cohort-layout--with-detail {
+  grid-template-columns: 280px minmax(0, 1fr) minmax(360px, 0.42fr);
+}
+
 .downloads-cohort-sidebar {
   display: grid;
   gap: 18px;
@@ -8683,6 +8709,31 @@ button:disabled:hover {
 
 .downloads-healthy-file-table {
   min-width: 520px;
+}
+
+.downloads-healthy-detail-card {
+  border: 1px solid #d8e1ef;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.downloads-healthy-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+}
+
+.downloads-healthy-detail-shell {
+  padding: 16px 18px 18px;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 0;
+  background: #ffffff;
 }
 
 .downloads-healthy-drawer {
@@ -9242,8 +9293,13 @@ button:disabled:hover {
   color: #1f2d44;
   font: inherit;
   font-weight: 700;
+  font-style: italic;
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
   transition: all 0.2s;
+}
+
+.vaf-analysis-search-row input::placeholder {
+  font-style: italic;
 }
 .vaf-analysis-search-row input:focus {
   outline: none;
@@ -9575,6 +9631,10 @@ button:disabled:hover {
     grid-template-columns: 1fr;
   }
 
+  .downloads-cohort-layout--with-detail {
+    grid-template-columns: 1fr;
+  }
+
   .downloads-filtered-workspace-card--downloads .browse-samples-top-filters {
     padding: 18px;
     border: 1px solid #e2e9f2;
@@ -9775,6 +9835,14 @@ button:disabled:hover {
   color: #1f2a44;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.survival-field input {
+  font-style: italic;
+}
+
+.survival-field input::placeholder {
+  font-style: italic;
 }
 
 .survival-field input:focus,

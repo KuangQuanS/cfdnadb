@@ -225,12 +225,12 @@ export function WaterfallChart({ data, title, cellHeight = 18 }: WaterfallChartP
             const frequency = totalSamples > 0 ? ((alteredSamples / totalSamples) * 100).toFixed(1) : "0.0";
 
             if (value === 0) {
-              return `<b>${gene}</b><br/>${sample}<br/><span style="color:#c6d0e0">No alteration</span>`;
+              return `<i><b>${gene}</b></i><br/>${sample}<br/><span style="color:#c6d0e0">No alteration</span>`;
             }
 
             const mutationType = MUTATION_TYPES[value - 1];
             return [
-              `<b>${gene}</b>`,
+              `<i><b>${gene}</b></i>`,
               `<span style="color:#c6d0e0">${alteredSamples}/${totalSamples} samples (${frequency}%)</span>`,
               `${sample}`,
               `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${mutationType?.color ?? "#000"};margin-right:6px;"></span>${mutationType?.label ?? "Other"}`,
@@ -246,7 +246,7 @@ export function WaterfallChart({ data, title, cellHeight = 18 }: WaterfallChartP
             const alteredSamples = geneCounts[gene] ?? 0;
             const frequency = totalSamples > 0 ? ((alteredSamples / totalSamples) * 100).toFixed(1) : "0.0";
             return [
-              `<b>${gene}</b>`,
+              `<i><b>${gene}</b></i>`,
               `<span style="color:#c6d0e0">${alteredSamples}/${totalSamples} samples (${frequency}%)</span>`,
               `${params.seriesName}: <b>${params.value}</b>`,
             ].join("<br/>");
@@ -349,6 +349,7 @@ export function WaterfallChart({ data, title, cellHeight = 18 }: WaterfallChartP
               gene: {
                 color: "#1f4b84",
                 fontWeight: 700,
+                fontStyle: "italic",
                 width: 78,
                 align: "right",
               },

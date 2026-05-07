@@ -141,8 +141,8 @@ export const recordsMock: PagedResponse<BiomarkerRecord> = {
       effectSize: 1.82,
       notes: "Stable performance in independent validation.",
       studyId: 1,
-      studyAccession: "CFDNA-001",
-      studyTitle: "Genome-wide cfDNA methylation landscape for early hepatocellular carcinoma detection",
+      studyAccession: "CTDNA-001",
+      studyTitle: "Genome-wide ctDNA methylation landscape for early hepatocellular carcinoma detection",
       publicationYear: 2024
     },
     {
@@ -159,8 +159,8 @@ export const recordsMock: PagedResponse<BiomarkerRecord> = {
       effectSize: 2.41,
       notes: "Integrated multiregion classifier.",
       studyId: 1,
-      studyAccession: "CFDNA-001",
-      studyTitle: "Genome-wide cfDNA methylation landscape for early hepatocellular carcinoma detection",
+      studyAccession: "CTDNA-001",
+      studyTitle: "Genome-wide ctDNA methylation landscape for early hepatocellular carcinoma detection",
       publicationYear: 2024
     },
     {
@@ -177,7 +177,7 @@ export const recordsMock: PagedResponse<BiomarkerRecord> = {
       effectSize: 1.45,
       notes: "Fragment length skew score.",
       studyId: 2,
-      studyAccession: "CFDNA-002",
+      studyAccession: "CTDNA-002",
       studyTitle: "Fragmentomics signatures distinguish colorectal cancer and advanced adenoma",
       publicationYear: 2023
     },
@@ -195,7 +195,7 @@ export const recordsMock: PagedResponse<BiomarkerRecord> = {
       effectSize: 1.98,
       notes: "Combines fragmentomics and copy number.",
       studyId: 2,
-      studyAccession: "CFDNA-002",
+      studyAccession: "CTDNA-002",
       studyTitle: "Fragmentomics signatures distinguish colorectal cancer and advanced adenoma",
       publicationYear: 2023
     },
@@ -213,8 +213,8 @@ export const recordsMock: PagedResponse<BiomarkerRecord> = {
       effectSize: 1.29,
       notes: "Most frequent recurrent hotspot.",
       studyId: 3,
-      studyAccession: "CFDNA-003",
-      studyTitle: "Urine cfDNA mutation panel for bladder cancer surveillance",
+      studyAccession: "CTDNA-003",
+      studyTitle: "Urine ctDNA mutation panel for bladder cancer surveillance",
       publicationYear: 2022
     }
   ],
@@ -229,10 +229,10 @@ export const recordsMock: PagedResponse<BiomarkerRecord> = {
 export const downloadsMock: DownloadAsset[] = [
   {
     id: 1,
-    name: "cfDNA master release",
+    name: "ctDNA master release",
     category: "Full database release",
     description: "Combined curated study, dataset and biomarker release.",
-    fileName: "cfdna_master_release.csv",
+    fileName: "ctdna_master_release.csv",
     contentType: "text/csv",
     fileSizeBytes: 412,
     publicAsset: true,
@@ -263,7 +263,7 @@ export const downloadsMock: DownloadAsset[] = [
     fileSizeBytes: 218,
     publicAsset: true,
     studyId: 1,
-    studyAccession: "CFDNA-001",
+    studyAccession: "CTDNA-001",
     downloadUrl: "/api/v1/downloads/3/file"
   },
   {
@@ -276,7 +276,7 @@ export const downloadsMock: DownloadAsset[] = [
     fileSizeBytes: 219,
     publicAsset: true,
     studyId: 2,
-    studyAccession: "CFDNA-002",
+    studyAccession: "CTDNA-002",
     downloadUrl: "/api/v1/downloads/4/file"
   }
 ];
@@ -284,17 +284,17 @@ export const downloadsMock: DownloadAsset[] = [
 export const studyDetailsMock: Record<number, StudyDetail> = {
   1: {
     id: 1,
-    accession: "CFDNA-001",
-    title: "Genome-wide cfDNA methylation landscape for early hepatocellular carcinoma detection",
+    accession: "CTDNA-001",
+    title: "Genome-wide ctDNA methylation landscape for early hepatocellular carcinoma detection",
     diseaseType: "Hepatocellular carcinoma",
     sampleSource: "Plasma",
     technology: "Targeted methylation sequencing",
     journal: "Nature Medicine",
     publicationYear: 2024,
     cohortSize: 286,
-    doi: "10.1000/cfdna001",
+    doi: "10.1000/ctdna001",
     pmid: "39800001",
-    abstractText: "A curated multicenter cfDNA methylation study focused on liver cancer screening cohorts.",
+    abstractText: "A curated multicenter ctDNA methylation study focused on liver cancer screening cohorts.",
     citation: "Author A et al. Nature Medicine (2024).",
     datasets: [
       {
@@ -308,15 +308,15 @@ export const studyDetailsMock: Record<number, StudyDetail> = {
       }
     ],
     sampleGroups: [
-      { id: 1, datasetId: 1, groupName: "Discovery HCC cases", conditionName: "Case", sampleType: "Plasma cfDNA", sampleCount: 82 },
-      { id: 2, datasetId: 1, groupName: "Discovery controls", conditionName: "Control", sampleType: "Plasma cfDNA", sampleCount: 54 }
+      { id: 1, datasetId: 1, groupName: "Discovery HCC cases", conditionName: "Case", sampleType: "Plasma ctDNA", sampleCount: 82 },
+      { id: 2, datasetId: 1, groupName: "Discovery controls", conditionName: "Control", sampleType: "Plasma ctDNA", sampleCount: 54 }
     ],
     biomarkers: recordsMock.content.filter((record) => record.studyId === 1),
     downloads: downloadsMock.filter((item) => item.studyId === 1)
   },
   2: {
     id: 2,
-    accession: "CFDNA-002",
+    accession: "CTDNA-002",
     title: "Fragmentomics signatures distinguish colorectal cancer and advanced adenoma",
     diseaseType: "Colorectal cancer",
     sampleSource: "Plasma",
@@ -324,7 +324,7 @@ export const studyDetailsMock: Record<number, StudyDetail> = {
     journal: "Gut",
     publicationYear: 2023,
     cohortSize: 198,
-    doi: "10.1000/cfdna002",
+    doi: "10.1000/ctdna002",
     pmid: "39800002",
     abstractText: "This study benchmarks fragment length, end motif and copy-number signals across colorectal cohorts.",
     citation: "Author B et al. Gut (2023).",
@@ -340,25 +340,25 @@ export const studyDetailsMock: Record<number, StudyDetail> = {
       }
     ],
     sampleGroups: [
-      { id: 5, datasetId: 3, groupName: "CRC cases", conditionName: "Case", sampleType: "Plasma cfDNA", sampleCount: 120 },
-      { id: 6, datasetId: 3, groupName: "Advanced adenoma", conditionName: "Case", sampleType: "Plasma cfDNA", sampleCount: 38 }
+      { id: 5, datasetId: 3, groupName: "CRC cases", conditionName: "Case", sampleType: "Plasma ctDNA", sampleCount: 120 },
+      { id: 6, datasetId: 3, groupName: "Advanced adenoma", conditionName: "Case", sampleType: "Plasma ctDNA", sampleCount: 38 }
     ],
     biomarkers: recordsMock.content.filter((record) => record.studyId === 2),
     downloads: downloadsMock.filter((item) => item.studyId === 2)
   },
   3: {
     id: 3,
-    accession: "CFDNA-003",
-    title: "Urine cfDNA mutation panel for bladder cancer surveillance",
+    accession: "CTDNA-003",
+    title: "Urine ctDNA mutation panel for bladder cancer surveillance",
     diseaseType: "Bladder cancer",
     sampleSource: "Urine",
     technology: "Targeted panel sequencing",
     journal: "Clinical Cancer Research",
     publicationYear: 2022,
     cohortSize: 142,
-    doi: "10.1000/cfdna003",
+    doi: "10.1000/ctdna003",
     pmid: "39800003",
-    abstractText: "A longitudinal urine cfDNA panel study evaluating surveillance performance after surgery.",
+    abstractText: "A longitudinal urine ctDNA panel study evaluating surveillance performance after surgery.",
     citation: "Author C et al. Clin Cancer Res (2022).",
     datasets: [
       {
@@ -372,8 +372,8 @@ export const studyDetailsMock: Record<number, StudyDetail> = {
       }
     ],
     sampleGroups: [
-      { id: 7, datasetId: 4, groupName: "Surveillance positives", conditionName: "Case", sampleType: "Urine cfDNA", sampleCount: 61 },
-      { id: 8, datasetId: 4, groupName: "Surveillance negatives", conditionName: "Control", sampleType: "Urine cfDNA", sampleCount: 81 }
+      { id: 7, datasetId: 4, groupName: "Surveillance positives", conditionName: "Case", sampleType: "Urine ctDNA", sampleCount: 61 },
+      { id: 8, datasetId: 4, groupName: "Surveillance negatives", conditionName: "Control", sampleType: "Urine ctDNA", sampleCount: 81 }
     ],
     biomarkers: recordsMock.content.filter((record) => record.studyId === 3),
     downloads: []
@@ -418,7 +418,7 @@ export const vcfDemoMock: VcfDemo = {
     {
       datasetKey: "CRC_2023",
       displayName: "Colorectal plasma surveillance set",
-      publicReleaseId: "CFDNA-VCF-CRC-2023",
+      publicReleaseId: "CTDNA-VCF-CRC-2023",
       diseaseType: "Colorectal cancer",
       sampleSource: "Plasma",
       platform: "Targeted panel sequencing",
@@ -433,7 +433,7 @@ export const vcfDemoMock: VcfDemo = {
     {
       datasetKey: "HCC_2024",
       displayName: "HCC methylation-informed mutation subset",
-      publicReleaseId: "CFDNA-VCF-HCC-2024",
+      publicReleaseId: "CTDNA-VCF-HCC-2024",
       diseaseType: "Hepatocellular carcinoma",
       sampleSource: "Plasma",
       platform: "Hybrid capture panel",
@@ -447,8 +447,8 @@ export const vcfDemoMock: VcfDemo = {
     },
     {
       datasetKey: "BLCA_2022",
-      displayName: "Urine cfDNA recurrence monitoring set",
-      publicReleaseId: "CFDNA-VCF-BLCA-2022",
+      displayName: "Urine ctDNA recurrence monitoring set",
+      publicReleaseId: "CTDNA-VCF-BLCA-2022",
       diseaseType: "Bladder cancer",
       sampleSource: "Urine",
       platform: "Amplicon panel",

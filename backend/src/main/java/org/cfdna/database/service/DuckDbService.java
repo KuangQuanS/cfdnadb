@@ -59,6 +59,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -69,7 +71,7 @@ public class DuckDbService {
 
     private static final Logger log = LoggerFactory.getLogger(DuckDbService.class);
     private static final Path DEFAULT_DATA_DIR = Path.of("/400T/cfdnaweb");
-    private static final Path DEFAULT_HEALTHY_VCF_DIR = Path.of("/400T/cfdnadb/Healthy/Vcf");
+    private static final Path DEFAULT_HEALTHY_VCF_DIR = Path.of("/400T/cfdnaweb/Healthy/Pon");
     private static final String HEALTHY_COHORT = "Healthy";
     private static final String HEALTHY_SAMPLE_SOURCE = "healthy";
     private static final String HEALTHY_VCF_CATEGORY = "healthy-vcf";
@@ -78,6 +80,7 @@ public class DuckDbService {
             "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
             "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Brain", "Benign_Tumor");
     private static final long CANCER_SUMMARY_CACHE_TTL_MS = 10 * 60_000L;
+    private static final String SOURCE_DISTRIBUTION_ALL_KEY = "__ALL__";
     private static final List<String> REQUIRED_MULTIANNO_COLUMNS = List.of(
             "Chr",
             "Start",
@@ -98,6 +101,7 @@ public class DuckDbService {
     private volatile List<CancerSummaryDto> cachedCancerSummary;
     private volatile long cachedCancerSummaryAtMillis;
     private volatile long cachedCancerSummaryDbModifiedMillis;
+    private final ConcurrentMap<String, CachedLabelCounts> sourceDistributionCache = new ConcurrentHashMap<>();
 
     @Autowired
     public DuckDbService(@Value("${app.data-dir:/400T/cfdnaweb}") String dataDir,
@@ -144,7 +148,7 @@ public class DuckDbService {
     }
 
     public List<CancerSummaryDto> getCancerSummary() {
-        Path dbPath = resolveDuckDbPath();
+        Path dbPath = resolveMafDatabaseFile();
         long dbModifiedMillis = safeLastModifiedMillis(dbPath);
         List<CancerSummaryDto> snapshot = cachedCancerSummary;
         long age = System.currentTimeMillis() - cachedCancerSummaryAtMillis;
@@ -553,11 +557,11 @@ public class DuckDbService {
 
         try (Stream<Path> stream = Files.list(healthyVcfDir)) {
             return stream
-                    .filter(this::isHealthyVcfFile)
+                    .filter(this::isHealthyPonDownloadFile)
                     .sorted(Comparator.comparing(path -> path.getFileName().toString()))
                     .map(path -> buildDataFileDto(
                             HEALTHY_COHORT,
-                            "Healthy VCF",
+                            "Healthy PON",
                             path,
                             "/api/v1/data-files/" + HEALTHY_VCF_CATEGORY + "/" +
                                     UriUtils.encodePathSegment(path.getFileName().toString(), StandardCharsets.UTF_8)))
@@ -576,7 +580,7 @@ public class DuckDbService {
         long totalSize = 0;
         long fileCount = 0;
         try (Stream<Path> stream = Files.list(healthyVcfDir)) {
-            for (Path path : stream.filter(this::isHealthyVcfFile).collect(Collectors.toList())) {
+            for (Path path : stream.filter(this::isHealthyPonDownloadFile).collect(Collectors.toList())) {
                 fileCount++;
                 try {
                     totalSize += Files.size(path);
@@ -592,9 +596,9 @@ public class DuckDbService {
         }
         return new DataFileDto(
                 HEALTHY_COHORT,
-                "Healthy VCF",
-                "Healthy VCF files (" + fileCount + " samples)",
-                "healthy-vcf-files",
+                "Healthy PON",
+                "Healthy PON files (" + fileCount + " integrated files)",
+                "healthy-pon-files",
                 totalSize,
                 "");
     }
@@ -609,10 +613,14 @@ public class DuckDbService {
         }
         Path root = healthyVcfDir.toAbsolutePath().normalize();
         Path candidate = root.resolve(fileName).normalize();
-        if (!candidate.startsWith(root) || !isHealthyVcfFile(candidate)) {
+        if (!candidate.startsWith(root) || !isHealthyPonDownloadFile(candidate)) {
             throw new ResourceNotFoundException("Healthy VCF file not found: " + fileName);
         }
         return candidate;
+    }
+
+    private boolean isHealthyPonDownloadFile(Path path) {
+        return Files.isRegularFile(path);
     }
 
     private boolean isHealthyVcfFile(Path path) {
@@ -3004,6 +3012,9 @@ public class DuckDbService {
                 long multiannoCount = rs.getLong("multianno_count");
                 long plotAssetCount = rs.getLong("plot_asset_count");
                 long externalAssetCount = rs.getLong("external_asset_count");
+                if (sampleCount == 0) {
+                    sampleCount = countAvinputSamplesFromFilesystem(cancer);
+                }
                 return new CancerSummaryDto(
                         cancer,
                         sampleCount,
@@ -3024,6 +3035,44 @@ public class DuckDbService {
             }
         } catch (SQLException exception) {
             throw new IllegalStateException("Failed to build cancer summary for " + cancer, exception);
+        }
+    }
+
+    private long countAvinputSamplesFromFilesystem(String cancer) {
+        Set<String> sampleIds = new LinkedHashSet<>();
+        Path cancerDir = resolveCancerDir(cancer);
+        collectAvinputSampleIds(sampleIds, cancerDir.resolve("private").resolve("avinput"));
+        collectAvinputSampleIds(sampleIds, cancerDir.resolve("Private_cfDNA").resolve("avinput"));
+        collectAvinputSampleIds(sampleIds, cancerDir.resolve("public").resolve("avinput"));
+        collectAvinputSampleIds(sampleIds, cancerDir.resolve("Public").resolve("avinput"));
+
+        for (Path geoDir : List.of(cancerDir.resolve("geo"), cancerDir.resolve("GEO"))) {
+            collectAvinputSampleIds(sampleIds, geoDir.resolve("avinput"));
+            if (!Files.isDirectory(geoDir)) {
+                continue;
+            }
+            try (Stream<Path> datasets = Files.list(geoDir)) {
+                datasets.filter(Files::isDirectory)
+                        .forEach(dataset -> collectAvinputSampleIds(sampleIds, dataset.resolve("avinput")));
+            } catch (IOException exception) {
+                log.warn("Failed to scan GEO avinput samples for {}", cancer, exception);
+            }
+        }
+        return sampleIds.size();
+    }
+
+    private void collectAvinputSampleIds(Set<String> sampleIds, Path directory) {
+        if (!Files.isDirectory(directory)) {
+            return;
+        }
+        try (Stream<Path> stream = Files.walk(directory)) {
+            stream.filter(Files::isRegularFile)
+                    .map(path -> extractSampleId(path.getFileName().toString(), "avinput"))
+                    .filter(sampleId -> sampleId != null && !sampleId.isBlank())
+                    .map(String::trim)
+                    .forEach(sampleIds::add);
+        } catch (IOException exception) {
+            log.warn("Failed to scan avinput samples under {}", directory, exception);
         }
     }
 
@@ -3675,12 +3724,25 @@ public class DuckDbService {
 
     public List<LabelCountDto> getSourceDistribution(String cancer) {
         String validatedCancer = cancer == null || cancer.isBlank() ? null : validateCancer(cancer);
-        StringBuilder sql = new StringBuilder("SELECT source, COUNT(*) AS cnt FROM sample_inventory " +
-                "WHERE source IN ('private', 'public', 'tcga', 'geo')");
+        String cacheKey = validatedCancer == null ? SOURCE_DISTRIBUTION_ALL_KEY : validatedCancer;
+        long dbModifiedMillis = safeLastModifiedMillis(resolveMafDatabaseFile());
+        long healthyDirModifiedMillis = validatedCancer == null ? safeLastModifiedMillis(healthyVcfDir) : -1L;
+        CachedLabelCounts cached = sourceDistributionCache.get(cacheKey);
+        if (cached != null
+                && cached.dbModifiedMillis == dbModifiedMillis
+                && cached.healthyDirModifiedMillis == healthyDirModifiedMillis) {
+            return cached.values;
+        }
+
+        StringBuilder sql = new StringBuilder("SELECT " +
+                "CASE WHEN source = 'private' THEN 'private' WHEN source = 'tcga' THEN 'tcga' ELSE 'public' END AS source, " +
+                "COUNT(*) AS cnt FROM sample_inventory " +
+                "WHERE source IN ('private', 'public', 'tcga', 'geo') " +
+                "AND (source = 'tcga' OR (avinput_file_path IS NOT NULL AND avinput_file_path <> ''))");
         if (validatedCancer != null) {
             sql.append(" AND cancer_type = ?");
         }
-        sql.append(" GROUP BY source ORDER BY source ASC");
+        sql.append(" GROUP BY 1 ORDER BY source ASC");
         List<LabelCountDto> results = new ArrayList<>();
         try (Connection connection = openMafConnection();
              PreparedStatement statement = connection.prepareStatement(sql.toString())) {
@@ -3695,15 +3757,23 @@ public class DuckDbService {
             if (validatedCancer == null) {
                 long healthyVcfCount = countHealthyVcfFiles();
                 if (healthyVcfCount > 0) {
-                    long privateCount = results.stream()
-                            .filter(item -> "private".equalsIgnoreCase(item.getLabel()))
-                            .mapToLong(LabelCountDto::getCount)
-                            .sum();
-                    results.removeIf(item -> "private".equalsIgnoreCase(item.getLabel()));
-                    results.add(new LabelCountDto("private", privateCount + healthyVcfCount));
+                    boolean merged = false;
+                    for (int i = 0; i < results.size(); i++) {
+                        LabelCountDto item = results.get(i);
+                        if ("private".equalsIgnoreCase(item.getLabel())) {
+                            results.set(i, new LabelCountDto(item.getLabel(), item.getCount() + healthyVcfCount));
+                            merged = true;
+                            break;
+                        }
+                    }
+                    if (!merged) {
+                        results.add(new LabelCountDto("private", healthyVcfCount));
+                    }
                 }
             }
-            return results;
+            List<LabelCountDto> snapshot = List.copyOf(results);
+            sourceDistributionCache.put(cacheKey, new CachedLabelCounts(snapshot, dbModifiedMillis, healthyDirModifiedMillis));
+            return snapshot;
         } catch (SQLException exception) {
             throw new IllegalStateException("Failed to load source distribution for " + (validatedCancer == null ? "all cancers" : validatedCancer), exception);
         }
@@ -3720,6 +3790,18 @@ public class DuckDbService {
                 item.annoPath != null,
                 item.vcfPath != null
         );
+    }
+
+    private static class CachedLabelCounts {
+        private final List<LabelCountDto> values;
+        private final long dbModifiedMillis;
+        private final long healthyDirModifiedMillis;
+
+        private CachedLabelCounts(List<LabelCountDto> values, long dbModifiedMillis, long healthyDirModifiedMillis) {
+            this.values = values;
+            this.dbModifiedMillis = dbModifiedMillis;
+            this.healthyDirModifiedMillis = healthyDirModifiedMillis;
+        }
     }
 
     private List<String> buildAvailableFileTypes(SampleInventory item) {
@@ -4449,10 +4531,10 @@ public class DuckDbService {
      * normalizes legacy VAF file prefixes to current cohort names.
      */
     public List<VafDistributionDto> getVafDistribution() {
-        List<VafDistributionDto> result = new ArrayList<>();
+        Map<String, List<Double>> valuesByCancerType = new LinkedHashMap<>();
         if (!Files.isDirectory(vafDataDir)) {
             log.warn("[VAF] vafDataDir does not exist: {}", vafDataDir);
-            return result;
+            return List.of();
         }
         try (Stream<Path> files = Files.list(vafDataDir)) {
             List<Path> vafFiles = files
@@ -4469,12 +4551,15 @@ public class DuckDbService {
                 String cancerType = normalizeVafCancerType(fileName.replace("_VAF_statistics.txt", ""));
                 List<Double> values = readVafValues(vafFile);
                 if (!values.isEmpty()) {
-                    result.add(new VafDistributionDto(cancerType, values));
+                    valuesByCancerType.computeIfAbsent(cancerType, ignored -> new ArrayList<>()).addAll(values);
                 }
             }
         } catch (IOException e) {
             log.error("[VAF] Failed to list vafDataDir: {}", vafDataDir, e);
         }
+        List<VafDistributionDto> result = valuesByCancerType.entrySet().stream()
+                .map(entry -> new VafDistributionDto(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toCollection(ArrayList::new));
         // Sort by median VAF descending
         result.sort((a, b) -> {
             double medA = median(a.getValues());

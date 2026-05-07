@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   downloadSampleFiles,
   getSampleBrowse,
@@ -7,6 +7,7 @@ import {
   toApiUrl,
   type SampleBrowseFilters
 } from "../api/client";
+import { GeneSymbol } from "./GeneSymbol";
 import { CANCER_OPTIONS, DEFAULT_CANCER } from "../constants/cfdna";
 import type { LabelCount, SampleBrowseItem, SampleSelection } from "../types/api";
 import { formatCohortLabel } from "../utils/cohortLabels";
@@ -14,6 +15,8 @@ import { formatFileSize, formatNumber } from "../utils/format";
 
 const BROWSE_PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DOWNLOAD_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const SAMPLE_BROWSE_CACHE_MS = 10 * 60_000;
+const SAMPLE_BROWSE_GC_MS = 60 * 60_000;
 const PRESETS_KEY = "cfdnadb-browse-sample-presets";
 const SOURCE_OPTIONS = [
   { value: "private", label: "Internal Data" },
@@ -101,6 +104,10 @@ function sourceLabel(source: string) {
   return source;
 }
 
+function activeTagValue(tag: { label: string; value: string }) {
+  return tag.label === "Gene" ? <GeneSymbol symbol={tag.value} /> : tag.value;
+}
+
 function formatTimestamp(value: string) {
   if (!value) return "-";
   const date = new Date(value);
@@ -169,13 +176,21 @@ export function SampleBrowsePanel({
 
   const samplesQuery = useQuery({
     queryKey: ["browse-samples", queryFilters],
-    queryFn: () => getSampleBrowse(queryFilters)
+    queryFn: () => getSampleBrowse(queryFilters),
+    staleTime: SAMPLE_BROWSE_CACHE_MS,
+    gcTime: SAMPLE_BROWSE_GC_MS,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
 
   const detailQuery = useQuery({
     queryKey: ["browse-sample-detail", detailTarget?.cancer, detailTarget?.source, detailTarget?.sampleId],
     queryFn: () => getSampleDetail(detailTarget!.cancer, detailTarget!.source, detailTarget!.sampleId),
-    enabled: detailTarget != null
+    enabled: detailTarget != null,
+    staleTime: SAMPLE_BROWSE_CACHE_MS,
+    gcTime: SAMPLE_BROWSE_GC_MS,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
 
   const rows = samplesQuery.data?.content ?? [];
@@ -457,7 +472,7 @@ export function SampleBrowsePanel({
                           <strong>{preset.name}</strong>
                           <span>
                             {preset.cancers.map(formatCohortLabel).join(", ")}
-                            {preset.gene ? ` / ${preset.gene}` : ""}
+                            {preset.gene ? <> / <GeneSymbol symbol={preset.gene} /></> : ""}
                             {preset.minVariants ? ` / >= ${preset.minVariants}` : ""}
                           </span>
                         </button>
@@ -544,7 +559,7 @@ export function SampleBrowsePanel({
                           <strong>{preset.name}</strong>
                           <span>
                             {preset.cancers.map(formatCohortLabel).join(", ")}
-                            {preset.gene ? ` / ${preset.gene}` : ""}
+                            {preset.gene ? <> / <GeneSymbol symbol={preset.gene} /></> : ""}
                             {preset.minVariants ? ` / >= ${preset.minVariants}` : ""}
                           </span>
                         </button>
@@ -564,7 +579,7 @@ export function SampleBrowsePanel({
           <span className="browse-filters-label">Active filters</span>
           {activeTags.map((tag) => (
             <button key={tag.key} className="browse-filter-pill" type="button" onClick={() => removeTag(tag.key, tag.rawValue)}>
-              {tag.label}: {tag.value} &times;
+              {tag.label}: {activeTagValue(tag)} &times;
             </button>
           ))}
         </div>
@@ -577,7 +592,7 @@ export function SampleBrowsePanel({
               <span className="browse-filters-label">Active filters</span>
               {activeTags.map((tag) => (
                 <button key={tag.key} className="browse-filter-pill" type="button" onClick={() => removeTag(tag.key, tag.rawValue)}>
-                  {tag.label}: {tag.value} &times;
+                  {tag.label}: {activeTagValue(tag)} &times;
                 </button>
               ))}
             </div>
@@ -593,7 +608,7 @@ export function SampleBrowsePanel({
                       <span className="browse-filters-label">Active filters</span>
                       {activeTags.map((tag) => (
                         <button key={tag.key} className="browse-filter-pill" type="button" onClick={() => removeTag(tag.key, tag.rawValue)}>
-                          {tag.label}: {tag.value} &times;
+                          {tag.label}: {activeTagValue(tag)} &times;
                         </button>
                       ))}
                     </div>
@@ -690,7 +705,7 @@ export function SampleBrowsePanel({
                                   <strong>{preset.name}</strong>
                                   <span>
                                     {preset.cancers.map(formatCohortLabel).join(", ")}
-                                    {preset.gene ? ` / ${preset.gene}` : ""}
+                                    {preset.gene ? <> / <GeneSymbol symbol={preset.gene} /></> : ""}
                                     {preset.minVariants ? ` / >= ${preset.minVariants}` : ""}
                                   </span>
                                 </button>
@@ -778,7 +793,7 @@ export function SampleBrowsePanel({
                                 <td>
                                   <div className="browse-samples-chip-list">
                                     {item.topGenes.length > 0 ? item.topGenes.map((gene) => (
-                                      <span key={gene} className="browse-samples-mini-chip">{gene}</span>
+                                      <span key={gene} className="browse-samples-mini-chip"><GeneSymbol symbol={gene} /></span>
                                     )) : <span className="browse-empty-copy">No gene summary</span>}
                                   </div>
                                 </td>
@@ -911,7 +926,7 @@ export function SampleBrowsePanel({
                             <td>
                               <div className="browse-samples-chip-list">
                                 {item.topGenes.length > 0 ? item.topGenes.map((gene) => (
-                                  <span key={gene} className="browse-samples-mini-chip">{gene}</span>
+                                  <span key={gene} className="browse-samples-mini-chip"><GeneSymbol symbol={gene} /></span>
                                 )) : <span className="browse-empty-copy">No gene summary</span>}
                               </div>
                             </td>
@@ -985,7 +1000,7 @@ export function SampleBrowsePanel({
                     <div className="browse-sample-gene-list">
                       {detailQuery.data.topGenes.map((gene: LabelCount) => (
                         <div key={gene.label} className="browse-sample-gene-row">
-                          <span>{gene.label}</span>
+                          <span><GeneSymbol symbol={gene.label} /></span>
                           <strong>{formatNumber(gene.count)}</strong>
                         </div>
                       ))}

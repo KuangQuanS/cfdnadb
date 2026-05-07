@@ -46,8 +46,9 @@
 }
 
 .gdc-hero-inner--intro {
-  grid-template-columns: minmax(0, 1.24fr) minmax(520px, 0.76fr);
-  gap: clamp(48px, 5vw, 110px);
+  width: min(1900px, calc(100% - 96px));
+  grid-template-columns: minmax(0, 1fr) minmax(920px, 0.95fr);
+  gap: clamp(24px, 2.2vw, 44px);
   align-items: start;
 }
 
@@ -73,7 +74,9 @@
   }
 
   .gdc-hero-inner--intro {
-    grid-template-columns: minmax(0, 1.28fr) minmax(560px, 0.72fr);
+    width: min(1900px, calc(100% - 96px));
+    grid-template-columns: minmax(0, 1fr) minmax(920px, 0.95fr);
+    gap: clamp(24px, 2.2vw, 44px);
   }
 }
 
@@ -86,8 +89,9 @@
   display: grid;
   gap: 18px;
   align-content: start;
+  min-width: 0;
   min-height: 620px;
-  margin-left: 2%;
+  margin-left: clamp(32px, 3vw, 58px);
   padding: 42px 0 18px;
 }
 
@@ -103,7 +107,7 @@
 .gdc-title {
   margin: 0;
   color: #18233f;
-  font-size: clamp(3.3rem, 4.6vw, 5.2rem);
+  font-size: clamp(3.3rem, 4.2vw, 4.6rem);
   line-height: 1;
   font-weight: 900;
   letter-spacing: 0;
@@ -148,18 +152,38 @@
   text-justify: inter-word;
 }
 
+.gdc-subtitle-stat,
+.gdc-subtitle-term,
+.gdc-subtitle-keyword {
+  font-weight: 850;
+  color: #176f91;
+}
+
 /* ---- Middle col: body map ---- */
 .gdc-col-middle {
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
   min-width: 0;
+  margin-left: clamp(24px, 2.4vw, 56px);
 }
 
 .body-map {
-  position: relative;
-  width: min(100%, 680px);
+  width: min(100%, 920px);
+  min-width: 900px;
   height: 800px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  overflow: visible;
+}
+
+.body-map-stage {
+  position: relative;
+  width: 680px;
+  flex: 0 0 680px;
+  height: 800px;
+  margin-right: clamp(18px, 1.6vw, 34px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -675,7 +699,7 @@
   cursor: pointer;
   pointer-events: auto;
   gap: 2px;
-  width: 128px;
+  width: clamp(112px, 8.1vw, 128px);
   min-height: 42px;
   box-sizing: border-box;
   transform: translate(-50%, -50%);
@@ -826,8 +850,9 @@
 
 .gdc-overview-chart-shell {
   position: relative;
-  width: min(100%, 290px);
-  min-height: 280px;
+  --gdc-overview-chart-size: clamp(320px, 23vw, 340px);
+  width: min(100%, var(--gdc-overview-chart-size));
+  min-height: var(--gdc-overview-chart-size);
 }
 
 .gdc-overview-chart-shell::before {
@@ -918,8 +943,13 @@
   color: #14213a;
   font-size: 0.97rem;
   font-weight: 600;
+  font-style: italic;
   outline: none;
   box-shadow: 0 10px 22px rgba(24, 35, 63, 0.06);
+}
+
+.gdc-quick-search-row input::placeholder {
+  font-style: italic;
 }
 
 .gdc-quick-search-row input:focus {
@@ -1201,6 +1231,14 @@
   }
 
   .body-map {
+    min-width: 0;
+    width: min(100%, 680px);
+    height: 344px;
+  }
+
+  .body-map-stage {
+    width: min(100%, 680px);
+    flex-basis: min(100%, 680px);
     height: 344px;
   }
 
@@ -1294,8 +1332,7 @@
   }
 
   .gdc-overview-chart-shell {
-    width: min(100%, 252px);
-    min-height: 240px;
+    --gdc-overview-chart-size: min(252px, 100vw - 64px);
   }
 
   .gdc-quick-stat-grid {
@@ -1364,8 +1401,7 @@
   }
 
   .gdc-overview-chart-shell {
-    width: min(100%, 252px);
-    min-height: 240px;
+    --gdc-overview-chart-size: min(252px, 100vw - 64px);
   }
 
   .gdc-overview-media-grid {
@@ -2195,7 +2231,7 @@
 }
 
 .body-callout .callout-label {
-  animation: gdcCalloutLabelIn 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: gdcCalloutLabelIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .body-callout .callout-dot {
@@ -2203,31 +2239,31 @@
 }
 
 .body-callout:nth-of-type(1) .callout-label {
-  animation-delay: 360ms;
+  animation-delay: 80ms;
 }
 
 .body-callout:nth-of-type(2) .callout-label {
-  animation-delay: 410ms;
+  animation-delay: 100ms;
 }
 
 .body-callout:nth-of-type(3) .callout-label {
-  animation-delay: 460ms;
+  animation-delay: 120ms;
 }
 
 .body-callout:nth-of-type(4) .callout-label {
-  animation-delay: 510ms;
+  animation-delay: 140ms;
 }
 
 .body-callout:nth-of-type(5) .callout-label {
-  animation-delay: 560ms;
+  animation-delay: 160ms;
 }
 
 .body-callout:nth-of-type(6) .callout-label {
-  animation-delay: 610ms;
+  animation-delay: 180ms;
 }
 
 .body-callout:nth-of-type(n + 7) .callout-label {
-  animation-delay: 660ms;
+  animation-delay: 200ms;
 }
 
 .body-callout:nth-of-type(2) .callout-dot {

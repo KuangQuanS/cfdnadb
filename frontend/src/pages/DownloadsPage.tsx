@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { listDataFiles, toApiUrl } from "../api/client";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { listDataFiles, listHealthyVcfFiles, toApiUrl } from "../api/client";
 import { SampleBrowsePanel } from "../components/SampleBrowsePanel";
+import type { DataFile } from "../types/api";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatFileSize } from "../utils/format";
 
 const FILE_TYPE_ORDER = [
+  "Healthy PON",
   "Variant Data",
   "MAF Summary",
   "Public Mutations",
@@ -13,6 +15,7 @@ const FILE_TYPE_ORDER = [
   "Pan-Cancer Variants",
 ];
 const COHORT_ORDER = [
+  "Healthy",
   "Breast",
   "Colorectal",
   "Liver",
@@ -21,6 +24,8 @@ const COHORT_ORDER = [
   "Pan-Cancer",
 ];
 const ALL_DOWNLOAD_PAGE_SIZES = [10, 25, 50, 100];
+const DOWNLOAD_METADATA_CACHE_MS = 30 * 60_000;
+const DOWNLOAD_METADATA_GC_MS = 2 * 60 * 60_000;
 
 function rankByOrder(value: string, order: string[]) {
   const index = order.indexOf(value);
@@ -31,19 +36,55 @@ export function DownloadsPage() {
   const [mode, setMode] = useState<"cohort" | "sample">("cohort");
   const [selectedCohorts, setSelectedCohorts] = useState<string[]>([]);
   const [selectedFileTypes, setSelectedFileTypes] = useState<string[]>([]);
+  const [selectedHealthy, setSelectedHealthy] = useState(false);
   const [allDownloadsPage, setAllDownloadsPage] = useState(1);
   const [allDownloadsPageSize, setAllDownloadsPageSize] = useState(10);
-  const filesQuery = useQuery({ queryKey: ["data-files"], queryFn: listDataFiles });
+  const filesQuery = useQuery({
+    queryKey: ["data-files"],
+    queryFn: listDataFiles,
+    staleTime: DOWNLOAD_METADATA_CACHE_MS,
+    gcTime: DOWNLOAD_METADATA_GC_MS,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
+  });
+  const healthyFilesQuery = useQuery({
+    queryKey: ["healthy-vcf-files"],
+    queryFn: listHealthyVcfFiles,
+    staleTime: DOWNLOAD_METADATA_CACHE_MS,
+    gcTime: DOWNLOAD_METADATA_GC_MS,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
+  });
+
+  const dataFiles = useMemo<DataFile[]>(() => {
+    const files = filesQuery.data ?? [];
+    const hasHealthySummary = files.some((file) => file.cancer === "Healthy" && file.fileType === "Healthy PON");
+    const healthyFiles = healthyFilesQuery.data ?? [];
+    if (hasHealthySummary || healthyFiles.length === 0) {
+      return files;
+    }
+    const totalSize = healthyFiles.reduce((sum, file) => sum + file.sizeBytes, 0);
+    return [
+      ...files,
+      {
+        cancer: "Healthy",
+        fileType: "Healthy PON",
+        name: `Healthy PON files (${healthyFiles.length} integrated files)`,
+        fileName: "healthy-pon-files",
+        sizeBytes: totalSize,
+        downloadUrl: "",
+      },
+    ];
+  }, [filesQuery.data, healthyFilesQuery.data]);
 
   const grouped = useMemo(() => {
-    const files = (filesQuery.data ?? []).filter((file) => file.cancer !== "Healthy");
-    return files.reduce<Record<string, typeof files>>((acc, file) => {
+    return dataFiles.reduce<Record<string, typeof dataFiles>>((acc, file) => {
       const key = file.cancer;
       acc[key] ??= [];
       acc[key].push(file);
       return acc;
     }, {});
-  }, [filesQuery.data]);
+  }, [dataFiles]);
 
   const sortedGroups = useMemo(
     () =>
@@ -85,6 +126,7 @@ export function DownloadsPage() {
       }),
     [allTableRows, selectedCohorts, selectedFileTypes]
   );
+  const selectedHealthySummary = tableRows.find((file) => file.cancer === "Healthy" && file.fileType === "Healthy PON");
   const allDownloadsTotalPages = Math.max(1, Math.ceil(tableRows.length / allDownloadsPageSize));
   const allDownloadsPageStart = (allDownloadsPage - 1) * allDownloadsPageSize;
   const paginatedTableRows = tableRows.slice(allDownloadsPageStart, allDownloadsPageStart + allDownloadsPageSize);
@@ -143,7 +185,7 @@ export function DownloadsPage() {
       </section>
 
       {mode === "cohort" ? (
-        <section className="downloads-cohort-layout">
+        <section className={`downloads-cohort-layout${selectedHealthy ? " downloads-cohort-layout--with-detail" : ""}`}>
           <aside className="downloads-cohort-sidebar tool-sidebar-panel" aria-label="Cohort-level file filters">
             <div className="downloads-sidebar-head">
               <h3>Filter</h3>
@@ -268,9 +310,15 @@ export function DownloadsPage() {
                             <td className="browse-mono">{file.fileName}</td>
                             <td>{formatFileSize(file.sizeBytes)}</td>
                             <td>
-                              <a className="button-secondary" href={toApiUrl(file.downloadUrl)} download={file.fileName}>
-                                Download
-                              </a>
+                              {file.cancer === "Healthy" && file.fileType === "Healthy PON" ? (
+                                <button className="button-secondary" type="button" onClick={() => setSelectedHealthy(true)}>
+                                  View files
+                                </button>
+                              ) : (
+                                <a className="button-secondary" href={toApiUrl(file.downloadUrl)} download={file.fileName}>
+                                  Download
+                                </a>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -303,6 +351,15 @@ export function DownloadsPage() {
               ) : null}
             </div>
           </article>
+          {selectedHealthy ? (
+            <HealthyVcfDetailPanel
+              summary={selectedHealthySummary}
+              files={healthyFilesQuery.data ?? []}
+              loading={healthyFilesQuery.isLoading}
+              error={healthyFilesQuery.isError}
+              onClose={() => setSelectedHealthy(false)}
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -317,5 +374,74 @@ export function DownloadsPage() {
         </section>
       ) : null}
     </div>
+  );
+}
+
+function HealthyVcfDetailPanel({
+  summary,
+  files,
+  loading,
+  error,
+  onClose,
+}: {
+  summary?: DataFile;
+  files: DataFile[];
+  loading: boolean;
+  error: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <aside className="downloads-healthy-detail-card">
+      <div className="statistics-panel-header downloads-healthy-detail-header">
+        <div>
+          <h3 className="stat-pdf-title">Healthy PON files</h3>
+          <p className="statistics-panel-note">
+            {summary ? `${summary.name} - ${formatFileSize(summary.sizeBytes)} total` : "Integrated Healthy PON downloads."}
+          </p>
+        </div>
+        <button type="button" className="browse-files-close" onClick={onClose}>&times;</button>
+      </div>
+      <div className="statistics-pdf-shell downloads-healthy-detail-shell">
+        {loading ? <p className="panel-note">Loading Healthy PON file list...</p> : null}
+        {error ? (
+          <section className="detail-card empty-card">
+            <h3>Healthy PON list unavailable</h3>
+            <p>Could not reach the backend server to list Healthy files.</p>
+          </section>
+        ) : null}
+        {!loading && !error && files.length === 0 ? (
+          <section className="detail-card empty-card">
+            <h3>No Healthy PON files found</h3>
+            <p>The configured Healthy PON directory did not return files.</p>
+          </section>
+        ) : null}
+        {files.length > 0 ? (
+          <div className="downloads-table-wrap downloads-healthy-file-wrap">
+            <table className="data-table downloads-table downloads-healthy-file-table">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Size</th>
+                  <th>Download</th>
+                </tr>
+              </thead>
+              <tbody>
+                {files.map((file) => (
+                  <tr key={file.fileName}>
+                    <td className="browse-mono">{file.fileName}</td>
+                    <td>{formatFileSize(file.sizeBytes)}</td>
+                    <td>
+                      <a className="button-secondary" href={toApiUrl(file.downloadUrl)} download={file.fileName}>
+                        Download
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
+    </aside>
   );
 }

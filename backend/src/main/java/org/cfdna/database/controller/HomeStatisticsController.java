@@ -1,7 +1,7 @@
 package org.cfdna.database.controller;
 
 import org.cfdna.database.dto.ApiResponse;
-import org.cfdna.database.dto.CancerSummaryDto;
+import org.cfdna.database.dto.HomeBodyCalloutDto;
 import org.cfdna.database.service.CsvStatisticsService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -10,17 +10,17 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/summary")
-public class CancerSummaryController {
+@RequestMapping("/api/v1/home")
+public class HomeStatisticsController {
 
     private final CsvStatisticsService csvStatisticsService;
 
-    public CancerSummaryController(CsvStatisticsService csvStatisticsService) {
+    public HomeStatisticsController(CsvStatisticsService csvStatisticsService) {
         this.csvStatisticsService = csvStatisticsService;
     }
 
-    @GetMapping("/cancers")
-    public ApiResponse<List<CancerSummaryDto>> getCancerSummary() {
-        return ApiResponse.success(csvStatisticsService.readHomeSampleCategories().orElseGet(List::of));
+    @GetMapping("/body-callouts")
+    public ApiResponse<List<HomeBodyCalloutDto>> getBodyCallouts() {
+        return ApiResponse.success(csvStatisticsService.readHomeBodyCallouts().orElse(List.of()));
     }
 }

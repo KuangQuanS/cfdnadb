@@ -2,7 +2,7 @@ import { lazy, Suspense, type CSSProperties, type FormEvent, useMemo, useState }
 import { useQuery } from "@tanstack/react-query";
 import type { EChartsOption } from "echarts";
 import { useNavigate } from "react-router-dom";
-import { getCancerSummary, getSourceDistribution, getStatisticsOverview } from "../api/client";
+import { getCancerSummary, getHomeBodyCallouts, getSourceDistribution, getStatisticsOverview } from "../api/client";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/body_simple_man.png";
@@ -39,14 +39,36 @@ const SOURCE_RING_ORDER = ["internal", "public", "tcga"] as const;
 
 const SOURCE_RING_LABELS: Record<typeof SOURCE_RING_ORDER[number], { label: string; browseSource: string }> = {
   internal: { label: "Internal Data", browseSource: "cfDNA" },
-  public: { label: "Public Cohorts", browseSource: "Public" },
+  public: { label: "Public Cohort", browseSource: "Public" },
   tcga: { label: "TCGA", browseSource: "tcga" },
 };
+
+const HOME_STATS_CACHE_MS = 30 * 60_000;
 
 const COHORT_DISPLAY_LABELS: Record<string, string> = {
   HeadAndNeck: "Head & Neck",
   Benign_Tumor: "Benign Tumor",
   Cell_Line: "Gastric",
+};
+
+const BODY_CALLOUT_SAMPLE_COUNTS: Record<string, number> = {
+  Bladder: 429,
+  Brain: 13,
+  Breast: 1490,
+  Cervical: 294,
+  Colorectal: 729,
+  Endometrial: 520,
+  Esophageal: 187,
+  Gastric: 562,
+  HeadAndNeck: 524,
+  Kidney: 400,
+  Liver: 460,
+  Lung: 1268,
+  Ovarian: 823,
+  Pancreatic: 227,
+  Thyroid: 504,
+  Benign_Tumor: 66,
+  Healthy: 1428,
 };
 
 function formatCohortLabel(cancer: string) {
@@ -101,23 +123,30 @@ type BodyCalloutConfig = {
   pointXPct: number;
   pointYPct: number;
   browseKey: string;
+  showConnector?: boolean;
+  count?: number;
 };
 
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 15, labelXPct: 10, pointXPct: 39, pointYPct: 20, browseKey: "HeadAndNeck" },
-  { id: "Lung", label: "Lung", side: "left", labelTopPct: 26, labelXPct: 10, pointXPct: 34, pointYPct: 29.5, browseKey: "Lung" },
-  { id: "Liver", label: "Liver", side: "left", labelTopPct: 36, labelXPct: 10, pointXPct: 36, pointYPct: 37.3, browseKey: "Liver" },
-  { id: "Pancreatic", label: "Pancreas", side: "left", labelTopPct: 46, labelXPct: 10, pointXPct: 35.5, pointYPct: 39.6, browseKey: "Pancreatic" },
-  { id: "Colorectal", label: "Colorectal", side: "left", labelTopPct: 56, labelXPct: 10, pointXPct: 64, pointYPct: 53, browseKey: "Colorectal" },
-  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 66, labelXPct: 10, pointXPct: 39, pointYPct: 54, browseKey: "Bladder" },
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 14, labelXPct: 8.5, pointXPct: 41.3, pointYPct: 18, browseKey: "HeadAndNeck" },
+  { id: "Thyroid", label: "Thyroid", side: "left", labelTopPct: 21.5, labelXPct: 8.5, pointXPct: 41.2, pointYPct: 21.5, browseKey: "Thyroid" },
+  { id: "Lung", label: "Lung", side: "left", labelTopPct: 34.5, labelXPct: 8.5, pointXPct: 37, pointYPct: 30, browseKey: "Lung" },
+  { id: "Esophageal", label: "Esophageal", side: "left", labelTopPct: 28, labelXPct: 8.5, pointXPct: 41.2, pointYPct: 23.5, browseKey: "Esophageal" },
+  { id: "Liver", label: "Liver", side: "left", labelTopPct: 42, labelXPct: 8.5, pointXPct: 38, pointYPct: 37.5, browseKey: "Liver" },
+  { id: "Pancreatic", label: "Pancreas", side: "left", labelTopPct: 50.5, labelXPct: 8.5, pointXPct: 43.2, pointYPct: 40, browseKey: "Pancreatic" },
+  { id: "Colorectal", label: "Colorectal", side: "left", labelTopPct: 60.5, labelXPct: 8.5, pointXPct: 47, pointYPct: 48.5, browseKey: "Colorectal" },
+  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 71, labelXPct: 8.5, pointXPct: 39, pointYPct: 54, browseKey: "Bladder" },
+  { id: "Healthy", label: "Healthy", side: "left", labelTopPct: 82, labelXPct: 8.5, pointXPct: 0, pointYPct: 0, browseKey: "Healthy", showConnector: false },
   /* ── right side (top → bottom) ── */
-  { id: "Brain", label: "Brain", side: "right", labelTopPct: 15.0, labelXPct: 90, pointXPct: 39, pointYPct: 15, browseKey: "Brain" },
-  { id: "Breast", label: "Breast", side: "right", labelTopPct: 26, labelXPct: 90, pointXPct: 72, pointYPct: 33.5, browseKey: "Breast" },
-  { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 36, labelXPct: 90, pointXPct: 44, pointYPct: 39.5, browseKey: "Gastric" },
-  { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 46, labelXPct: 90, pointXPct: 47.5, pointYPct: 41, browseKey: "Kidney" },
-  { id: "Endometrial", label: "Endometrial", side: "right", labelTopPct: 56, labelXPct: 90, pointXPct: 46.5, pointYPct: 46.8, browseKey: "Endometrial" },
-  { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 66, labelXPct: 90, pointXPct: 69.5, pointYPct: 53.5, browseKey: "Ovarian" },
+  { id: "Brain", label: "Brain", side: "right", labelTopPct: 14, labelXPct: 91.5, pointXPct: 41.3, pointYPct: 14, browseKey: "Brain" },
+  { id: "Breast", label: "Breast", side: "right", labelTopPct: 24, labelXPct: 91.5, pointXPct: 67, pointYPct: 33.2, browseKey: "Breast" },
+  { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 34, labelXPct: 91.5, pointXPct: 45.5, pointYPct: 40, browseKey: "Gastric" },
+  { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 41, labelXPct: 91.5, pointXPct: 48.5, pointYPct: 41, browseKey: "Kidney" },
+  { id: "Cervical", label: "Cervical", side: "right", labelTopPct: 59, labelXPct: 91, pointXPct: 61, pointYPct: 56.2, browseKey: "Cervical" },
+  { id: "Endometrial", label: "Endometrial", side: "right", labelTopPct: 50, labelXPct: 91.5, pointXPct: 61, pointYPct: 53, browseKey: "Endometrial" },
+  { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 68, labelXPct: 91.5, pointXPct: 65, pointYPct: 53.5, browseKey: "Ovarian" },
+  { id: "Benign_Tumor", label: "Benign Tumor", side: "right", labelTopPct: 82, labelXPct: 91.5, pointXPct: 0, pointYPct: 0, browseKey: "Benign_Tumor", showConnector: false },
 ] as const satisfies readonly BodyCalloutConfig[];
 
 function getLabelCenterX(cfg: BodyCalloutConfig) {
@@ -138,9 +167,14 @@ type HeroRingEntry = {
   browseKey: string;
 };
 
-function formatMutationValue(value: number) {
+function formatCompactCount(value: number) {
+  if (value >= 1_000_000) {
+    const millions = value / 1_000_000;
+    return `${Number.isInteger(millions) ? millions.toFixed(0) : millions.toFixed(1).replace(/\\.0$/, "")}M`;
+  }
   if (value >= 1_000) {
-    return `${Math.round(value / 1_000).toLocaleString()}K`;
+    const thousands = value / 1_000;
+    return `${Number.isInteger(thousands) ? thousands.toFixed(0) : thousands.toFixed(1).replace(/\\.0$/, "")}K`;
   }
   return formatNumber(value);
 }
@@ -185,9 +219,9 @@ function buildHeroSunburstOption(
   centerTitle: string,
   centerValue: string,
 ): EChartsOption {
-  const isMutations = title === "Variant Classification";
-  const children = buildSunburstEntries(entries, palette, 7, isMutations ? "Bladder" : undefined);
-  const formatValue = (value: number) => (isMutations ? formatMutationValue(value) : formatNumber(value));
+  const isVariantCountChart = title === "Genome distribution" || title === "Variant Classification";
+  const children = buildSunburstEntries(entries, palette, 7, title === "Variant Classification" ? "Bladder" : undefined);
+  const formatValue = (value: number) => (isVariantCountChart ? formatCompactCount(value) : formatNumber(value));
 
   return {
     animationDuration: 600,
@@ -232,7 +266,7 @@ function buildHeroSunburstOption(
             value: {
               color: "#ffffff",
               fontWeight: 800,
-              fontSize: isMutations ? 10 : 12,
+              fontSize: isVariantCountChart ? 10 : 12,
               align: "center",
               lineHeight: 14,
             },
@@ -254,7 +288,7 @@ function buildHeroSunburstOption(
         top: 0,
         right: 0,
         bottom: 0,
-        radius: ["46%", "94%"],
+        radius: ["46%", "88%"],
         center: ["50%", "50%"],
         startAngle: 180,
         sort: undefined,
@@ -329,7 +363,7 @@ function HeroRingChart({
             option={option}
             notMerge
             lazyUpdate={false}
-            style={{ height: 280, width: "100%" }}
+            style={{ height: "var(--gdc-overview-chart-size)", width: "100%" }}
             opts={{ renderer: "canvas" }}
             onEvents={{
               click: (params: { data?: { browseKey?: string; name?: string } }) => {
@@ -350,16 +384,35 @@ export function HeroCarousel() {
   const navigate = useNavigate();
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [quickGene, setQuickGene] = useState("");
-  const cancerQuery = useQuery({ queryKey: ["cancer-summary"], queryFn: getCancerSummary, staleTime: 5 * 60_000 });
-  const sourceQuery = useQuery({ queryKey: ["source-distribution", "all"], queryFn: () => getSourceDistribution(), staleTime: 5 * 60_000 });
-  const overviewQuery = useQuery({ queryKey: ["statistics-overview"], queryFn: getStatisticsOverview, staleTime: 5 * 60_000 });
+  const cancerQuery = useQuery({
+    queryKey: ["cancer-summary"],
+    queryFn: getCancerSummary,
+    placeholderData: MOCK_COHORTS,
+    staleTime: HOME_STATS_CACHE_MS,
+    gcTime: HOME_STATS_CACHE_MS,
+  });
+  const sourceQuery = useQuery({
+    queryKey: ["source-distribution", "all"],
+    queryFn: () => getSourceDistribution(),
+    staleTime: HOME_STATS_CACHE_MS,
+    gcTime: HOME_STATS_CACHE_MS,
+  });
+  const overviewQuery = useQuery({
+    queryKey: ["statistics-overview"],
+    queryFn: getStatisticsOverview,
+    staleTime: HOME_STATS_CACHE_MS,
+    gcTime: HOME_STATS_CACHE_MS,
+  });
+  const bodyCalloutsQuery = useQuery({
+    queryKey: ["home-body-callouts"],
+    queryFn: getHomeBodyCallouts,
+    staleTime: HOME_STATS_CACHE_MS,
+    gcTime: HOME_STATS_CACHE_MS,
+  });
   const cohorts = cancerQuery.data?.length ? cancerQuery.data : MOCK_COHORTS;
   const sourceDistribution = sourceQuery.data ?? [];
   const overview = overviewQuery.data;
-  const countMap = useMemo(
-    () => Object.fromEntries(cohorts.map((c) => [c.cancer, c.sampleCount])),
-    [cohorts],
-  );
+  const countMap = BODY_CALLOUT_SAMPLE_COUNTS;
   const ringEntries = useMemo(
     () => {
       const priority = new Map(COHORT_PRIORITY.map((name, index) => [name, index]));
@@ -426,7 +479,7 @@ export function HeroCarousel() {
     () => variantClassDistribution.reduce((sum, entry) => sum + entry.count, 0),
     [variantClassDistribution],
   );
-  const visibleCallouts = ALL_CALLOUTS;
+  const visibleCallouts = bodyCalloutsQuery.data?.length ? bodyCalloutsQuery.data : ALL_CALLOUTS;
   const genomeRingEntries = useMemo(
     () => genomeDistribution.map((entry, index) => ({
       id: `genome-${index}-${entry.label}`,
@@ -472,7 +525,7 @@ export function HeroCarousel() {
         entries: genomeRingEntries,
         palette: RING_PALETTES.annotated,
         centerTitle: "Variants",
-        centerValue: formatNumber(totalGenomeDistribution),
+        centerValue: formatCompactCount(totalGenomeDistribution),
       },
       {
         id: "variant-classification",
@@ -481,18 +534,11 @@ export function HeroCarousel() {
         entries: variantClassRingEntries,
         palette: RING_PALETTES.mutations,
         centerTitle: "Variants",
-        centerValue: formatNumber(totalVariantClassification),
+        centerValue: formatCompactCount(totalVariantClassification),
       },
     ],
     [genomeRingEntries, sampleRingEntries, sourceRingEntries, totalGenomeDistribution, totalSamples, totalSourceSamples, totalVariantClassification, variantClassRingEntries],
   );
-  const heroStatistics = [
-    { value: ">10,000", label: "Samples" },
-    { value: ">51M", label: "Variants" },
-    { value: "18", label: "Cancer types" },
-    { value: "EGA / TCGA / GEO", label: "Public sources" },
-  ];
-
   const goToBrowse = (browseKey: string) => {
     navigate(`/browse?cancer=${encodeURIComponent(browseKey)}&source=cfDNA`);
   };
@@ -520,7 +566,10 @@ export function HeroCarousel() {
             <div className="gdc-title-rule" aria-hidden="true" />
             <div className="gdc-subtitle">
               <p>
-                ctDNA Database is a comprehensive pan-cancer resource for exploring circulating tumor DNA variants across diverse cancer types. By integrating in-house sequencing data with publicly available datasets from EGA, TCGA, and GEO, the database currently curates more than 10,000 samples, over 51 million variants, and 18 cancer types. It provides standardized variant annotation, clinical information, and interactive analysis modules, enabling users to investigate mutation landscapes, variant allele frequency patterns, genome distributions, mutation types, cancer-specific oncoplots, Ti/Tv profiles, and survival associations. ctDNA Database aims to support liquid biopsy biomarker discovery, tumor evolution research, treatment resistance analysis, and precision oncology studies.
+                ctDNA Database is a comprehensive database focusing on plasma circulating tumor DNA somatic mutation profiles of multiple cancers based on high-throughput sequencing, encompassing <span className="gdc-subtitle-stat">9,924 samples</span> (<span className="gdc-subtitle-stat">6,618 public</span> and <span className="gdc-subtitle-stat">3,306 internal</span>), <span className="gdc-subtitle-stat gdc-subtitle-stat--variant">51,099,363 variants</span>, and <span className="gdc-subtitle-stat">16 cancer types</span>. Among these variants, genome distribution analysis identified <span className="gdc-subtitle-stat gdc-subtitle-stat--variant">48,535,909 variants</span>, including <span className="gdc-subtitle-term">23,901,156 intergenic</span>, <span className="gdc-subtitle-term">17,771,249 intronic</span>, <span className="gdc-subtitle-term">2,217,583 exonic</span>, and <span className="gdc-subtitle-term">646,446 UTR3</span> variants.
+              </p>
+              <p>
+                For functional annotation, we identified <span className="gdc-subtitle-stat gdc-subtitle-stat--mutation">2,499,460 non-synonymous mutations</span>, comprising <span className="gdc-subtitle-term">2,231,182 missense mutations</span>, <span className="gdc-subtitle-term">126,633 nonsense mutations</span>, <span className="gdc-subtitle-term">15,167 frame shift deletions</span>, and <span className="gdc-subtitle-term">113,284 frame shift insertions</span>. The database provides integrated analysis of <span className="gdc-subtitle-keyword">somatic mutations</span>, <span className="gdc-subtitle-keyword">VAF</span>, <span className="gdc-subtitle-keyword">oncoplots</span>, <span className="gdc-subtitle-keyword">transition/transversion (Ti/Tv) plots</span>, and <span className="gdc-subtitle-keyword">survival outcomes</span>. Beyond variant-level exploration, the database integrates additional epigenomic and structural genomics data including <span className="gdc-subtitle-keyword">DNA methylation</span>, <span className="gdc-subtitle-keyword">circulating tumor cells (CTCs)</span>, <span className="gdc-subtitle-keyword">histone modifications</span>, and <span className="gdc-subtitle-keyword">nucleosome positioning</span> to facilitate the assessment of how mutated genes exert their functional effects.
               </p>
             </div>
 
@@ -538,46 +587,43 @@ export function HeroCarousel() {
                   <button type="submit">Search</button>
                 </div>
               </form>
-
-              <div className="gdc-quick-stat-grid" aria-label="ctDNA Database statistics">
-                {heroStatistics.map((item) => (
-                  <div className="gdc-quick-stat" key={item.label}>
-                    <strong>{item.value}</strong>
-                    <span>{item.label}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
 
           <div className="gdc-col-middle">
             <div className="body-map">
-              <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" loading="eager" decoding="async" />
+              <div className="body-map-stage">
+                <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" loading="eager" decoding="async" />
 
-              {visibleCallouts.map((cfg) => (
-                <div key={cfg.id} className={`body-callout body-callout--${cfg.side}`}>
-                  <svg className="callout-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    <polyline points={buildCalloutPolyline(cfg)} />
-                  </svg>
+                {visibleCallouts.map((cfg) => (
+                  <div key={cfg.id} className={`body-callout body-callout--${cfg.side}`}>
+                    {cfg.showConnector === false ? null : (
+                      <svg className="callout-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                        <polyline points={buildCalloutPolyline(cfg)} />
+                      </svg>
+                    )}
 
-                  <div
-                    className="callout-dot"
-                    style={{ left: `${cfg.pointXPct}%`, top: `${cfg.pointYPct}%` } as CSSProperties}
-                    aria-hidden="true"
-                  />
+                    {cfg.showConnector === false ? null : (
+                      <div
+                        className="callout-dot"
+                        style={{ left: `${cfg.pointXPct}%`, top: `${cfg.pointYPct}%` } as CSSProperties}
+                        aria-hidden="true"
+                      />
+                    )}
 
-                  <button
-                    type="button"
-                    className={`callout-label callout-label--${cfg.side}`}
-                    style={{ top: `${cfg.labelTopPct}%`, left: `${getLabelCenterX(cfg)}%` } as CSSProperties}
-                    onClick={() => goToBrowse(cfg.browseKey)}
-                    aria-label={`Browse ${cfg.label} cohort`}
-                  >
-                    <strong>{cfg.label}</strong>
-                    <span>{formatNumber(countMap[cfg.id] ?? 0)}</span>
-                  </button>
-                </div>
-              ))}
+                    <button
+                      type="button"
+                      className={`callout-label callout-label--${cfg.side}`}
+                      style={{ top: `${cfg.labelTopPct}%`, left: `${getLabelCenterX(cfg)}%` } as CSSProperties}
+                      onClick={() => goToBrowse(cfg.browseKey)}
+                      aria-label={`Browse ${cfg.label} cohort`}
+                    >
+                      <strong>{cfg.label}</strong>
+                      <span>{formatNumber(cfg.count ?? countMap[cfg.id] ?? 0)}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

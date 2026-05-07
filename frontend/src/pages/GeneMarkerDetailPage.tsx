@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getGeneNcbiSummary, getMafGeneDetail, getMafSampleSuggestions, queryMafGeneMutations } from "../api/client";
+import { GeneSymbol } from "../components/GeneSymbol";
 import type { MafMutation } from "../types/api";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
@@ -101,7 +102,7 @@ export function GeneMarkerDetailPage() {
     <div className="page-stack maf-page maf-detail-page">
       <section className="maf-hero maf-detail-header">
         <div className="maf-hero-copy">
-          <h2>{geneSymbol}</h2>
+          <h2><GeneSymbol symbol={geneSymbol} /></h2>
           <p>Gene detail with genome browser context, sample-level mutation records, and analysis links.</p>
         </div>
         <div className="maf-detail-actions">
@@ -147,7 +148,7 @@ function GeneNcbiPanel({ geneSymbol }: { geneSymbol: string }) {
   return (
     <section className="gene-ncbi-panel" aria-label={`NCBI summary for ${data.symbol}`}>
       <div className="gene-ncbi-panel-head">
-        <span className="gene-ncbi-panel-title">About {data.symbol}</span>
+        <span className="gene-ncbi-panel-title">About <GeneSymbol symbol={data.symbol} /></span>
         <a className="gene-ncbi-panel-link" href={data.ncbiUrl} target="_blank" rel="noopener noreferrer">
           View full record on NCBI ↗
         </a>
@@ -162,7 +163,14 @@ function GeneNcbiPanel({ geneSymbol }: { geneSymbol: string }) {
         {data.aliases.length > 0 ? (
           <>
             <dt>Also known as</dt>
-            <dd>{data.aliases.join("; ")}</dd>
+            <dd>
+              {data.aliases.map((alias, index) => (
+                <span key={alias}>
+                  {index > 0 ? "; " : ""}
+                  <GeneSymbol symbol={alias} />
+                </span>
+              ))}
+            </dd>
           </>
         ) : null}
       </dl>
@@ -489,7 +497,7 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
             <h3>Sample-level Mutation Records</h3>
             <p>
               Showing {totalElements === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + pageSize, totalElements)} of{" "}
-              {formatNumber(totalElements)} rows for {geneSymbol}
+              {formatNumber(totalElements)} rows for <GeneSymbol symbol={geneSymbol} />
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "end", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -545,7 +553,7 @@ function SourceDetailPanel({ source, geneSymbol }: { source: SourceKey; geneSymb
                     {rows.map((row) => (
                       <tr key={`${row.id}-${row.hugoSymbol}-${row.startPosition}-${row.tumorSampleBarcode}`}>
                         <td>
-                          <div className="maf-cell-title">{row.hugoSymbol}</div>
+                          <div className="maf-cell-title"><GeneSymbol symbol={row.hugoSymbol} /></div>
                           {row.transcript ? <div className="maf-cell-sub">{row.transcript}</div> : null}
                         </td>
                         <td>{formatCohortLabel(row.cancerType)}</td>

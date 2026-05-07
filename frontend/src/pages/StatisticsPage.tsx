@@ -847,7 +847,7 @@ export function StatisticsPage() {
         <div>
           <h1>Statistic Of Dataset</h1>
           <p>
-            <strong>{isPublic ? "Public cohort" : "Internal Data"} statistics</strong> across cfDNA mutation datasets in our collection.
+            <strong>{isPublic ? "Public cohort" : "Internal Data"} statistics</strong> across ctDNA mutation datasets in our collection.
           </p>
         </div>
         <div className="statistics-rna-controls">
@@ -891,22 +891,20 @@ export function StatisticsPage() {
         <p className="panel-note">Loading database statistics...</p>
       ) : null}
 
-      {!isPublic ? (
-        <StatisticsSplitSection
-          title="Statistic Of Disease"
-          intro={<><strong>Disease</strong> across cfDNA cohorts in our collection.</>}
-          rows={cohortRows}
-          labelHeader="Disease"
-          countHeader="Sample Count"
-        >
-          <ReactECharts
-            option={buildCohortDonutOption(activeCohorts, totalSamples)}
-            showLoading={cohortChartLoading}
-            loadingOption={CHART_LOADING_OPTION}
-            style={STANDARD_STAT_CHART_STYLE}
-          />
-        </StatisticsSplitSection>
-      ) : null}
+      <StatisticsSplitSection
+        title="Statistic Of Disease"
+        intro={<><strong>Disease</strong> across ctDNA cohorts in our collection.</>}
+        rows={cohortRows}
+        labelHeader="Disease"
+        countHeader="Sample Count"
+      >
+        <ReactECharts
+          option={buildCohortDonutOption(activeCohorts, totalSamples)}
+          showLoading={cohortChartLoading}
+          loadingOption={CHART_LOADING_OPTION}
+          style={STANDARD_STAT_CHART_STYLE}
+        />
+      </StatisticsSplitSection>
 
       <StatisticsSplitSection
         title="Statistic Of Genomic Region"
