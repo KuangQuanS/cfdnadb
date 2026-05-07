@@ -45,7 +45,7 @@ const CHART_LOADING_OPTION = {
 };
 
 const STANDARD_STAT_CHART_STYLE = { width: "100%", height: 430 };
-const STATISTICS_PIE_MIN_ANGLE = 18;
+const STATISTICS_PIE_MIN_ANGLE = 25;
 
 function cleanLabels(items: LabelCount[]): LabelCount[] {
   return items.filter(

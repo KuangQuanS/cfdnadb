@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { listDataFiles, listHealthyVcfFiles, toApiUrl } from "../api/client";
 import { SampleBrowsePanel } from "../components/SampleBrowsePanel";
+import { CANCER_OPTIONS } from "../constants/cfdna";
 import type { DataFile } from "../types/api";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatFileSize } from "../utils/format";
@@ -14,14 +15,26 @@ const FILE_TYPE_ORDER = [
   "Pan-Cancer Variants",
 ];
 const COHORT_ORDER = [
-  "Healthy",
+  "Bladder",
+  "Brain",
   "Breast",
+  "Cervical",
   "Colorectal",
+  "Endometrial",
+  "Esophageal",
+  "Gastric",
+  "HeadAndNeck",
+  "Healthy",
+  "Kidney",
   "Liver",
   "Lung",
-  "Pancreatic",
+  "Ovarian",
   "Pan-Cancer",
+  "Pancreatic",
+  "Thyroid",
+  "Benign_Tumor",
 ];
+const DOWNLOAD_COHORT_OPTIONS = [...COHORT_ORDER] as const;
 const ALL_DOWNLOAD_PAGE_SIZES = [10, 25, 50, 100];
 const DOWNLOAD_METADATA_CACHE_MS = 30 * 60_000;
 const DOWNLOAD_METADATA_GC_MS = 2 * 60 * 60_000;
@@ -104,10 +117,10 @@ export function DownloadsPage() {
   );
   const cohortOptions = useMemo(
     () =>
-      Array.from(new Set(allTableRows.map((file) => file.cancer))).sort(
-        (a, b) => rankByOrder(a, COHORT_ORDER) - rankByOrder(b, COHORT_ORDER) || a.localeCompare(b)
+      DOWNLOAD_COHORT_OPTIONS.filter(
+        (cohort) => cohort === "Healthy" || cohort === "Pan-Cancer" || (CANCER_OPTIONS as readonly string[]).includes(cohort)
       ),
-    [allTableRows]
+    []
   );
   const fileTypeOptions = useMemo(
     () =>

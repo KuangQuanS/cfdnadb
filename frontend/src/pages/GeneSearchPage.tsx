@@ -8,6 +8,7 @@ import {
 } from "../api/client";
 import { Link, useSearchParams } from "react-router-dom";
 import { GeneSymbol } from "../components/GeneSymbol";
+import { CANCER_OPTIONS } from "../constants/cfdna";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
 
@@ -221,8 +222,8 @@ export function GeneSearchPage() {
               <MultiSelectGroup
                 title="Cancer Type"
                 values={cancerTypes}
-                options={filterQ.data?.cancerTypes ?? []}
-                loading={filterQ.isLoading}
+                options={[...CANCER_OPTIONS]}
+                loading={false}
                 formatLabel={formatCohortLabel}
                 onToggle={(value) => toggleMultiValue("cancerType", value)}
               />
@@ -273,7 +274,7 @@ export function GeneSearchPage() {
           label={isCfDNA ? "Cancer Cohorts" : "Variant Classes"}
           value={
             isCfDNA
-              ? formatNumber(filterQ.data?.cancerTypes.length ?? 0)
+              ? formatNumber(CANCER_OPTIONS.length)
               : formatNumber(filterQ.data?.variantClassifications.length ?? 0)
           }
         />
