@@ -107,7 +107,7 @@ export function TutorialPage() {
             <ol>
               <li>Enter a gene symbol and submit it to generate the VAF profile.</li>
               <li>Use the organ map to compare mean VAF across available cancer cohorts.</li>
-              <li>Review the cohort table for mean, median, maximum VAF, sample counts, and record counts.</li>
+              <li>Review the cohort table for mean, median, maximum VAF, and sample counts.</li>
               <li>Use the boxplots to inspect VAF distributions by cancer type and mutation type.</li>
             </ol>
           </section>

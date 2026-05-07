@@ -194,7 +194,6 @@ export function VafAnalysisPage() {
   const entries = vafQ.data?.entries ?? [];
   const maxMean = vafQ.data?.maxMeanVaf ?? 0;
   const organEntries = useMemo(() => buildOrganEntryMap(entries), [entries]);
-  const totalRecords = entries.reduce((sum, entry) => sum + entry.recordCount, 0);
   const totalSamples = entries.reduce((sum, entry) => sum + entry.sampleCount, 0);
   const cancerTypeBoxplot = vafQ.data?.cancerTypeBoxplot;
   const mutationTypeBoxplot = vafQ.data?.mutationTypeBoxplot;
@@ -260,10 +259,6 @@ export function VafAnalysisPage() {
                 <span>Samples</span>
                 <strong>{totalSamples}</strong>
               </div>
-              <div>
-                <span>Records</span>
-                <strong>{totalRecords}</strong>
-              </div>
             </div>
 
             <div className="vaf-analysis-legend" aria-label="VAF heat scale">
@@ -321,7 +316,6 @@ export function VafAnalysisPage() {
                     <th>Median</th>
                     <th>Max</th>
                     <th>Samples</th>
-                    <th>Records</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -332,7 +326,6 @@ export function VafAnalysisPage() {
                       <td>{formatVaf(entry.medianVaf)}</td>
                       <td>{formatVaf(entry.maxVaf)}</td>
                       <td>{entry.sampleCount}</td>
-                      <td>{entry.recordCount}</td>
                     </tr>
                   ))}
                 </tbody>
