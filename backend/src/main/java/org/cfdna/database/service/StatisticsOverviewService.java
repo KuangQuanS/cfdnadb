@@ -2,52 +2,39 @@ package org.cfdna.database.service;
 
 import org.cfdna.database.dto.MafSummaryDto;
 import org.cfdna.database.dto.StatisticsOverviewDto;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @Service
 public class StatisticsOverviewService {
 
     private final CsvStatisticsService csvStatisticsService;
-    private final long refreshMs;
 
     private volatile StatisticsOverviewDto cachedOverview;
-    private volatile long cachedAtMillis;
+    private final ConcurrentMap<String, StatisticsOverviewDto> publicOverviewCache = new ConcurrentHashMap<>();
 
-    public StatisticsOverviewService(CsvStatisticsService csvStatisticsService,
-                                     @Value("${app.statistics-overview-refresh-ms:1800000}") long refreshMs) {
+    public StatisticsOverviewService(CsvStatisticsService csvStatisticsService) {
         this.csvStatisticsService = csvStatisticsService;
-        this.refreshMs = Math.max(refreshMs, 60_000L);
     }
 
     @PostConstruct
     public void warmCacheOnStartup() {
-        refreshCacheSafely("startup");
-    }
-
-    @Scheduled(fixedDelayString = "${app.statistics-overview-refresh-ms:1800000}")
-    public void scheduledRefresh() {
-        refreshCacheSafely("scheduled");
+        cachedOverview = loadCfDnaOverview();
     }
 
     public StatisticsOverviewDto getCfDnaOverview() {
-        return csvStatisticsService.readStatisticsOverview("internal", "cfDNA").orElseGet(() -> emptyOverview("cfDNA"));
-    }
-
-    private StatisticsOverviewDto getCachedCfDnaOverview() {
         StatisticsOverviewDto snapshot = cachedOverview;
-        long age = System.currentTimeMillis() - cachedAtMillis;
-        if (snapshot == null || age > refreshMs) {
+        if (snapshot == null) {
             synchronized (this) {
                 snapshot = cachedOverview;
-                age = System.currentTimeMillis() - cachedAtMillis;
-                if (snapshot == null || age > refreshMs) {
-                    refreshCacheSafely("lazy");
+                if (snapshot == null) {
+                    cachedOverview = loadCfDnaOverview();
                     snapshot = cachedOverview;
                 }
             }
@@ -55,9 +42,8 @@ public class StatisticsOverviewService {
         return snapshot != null ? snapshot : emptyOverview("cfDNA");
     }
 
-    private void refreshCacheSafely(String trigger) {
-        cachedOverview = csvStatisticsService.readStatisticsOverview("internal", "cfDNA").orElseGet(() -> emptyOverview("cfDNA"));
-        cachedAtMillis = System.currentTimeMillis();
+    private StatisticsOverviewDto loadCfDnaOverview() {
+        return csvStatisticsService.readStatisticsOverview("internal", "cfDNA").orElseGet(() -> emptyOverview("cfDNA"));
     }
 
     private StatisticsOverviewDto emptyOverview(String source) {
@@ -74,7 +60,11 @@ public class StatisticsOverviewService {
     }
 
     public StatisticsOverviewDto getPublicOverview(String cancer) {
-        return csvStatisticsService.readStatisticsOverview("public", "Public").orElseGet(() -> emptyOverview("Public"));
+        String cacheKey = cancer == null || cancer.isBlank() ? "__all__" : cancer.trim().toLowerCase(Locale.ROOT);
+        return publicOverviewCache.computeIfAbsent(
+                cacheKey,
+                ignored -> csvStatisticsService.readStatisticsOverview("public", "Public").orElseGet(() -> emptyOverview("Public"))
+        );
     }
 
     public List<String> listPublicCohortNames() {

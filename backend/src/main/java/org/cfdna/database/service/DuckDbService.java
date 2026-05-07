@@ -103,7 +103,11 @@ public class DuckDbService {
     private volatile long cachedCancerSummaryDbModifiedMillis;
     private volatile List<DataFileDto> cachedDataFiles;
     private volatile List<DataFileDto> cachedHealthyVcfFiles;
+    private volatile List<VafDistributionDto> cachedVafDistribution;
     private final ConcurrentMap<String, CachedLabelCounts> sourceDistributionCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, List<TopGeneDto>> topGenesCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, List<LabelCountDto>> labelCountsCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, List<CancerAssetDto>> cancerAssetsCache = new ConcurrentHashMap<>();
 
     @Autowired
     public DuckDbService(@Value("${app.data-dir:/400T/cfdnaweb}") String dataDir,
@@ -196,8 +200,18 @@ public class DuckDbService {
         }
     }
 
+    private String normalizeCacheKey(String value) {
+        return value == null || value.isBlank() ? "__blank__" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
     public List<TopGeneDto> getTopGenes(String cancer, int limit) {
-        String readExpr = resolveMultiCancerReadExpr(validateCancer(cancer));
+        String validatedCancer = validateCancer(cancer);
+        String cacheKey = validatedCancer + "|" + limit;
+        return topGenesCache.computeIfAbsent(cacheKey, ignored -> List.copyOf(queryTopGenes(validatedCancer, limit)));
+    }
+
+    private List<TopGeneDto> queryTopGenes(String cancer, int limit) {
+        String readExpr = resolveMultiCancerReadExpr(cancer);
         if (readExpr == null) {
             return List.of();
         }
@@ -726,37 +740,53 @@ public class DuckDbService {
     }
 
     public List<LabelCountDto> getFuncDistribution(String cancer) {
-        return queryLabelCounts(cancer,
-                "SELECT TRIM(COALESCE(\"Func.refGene\", '')) AS label, COUNT(*) AS cnt " +
-                "FROM %s " +
-                "WHERE TRIM(COALESCE(\"Func.refGene\", '')) <> '' " +
-                "GROUP BY label ORDER BY cnt DESC");
+        String validatedCancer = validateCancer(cancer);
+        return labelCountsCache.computeIfAbsent(
+                "func|" + validatedCancer,
+                ignored -> List.copyOf(queryLabelCounts(validatedCancer,
+                        "SELECT TRIM(COALESCE(\"Func.refGene\", '')) AS label, COUNT(*) AS cnt " +
+                        "FROM %s " +
+                        "WHERE TRIM(COALESCE(\"Func.refGene\", '')) <> '' " +
+                        "GROUP BY label ORDER BY cnt DESC"))
+        );
     }
 
     public List<LabelCountDto> getExonicDistribution(String cancer) {
-        return queryLabelCounts(cancer,
-                "SELECT TRIM(COALESCE(\"ExonicFunc.refGene\", '')) AS label, COUNT(*) AS cnt " +
-                "FROM %s " +
-                "WHERE TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '' " +
-                "  AND TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '.' " +
-                "GROUP BY label ORDER BY cnt DESC");
+        String validatedCancer = validateCancer(cancer);
+        return labelCountsCache.computeIfAbsent(
+                "exonic|" + validatedCancer,
+                ignored -> List.copyOf(queryLabelCounts(validatedCancer,
+                        "SELECT TRIM(COALESCE(\"ExonicFunc.refGene\", '')) AS label, COUNT(*) AS cnt " +
+                        "FROM %s " +
+                        "WHERE TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '' " +
+                        "  AND TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '.' " +
+                        "GROUP BY label ORDER BY cnt DESC"))
+        );
     }
 
     public List<LabelCountDto> getChromDistribution(String cancer) {
-        return queryLabelCounts(cancer,
-                "SELECT TRIM(COALESCE(CAST(Chr AS VARCHAR), '')) AS label, COUNT(*) AS cnt " +
-                "FROM %s " +
-                "WHERE TRIM(COALESCE(CAST(Chr AS VARCHAR), '')) <> '' " +
-                "GROUP BY label " +
-                "ORDER BY TRY_CAST(REGEXP_REPLACE(label, '^chr', '') AS INTEGER) NULLS LAST, label ASC");
+        String validatedCancer = validateCancer(cancer);
+        return labelCountsCache.computeIfAbsent(
+                "chrom|" + validatedCancer,
+                ignored -> List.copyOf(queryLabelCounts(validatedCancer,
+                        "SELECT TRIM(COALESCE(CAST(Chr AS VARCHAR), '')) AS label, COUNT(*) AS cnt " +
+                        "FROM %s " +
+                        "WHERE TRIM(COALESCE(CAST(Chr AS VARCHAR), '')) <> '' " +
+                        "GROUP BY label " +
+                        "ORDER BY TRY_CAST(REGEXP_REPLACE(label, '^chr', '') AS INTEGER) NULLS LAST, label ASC"))
+        );
     }
 
     public List<LabelCountDto> getSampleBurden(String cancer, int limit) {
-        return queryLabelCounts(cancer,
-                "SELECT TRIM(COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '')) AS label, COUNT(*) AS cnt " +
-                "FROM %s " +
-                "WHERE TRIM(COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '')) <> '' " +
-                "GROUP BY label ORDER BY cnt DESC LIMIT " + limit);
+        String validatedCancer = validateCancer(cancer);
+        return labelCountsCache.computeIfAbsent(
+                "sample-burden|" + validatedCancer + "|" + limit,
+                ignored -> List.copyOf(queryLabelCounts(validatedCancer,
+                        "SELECT TRIM(COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '')) AS label, COUNT(*) AS cnt " +
+                        "FROM %s " +
+                        "WHERE TRIM(COALESCE(CAST(Tumor_Sample_Barcode AS VARCHAR), '')) <> '' " +
+                        "GROUP BY label ORDER BY cnt DESC LIMIT " + limit))
+        );
     }
 
     private List<LabelCountDto> queryLabelCounts(String cancer, String sqlTemplate) {
@@ -780,29 +810,41 @@ public class DuckDbService {
     // ---- Public cohort aggregated statistics (reads from public_maf) ----
 
     public List<LabelCountDto> getPublicFuncDistribution(String cancer) {
-        return queryPublicLabelCounts(cancer,
-                "SELECT TRIM(COALESCE(\"Func.refGene\", '')) AS label, COUNT(*) AS cnt " +
-                "FROM %s " +
-                "WHERE TRIM(COALESCE(\"Func.refGene\", '')) <> '' " +
-                "GROUP BY label ORDER BY cnt DESC");
+        String cacheKey = "public-func|" + normalizeCacheKey(cancer);
+        return labelCountsCache.computeIfAbsent(
+                cacheKey,
+                ignored -> List.copyOf(queryPublicLabelCounts(cancer,
+                        "SELECT TRIM(COALESCE(\"Func.refGene\", '')) AS label, COUNT(*) AS cnt " +
+                        "FROM %s " +
+                        "WHERE TRIM(COALESCE(\"Func.refGene\", '')) <> '' " +
+                        "GROUP BY label ORDER BY cnt DESC"))
+        );
     }
 
     public List<LabelCountDto> getPublicExonicDistribution(String cancer) {
-        return queryPublicLabelCounts(cancer,
-                "SELECT TRIM(COALESCE(\"ExonicFunc.refGene\", '')) AS label, COUNT(*) AS cnt " +
-                "FROM %s " +
-                "WHERE TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '' " +
-                "  AND TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '.' " +
-                "GROUP BY label ORDER BY cnt DESC");
+        String cacheKey = "public-exonic|" + normalizeCacheKey(cancer);
+        return labelCountsCache.computeIfAbsent(
+                cacheKey,
+                ignored -> List.copyOf(queryPublicLabelCounts(cancer,
+                        "SELECT TRIM(COALESCE(\"ExonicFunc.refGene\", '')) AS label, COUNT(*) AS cnt " +
+                        "FROM %s " +
+                        "WHERE TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '' " +
+                        "  AND TRIM(COALESCE(\"ExonicFunc.refGene\", '')) <> '.' " +
+                        "GROUP BY label ORDER BY cnt DESC"))
+        );
     }
 
     public List<LabelCountDto> getPublicChromDistribution(String cancer) {
-        return queryPublicLabelCounts(cancer,
-                "SELECT TRIM(COALESCE(CAST(\"Chr\" AS VARCHAR), '')) AS label, COUNT(*) AS cnt " +
-                "FROM %s " +
-                "WHERE TRIM(COALESCE(CAST(\"Chr\" AS VARCHAR), '')) <> '' " +
-                "GROUP BY label " +
-                "ORDER BY TRY_CAST(REGEXP_REPLACE(label, '^chr', '') AS INTEGER) NULLS LAST, label ASC");
+        String cacheKey = "public-chrom|" + normalizeCacheKey(cancer);
+        return labelCountsCache.computeIfAbsent(
+                cacheKey,
+                ignored -> List.copyOf(queryPublicLabelCounts(cancer,
+                        "SELECT TRIM(COALESCE(CAST(\"Chr\" AS VARCHAR), '')) AS label, COUNT(*) AS cnt " +
+                        "FROM %s " +
+                        "WHERE TRIM(COALESCE(CAST(\"Chr\" AS VARCHAR), '')) <> '' " +
+                        "GROUP BY label " +
+                        "ORDER BY TRY_CAST(REGEXP_REPLACE(label, '^chr', '') AS INTEGER) NULLS LAST, label ASC"))
+        );
     }
 
     private List<LabelCountDto> queryPublicLabelCounts(String cancer, String sqlTemplate) {
@@ -901,6 +943,10 @@ public class DuckDbService {
 
     public List<CancerAssetDto> getCancerAssets(String cancer) {
         String validatedCancer = validateCancer(cancer);
+        return cancerAssetsCache.computeIfAbsent(validatedCancer, ignored -> List.copyOf(queryCancerAssets(validatedCancer)));
+    }
+
+    private List<CancerAssetDto> queryCancerAssets(String validatedCancer) {
         String sql = "SELECT category, title, file_name, size_bytes FROM statistics_asset_index " +
                 "WHERE cancer_type = ? AND asset_type = 'cancer_asset' " +
                 "ORDER BY category ASC, file_name ASC";
@@ -4549,6 +4595,22 @@ public class DuckDbService {
      * normalizes legacy VAF file prefixes to current cohort names.
      */
     public List<VafDistributionDto> getVafDistribution() {
+        List<VafDistributionDto> snapshot = cachedVafDistribution;
+        if (snapshot != null) {
+            return snapshot;
+        }
+        synchronized (this) {
+            snapshot = cachedVafDistribution;
+            if (snapshot != null) {
+                return snapshot;
+            }
+            List<VafDistributionDto> computed = List.copyOf(computeVafDistribution());
+            cachedVafDistribution = computed;
+            return computed;
+        }
+    }
+
+    private List<VafDistributionDto> computeVafDistribution() {
         Map<String, List<Double>> valuesByCancerType = new LinkedHashMap<>();
         if (!Files.isDirectory(vafDataDir)) {
             log.warn("[VAF] vafDataDir does not exist: {}", vafDataDir);
