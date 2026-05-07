@@ -272,7 +272,7 @@ function buildHeroSunburstOption(
         startAngle: 180,
         sort: undefined,
         clockwise: true,
-        minAngle: 8,
+        minAngle: 20,
         avoidLabelOverlap: false,
         labelLine: {
           show: false,

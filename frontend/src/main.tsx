@@ -15,6 +15,8 @@ const queryClient = new QueryClient({
 });
 const basePath = (import.meta.env.VITE_APP_BASE_PATH ?? "/ctdnadb/").replace(/\/$/, "") || "/";
 
+document.title = "ctDNAdb";
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>

@@ -8,7 +8,7 @@ import survivalTutorial from "../assets/tutorial/survival.png";
 
 const GUIDE_LINKS = [
   { href: "#orientation", label: "Overview" },
-  { href: "#browse", label: "Browse" },
+  { href: "#browser", label: "Browser" },
   { href: "#gene-search", label: "Gene Search" },
   { href: "#statistics", label: "Statistics" },
   { href: "#survival", label: "Survival Analysis" },
@@ -16,11 +16,11 @@ const GUIDE_LINKS = [
   { href: "#downloads", label: "Download" },
 ];
 
-export function HelpPage() {
+export function TutorialPage() {
   return (
     <div className="page-stack help-page">
       <div className="help-layout">
-        <aside className="help-toc" aria-label="Help contents">
+        <aside className="help-toc" aria-label="Tutorial contents">
           <p className="section-eyebrow">Contents</p>
           <nav>
             {GUIDE_LINKS.map((item) => (
@@ -38,19 +38,19 @@ export function HelpPage() {
             </figure>
             <p>
               ctDNAdb organizes ctDNA mutation data by cohort, gene, sample, and downloadable file. Select a workflow from the analysis
-              goal: <Link to="/browse">Browse</Link> for cohort inspection, <Link to="/gene-search">Gene Search</Link> for gene-level
+              goal: <Link to="/browse">Browser</Link> for cohort inspection, <Link to="/gene-search">Gene Search</Link> for gene-level
               records, <Link to="/statistics">Statistics</Link> for database summaries, <Link to="/survival">Survival Analysis</Link>
               for TCGA-associated plots, <Link to="/vaf-analysis">ctDNA VAF</Link> for gene-level VAF patterns, and <Link to="/downloads">Download</Link> for mounted files.
             </p>
           </section>
 
-          <section id="browse">
-            <h3>Browse</h3>
+          <section id="browser">
+            <h3>Browser</h3>
             <figure className="help-tutorial-figure">
-              <img src={browserTutorial} alt="Browse tutorial showing cohort, source, gene input, oncoplot, and summary plots" loading="lazy" decoding="async" />
+              <img src={browserTutorial} alt="Browser tutorial showing cohort, source, gene input, oncoplot, and summary plots" loading="lazy" decoding="async" />
             </figure>
             <p>
-              Browse is the cohort view. Choose a cancer cohort, select the data source, and optionally enter genes to focus the oncoplot.
+              Browser is the cohort view. Choose a cancer cohort, select the data source, and optionally enter genes to focus the oncoplot.
               The oncoplot displays samples by column, genes by row, and mutation classes by color. The summary plots below provide
               cohort-level mutation distributions and exportable figures.
             </p>

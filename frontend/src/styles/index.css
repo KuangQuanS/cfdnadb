@@ -9009,10 +9009,13 @@ button:disabled:hover {
 }
 
 .downloads-filtered-workspace-card--downloads .browse-samples-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 8px;
 }
 
 .downloads-filtered-workspace-card--downloads .browse-samples-chip {
+  width: 100%;
   min-height: 30px;
   padding: 6px 10px;
   border: 1px solid #d5dfec;
@@ -9022,6 +9025,7 @@ button:disabled:hover {
   font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.2;
+  text-align: center;
 }
 
 .downloads-filtered-workspace-card--downloads .browse-samples-chip:hover,

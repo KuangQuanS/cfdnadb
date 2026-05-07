@@ -121,8 +121,8 @@ function boxOption(result: VafBoxplot, title: string): EChartsOption {
     grid: {
       left: 72,
       right: 28,
-      top: 108,
-      bottom: labelRotate ? 132 : 96,
+      top: 76,
+      bottom: labelRotate ? 108 : 72,
       show: true,
       borderColor: "#202020",
       borderWidth: 1,

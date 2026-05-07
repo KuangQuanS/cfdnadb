@@ -225,7 +225,15 @@ function buildCohortDonutOption(
         radius: "84%",
         center: ["38%", "50%"],
         avoidLabelOverlap: true,
-        label: { show: false },
+        label: {
+          show: true,
+          position: "inside",
+          color: "#ffffff",
+          fontSize: 11,
+          fontWeight: 800,
+          formatter: (params: { name?: string; percent?: number }) =>
+            `${params.name ?? ""}\n${(params.percent ?? 0).toFixed(1)}%`,
+        },
         labelLine: { show: false },
         itemStyle: {
           borderColor: "#ffffff",
@@ -294,7 +302,15 @@ function buildDonutOption(
         radius: "84%",
         center: ["38%", "50%"],
         avoidLabelOverlap: true,
-        label: { show: false },
+        label: {
+          show: true,
+          position: "inside",
+          color: "#ffffff",
+          fontSize: 11,
+          fontWeight: 800,
+          formatter: (params: { name?: string; percent?: number }) =>
+            `${params.name ?? ""}\n${(params.percent ?? 0).toFixed(1)}%`,
+        },
         labelLine: { show: false },
         itemStyle: { borderColor: "#ffffff", borderWidth: 3 },
         data: normalized.map((item, index) => ({

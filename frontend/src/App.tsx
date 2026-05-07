@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { PageLoader } from "./components/PageLoader";
 
@@ -10,7 +10,7 @@ const GeneMarkerDetailPage = lazy(() => import("./pages/GeneMarkerDetailPage").t
 const StudyDetailPage = lazy(() => import("./pages/StudyDetailPage").then((module) => ({ default: module.StudyDetailPage })));
 const DownloadsPage = lazy(() => import("./pages/DownloadsPage").then((module) => ({ default: module.DownloadsPage })));
 const StatisticsPage = lazy(() => import("./pages/StatisticsPage").then((module) => ({ default: module.StatisticsPage })));
-const HelpPage = lazy(() => import("./pages/HelpPage").then((module) => ({ default: module.HelpPage })));
+const TutorialPage = lazy(() => import("./pages/HelpPage").then((module) => ({ default: module.TutorialPage })));
 const SurvivalAnalysisPage = lazy(() => import("./pages/SurvivalAnalysisPage").then((module) => ({ default: module.SurvivalAnalysisPage })));
 const VafAnalysisPage = lazy(() => import("./pages/VafAnalysisPage").then((module) => ({ default: module.VafAnalysisPage })));
 
@@ -28,7 +28,8 @@ export default function App() {
           <Route path="/vaf-analysis" element={<VafAnalysisPage />} />
           <Route path="/studies/:id" element={<StudyDetailPage />} />
           <Route path="/downloads" element={<DownloadsPage />} />
-          <Route path="/help" element={<HelpPage />} />
+          <Route path="/tutorial" element={<TutorialPage />} />
+          <Route path="/help" element={<Navigate to="/tutorial" replace />} />
         </Routes>
       </Suspense>
     </AppShell>
