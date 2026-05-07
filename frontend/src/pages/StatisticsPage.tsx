@@ -188,6 +188,7 @@ function buildCohortDonutOption(
       },
     },
     title: {
+      show: false,
       text: formatNumber(total),
       subtext: "samples",
       left: "38%",
@@ -221,7 +222,7 @@ function buildCohortDonutOption(
     series: [
       {
         type: "pie",
-        radius: ["56%", "84%"],
+        radius: "84%",
         center: ["38%", "50%"],
         avoidLabelOverlap: true,
         label: { show: false },
@@ -256,6 +257,7 @@ function buildDonutOption(
       },
     },
     title: {
+      show: false,
       text: formatNumber(total),
       subtext: centerLabel,
       left: "38%",
@@ -289,7 +291,7 @@ function buildDonutOption(
     series: [
       {
         type: "pie",
-        radius: ["56%", "84%"],
+        radius: "84%",
         center: ["38%", "50%"],
         avoidLabelOverlap: true,
         label: { show: false },

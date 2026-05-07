@@ -31,8 +31,6 @@ const RING_PALETTES = {
   mutations: ["#4b247f", "#6731a7", "#8648c7", "#a66add", "#bf8fec", "#d4b3f3", "#e6d3f8"],
 } as const;
 
-const OTHER_SLICE_COLOR = "#6b7280";
-
 const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
 
 const SOURCE_RING_ORDER = ["internal", "public", "tcga"] as const;
@@ -182,33 +180,14 @@ function formatCompactCount(value: number) {
 function buildSunburstEntries(
   entries: HeroRingEntry[],
   palette: readonly string[],
-  limit = 7,
-  mergeFromLabel?: string,
 ) {
   const sorted = [...entries].sort((a, b) => b.value - a.value);
-  const mergeFromIndex = mergeFromLabel ? sorted.findIndex((entry) => entry.label === mergeFromLabel) : -1;
-  const splitIndex = mergeFromIndex >= 0 ? mergeFromIndex : limit;
-  const head = sorted.slice(0, splitIndex);
-  const tail = sorted.slice(splitIndex);
-  const otherValue = tail.reduce((sum, entry) => sum + entry.value, 0);
-
-  const children = head.map((entry, idx) => ({
+  return sorted.map((entry, idx) => ({
     name: entry.label,
     value: entry.value,
     browseKey: entry.browseKey,
     itemStyle: { color: palette[idx % palette.length] },
   }));
-
-  if (otherValue > 0) {
-    children.push({
-      name: "Other",
-      value: otherValue,
-      browseKey: "",
-      itemStyle: { color: OTHER_SLICE_COLOR },
-    });
-  }
-
-  return children;
 }
 
 function buildHeroSunburstOption(
@@ -220,7 +199,7 @@ function buildHeroSunburstOption(
   centerValue: string,
 ): EChartsOption {
   const isVariantCountChart = title === "Genome distribution" || title === "Variant Classification";
-  const children = buildSunburstEntries(entries, palette, 7, title === "Variant Classification" ? "Bladder" : undefined);
+  const children = buildSunburstEntries(entries, palette);
   const formatValue = (value: number) => (isVariantCountChart ? formatCompactCount(value) : formatNumber(value));
 
   return {
@@ -293,7 +272,7 @@ function buildHeroSunburstOption(
         startAngle: 180,
         sort: undefined,
         clockwise: true,
-        minAngle: 30,
+        minAngle: 8,
         avoidLabelOverlap: false,
         labelLine: {
           show: false,
@@ -312,9 +291,7 @@ function buildHeroSunburstOption(
           formatter: (params: { name?: string; value?: number }) => {
             const value = params.value ?? 0;
             const pct = formatPercent(value, total);
-            if (!params.name || params.name === "Other") {
-              return value > 0 ? `Other\n${pct}` : "";
-            }
+            if (!params.name) return "";
             return formatRingLabel(params.name, pct);
           },
         },

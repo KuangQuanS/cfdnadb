@@ -101,6 +101,8 @@ public class DuckDbService {
     private volatile List<CancerSummaryDto> cachedCancerSummary;
     private volatile long cachedCancerSummaryAtMillis;
     private volatile long cachedCancerSummaryDbModifiedMillis;
+    private volatile List<DataFileDto> cachedDataFiles;
+    private volatile List<DataFileDto> cachedHealthyVcfFiles;
     private final ConcurrentMap<String, CachedLabelCounts> sourceDistributionCache = new ConcurrentHashMap<>();
 
     @Autowired
@@ -464,6 +466,24 @@ public class DuckDbService {
     }
 
     public List<DataFileDto> listDataFiles() {
+        List<DataFileDto> snapshot = cachedDataFiles;
+        if (snapshot != null) {
+            return snapshot;
+        }
+        synchronized (this) {
+            snapshot = cachedDataFiles;
+            if (snapshot != null) {
+                return snapshot;
+            }
+            long start = System.currentTimeMillis();
+            List<DataFileDto> computed = List.copyOf(computeDataFiles());
+            cachedDataFiles = computed;
+            log.info("[DataFiles] Cached {} download metadata rows in {} ms", computed.size(), System.currentTimeMillis() - start);
+            return computed;
+        }
+    }
+
+    private List<DataFileDto> computeDataFiles() {
         List<DataFileDto> files = new ArrayList<>();
         for (String cancer : CANCERS) {
             Path multianno = resolveAggregateMultianno(cancer);
@@ -483,7 +503,7 @@ public class DuckDbService {
                     log.warn("Failed to scan maf dir for {}", cancer, e);
                 }
             }
-            // public/stats: aggregated mutation tables and cohort PDFs for public datasets (e.g. GEO_Breast_*)
+            // public/stats: aggregated mutation tables for public datasets (e.g. GEO_Breast_*)
             Path publicStatsDir = resolveCancerDir(cancer).resolve("public").resolve("stats");
             if (Files.isDirectory(publicStatsDir)) {
                 try (Stream<Path> stream = Files.list(publicStatsDir)) {
@@ -495,8 +515,6 @@ public class DuckDbService {
                                 String fileType;
                                 if (lower.endsWith("_all_mutations.txt")) {
                                     fileType = "Public Mutations";
-                                } else if (lower.endsWith(".pdf")) {
-                                    fileType = "Public Plot";
                                 } else {
                                     return;
                                 }
@@ -524,7 +542,21 @@ public class DuckDbService {
     }
 
     public List<DataFileDto> listHealthyVcfFiles() {
-        return listHealthyVcfDataFiles();
+        List<DataFileDto> snapshot = cachedHealthyVcfFiles;
+        if (snapshot != null) {
+            return snapshot;
+        }
+        synchronized (this) {
+            snapshot = cachedHealthyVcfFiles;
+            if (snapshot != null) {
+                return snapshot;
+            }
+            long start = System.currentTimeMillis();
+            List<DataFileDto> computed = List.copyOf(listHealthyVcfDataFiles());
+            cachedHealthyVcfFiles = computed;
+            log.info("[DataFiles] Cached {} healthy PON metadata rows in {} ms", computed.size(), System.currentTimeMillis() - start);
+            return computed;
+        }
     }
 
     public Resource loadDataFile(String category, String subPath) {
@@ -573,27 +605,13 @@ public class DuckDbService {
     }
 
     private DataFileDto buildHealthyVcfSummaryDataFile() {
-        if (!Files.isDirectory(healthyVcfDir)) {
+        List<DataFileDto> healthyFiles = listHealthyVcfFiles();
+        if (healthyFiles.isEmpty()) {
             return null;
         }
 
-        long totalSize = 0;
-        long fileCount = 0;
-        try (Stream<Path> stream = Files.list(healthyVcfDir)) {
-            for (Path path : stream.filter(this::isHealthyPonDownloadFile).collect(Collectors.toList())) {
-                fileCount++;
-                try {
-                    totalSize += Files.size(path);
-                } catch (IOException ignored) {
-                }
-            }
-        } catch (IOException exception) {
-            log.warn("Failed to summarize healthy VCF files from {}", healthyVcfDir, exception);
-            return null;
-        }
-        if (fileCount == 0) {
-            return null;
-        }
+        long totalSize = healthyFiles.stream().mapToLong(DataFileDto::getSizeBytes).sum();
+        long fileCount = healthyFiles.size();
         return new DataFileDto(
                 HEALTHY_COHORT,
                 "Healthy PON",

@@ -11,7 +11,6 @@ const FILE_TYPE_ORDER = [
   "Variant Data",
   "MAF Summary",
   "Public Mutations",
-  "Public Plot",
   "Pan-Cancer Variants",
 ];
 const COHORT_ORDER = [

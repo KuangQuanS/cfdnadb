@@ -8574,12 +8574,13 @@ button:disabled:hover {
 }
 
 .downloads-cohort-filter-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 8px;
 }
 
 .downloads-cohort-filter-option {
+  width: 100%;
   min-height: 30px;
   padding: 6px 10px;
   border: 1px solid #d5dfec;
@@ -8590,6 +8591,7 @@ button:disabled:hover {
   font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.2;
+  text-align: center;
 }
 
 .downloads-cohort-filter-option:hover,
@@ -9982,7 +9984,15 @@ button:disabled:hover {
 
 .survival-results--omics.vaf-omics-results .survival-chart-frame--vaf {
   width: 100%;
-  max-width: 720px;
+  max-width: 640px;
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+}
+
+.survival-chart-frame--vaf,
+.survival-chart-frame--omics {
+  width: 100%;
+  max-width: 640px;
   margin: 0 auto;
   aspect-ratio: 1 / 1;
 }
@@ -10054,7 +10064,7 @@ button:disabled:hover {
 }
 
 .survival-chart-frame {
-  width: min(100%, 720px);
+  width: min(100%, 640px);
   margin: 0 auto;
 }
 
@@ -10067,7 +10077,7 @@ button:disabled:hover {
 }
 
 .survival-chart-frame--omics {
-  aspect-ratio: 1.08 / 1;
+  aspect-ratio: 1 / 1;
 }
 
 .survival-plot-actions {
