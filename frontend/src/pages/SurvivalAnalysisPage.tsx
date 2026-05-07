@@ -326,7 +326,7 @@ function boxOption(result: VafResult, title: string): EChartsOption {
       left: 72,
       right: 28,
       top: 76,
-      bottom: labelRotate ? 108 : 72,
+      bottom: 118,
       show: true,
       borderColor: "#202020",
       borderWidth: 1,
@@ -337,7 +337,7 @@ function boxOption(result: VafResult, title: string): EChartsOption {
       data: names,
       name: result.xLabel,
       nameLocation: "middle",
-      nameGap: labelRotate ? 78 : 38,
+      nameGap: 88,
       nameTextStyle: { fontSize: 13 },
       axisLabel: {
         interval: 0,

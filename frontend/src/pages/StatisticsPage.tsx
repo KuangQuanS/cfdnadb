@@ -45,6 +45,7 @@ const CHART_LOADING_OPTION = {
 };
 
 const STANDARD_STAT_CHART_STYLE = { width: "100%", height: 430 };
+const STATISTICS_PIE_MIN_ANGLE = 18;
 
 function cleanLabels(items: LabelCount[]): LabelCount[] {
   return items.filter(
@@ -224,6 +225,7 @@ function buildCohortDonutOption(
         type: "pie",
         radius: "84%",
         center: ["38%", "50%"],
+        minAngle: STATISTICS_PIE_MIN_ANGLE,
         avoidLabelOverlap: true,
         label: {
           show: true,
@@ -301,6 +303,7 @@ function buildDonutOption(
         type: "pie",
         radius: "84%",
         center: ["38%", "50%"],
+        minAngle: STATISTICS_PIE_MIN_ANGLE,
         avoidLabelOverlap: true,
         label: {
           show: true,
