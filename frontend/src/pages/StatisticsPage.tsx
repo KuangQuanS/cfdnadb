@@ -45,7 +45,7 @@ const CHART_LOADING_OPTION = {
 };
 
 const STANDARD_STAT_CHART_STYLE = { width: "100%", height: 430 };
-const STATISTICS_PIE_MIN_ANGLE = 25;
+const STATISTICS_PIE_MIN_ANGLE = 18;
 
 function cleanLabels(items: LabelCount[]): LabelCount[] {
   return items.filter(
@@ -172,12 +172,9 @@ function buildCohortDonutOption(
   cancers: CancerSummary[],
   total: number
 ): EChartsOption {
-  const normalized = withOtherGroup(
-    cancers
-      .filter((item) => item.sampleCount > 0)
-      .map((item) => ({ label: item.cancer, count: item.sampleCount })),
-    8
-  );
+  const normalized = cancers
+    .filter((item) => item.sampleCount > 0)
+    .map((item) => ({ label: item.cancer, count: item.sampleCount }));
 
   return {
     tooltip: {
@@ -189,23 +186,17 @@ function buildCohortDonutOption(
       },
     },
     title: {
-      show: false,
-      text: formatNumber(total),
-      subtext: "samples",
+      show: true,
+      text: `Samples\n${formatNumber(total)}`,
       left: "38%",
-      top: "39%",
+      top: "44%",
       textAlign: "center",
       textStyle: {
-        color: "#1d2742",
-        fontSize: 24,
+        color: "#ffffff",
+        fontSize: 16,
         fontWeight: 800,
+        lineHeight: 20,
       },
-      subtextStyle: {
-        color: "#6b7893",
-        fontSize: 11,
-        fontWeight: 700,
-      },
-      itemGap: 2,
     },
     legend: {
       orient: "vertical",
@@ -228,13 +219,7 @@ function buildCohortDonutOption(
         minAngle: STATISTICS_PIE_MIN_ANGLE,
         avoidLabelOverlap: true,
         label: {
-          show: true,
-          position: "inside",
-          color: "#ffffff",
-          fontSize: 11,
-          fontWeight: 800,
-          formatter: (params: { name?: string; percent?: number }) =>
-            `${params.name ?? ""}\n${(params.percent ?? 0).toFixed(1)}%`,
+          show: false,
         },
         labelLine: { show: false },
         itemStyle: {
@@ -246,6 +231,17 @@ function buildCohortDonutOption(
           value: item.count,
           itemStyle: { color: PURPLE_SCALE[index % PURPLE_SCALE.length] },
         })),
+      },
+      {
+        type: "pie",
+        radius: "40%",
+        center: ["38%", "50%"],
+        silent: true,
+        label: { show: false },
+        labelLine: { show: false },
+        tooltip: { show: false },
+        data: [{ value: 1, itemStyle: { color: "#bd4820", borderColor: "#ffffff", borderWidth: 3 } }],
+        z: 3,
       },
     ],
   };
@@ -652,7 +648,7 @@ function RidgelinePlot({ data }: { data: VafDistribution[] }) {
       ctx.font = "600 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      ctx.fillText(d.cancerType.replace(/_/g, " "), plotLeft - 12, by);
+      ctx.fillText(formatVafCancerLabel(d.cancerType), plotLeft - 12, by);
     }
 
     // X-axis line
@@ -774,6 +770,11 @@ function RidgelinePlot({ data }: { data: VafDistribution[] }) {
       />
     </div>
   );
+}
+
+function formatVafCancerLabel(value: string): string {
+  if (value === "EGA") return "EGA_Lung";
+  return value.replace(/_/g, " ");
 }
 
 export function StatisticsPage() {
@@ -906,7 +907,15 @@ export function StatisticsPage() {
             </button>
           ))}
         </div>
-      ) : null}
+      ) : (
+        <div className="statistics-rna-cohort-strip">
+          {activeCohorts.map((cohort) => (
+            <button type="button" key={cohort.cancer}>
+              {formatCohortLabel(cohort.cancer)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <p className="panel-note">Loading database statistics...</p>
@@ -914,7 +923,7 @@ export function StatisticsPage() {
 
       <StatisticsSplitSection
         title="Statistic Of Disease"
-        intro={<><strong>Disease</strong> across ctDNA cohorts in our collection.</>}
+        intro={<><strong>Cancer type and Healthy</strong> across ctDNA cohorts in our collection.</>}
         rows={cohortRows}
         labelHeader="Disease"
         countHeader="Sample Count"
