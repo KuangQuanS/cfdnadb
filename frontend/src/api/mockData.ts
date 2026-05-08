@@ -579,7 +579,7 @@ export const funcDistributionMock: LabelCount[] = [
   { label: "intronic", count: 79842 },
   { label: "intergenic", count: 28651 },
   { label: "exonic", count: 15203 },
-  { label: "UTR3", count: 4812 },
+  { label: "UTR", count: 4812 },
   { label: "UTR5", count: 1243 },
   { label: "splicing", count: 987 },
   { label: "ncRNA_intronic", count: 2134 },

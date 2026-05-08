@@ -19,7 +19,7 @@ const SAMPLE_BROWSE_CACHE_MS = 10 * 60_000;
 const SAMPLE_BROWSE_GC_MS = 60 * 60_000;
 const PRESETS_KEY = "cfdnadb-browse-sample-presets";
 const SOURCE_OPTIONS = [
-  { value: "private", label: "Internal Data" },
+  { value: "private", label: "Collected samples" },
   { value: "geo", label: "GEO" },
 ] as const;
 const DOWNLOAD_SOURCE_OPTIONS = [
@@ -97,7 +97,7 @@ function sampleKey(item: SampleSelection) {
 }
 
 function sourceLabel(source: string) {
-  if (source === "private") return "Internal Data";
+  if (source === "private") return "Collected samples";
   if (source === "public") return "Public Data";
   if (source === "tcga") return "TCGA";
   if (source === "healthy") return "Healthy VCF";

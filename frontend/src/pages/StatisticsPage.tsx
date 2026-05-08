@@ -869,7 +869,7 @@ export function StatisticsPage() {
         <div>
           <h1>Statistic Of Dataset</h1>
           <p>
-            <strong>{isPublic ? "Public cohort" : "Internal Data"} statistics</strong> across ctDNA mutation datasets in our collection.
+            <strong>{isPublic ? "Public cohort" : "Collected samples"} statistics</strong> across ctDNA mutation datasets in our collection.
           </p>
         </div>
         <div className="statistics-rna-controls">
@@ -878,7 +878,7 @@ export function StatisticsPage() {
             className={!isPublic ? "active" : ""}
             onClick={() => setSource("private")}
           >
-            Internal Data
+            Collected samples
           </button>
           <button
             type="button"

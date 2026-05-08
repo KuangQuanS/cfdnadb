@@ -94,7 +94,7 @@ async function parseXlsxToText(file: File) {
 }
 
 const BROWSE_SOURCES = [
-  { source: "cfDNA", label: "Internal Data" },
+  { source: "cfDNA", label: "Collected samples" },
   { source: "Public", label: "Public Cohorts" },
   { source: "tcga", label: "TCGA" },
 ] as const;

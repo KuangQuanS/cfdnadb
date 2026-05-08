@@ -36,7 +36,7 @@ const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] 
 const SOURCE_RING_ORDER = ["internal", "public", "tcga"] as const;
 
 const SOURCE_RING_LABELS: Record<typeof SOURCE_RING_ORDER[number], { label: string; browseSource: string }> = {
-  internal: { label: "Internal Data", browseSource: "cfDNA" },
+  internal: { label: "Collected samples", browseSource: "cfDNA" },
   public: { label: "Public Cohort", browseSource: "Public" },
   tcga: { label: "TCGA", browseSource: "tcga" },
 };
@@ -90,6 +90,7 @@ function formatPercent(value: number, total: number) {
 
 function formatDistributionLabel(label: string) {
   const normalized = label.replace(/_/g, " ").trim();
+  if (/^UTR3$/i.test(normalized)) return "UTR";
   if (!normalized) return label;
   return normalized
     .split(/\s+/)
@@ -543,7 +544,7 @@ export function HeroCarousel() {
             <div className="gdc-title-rule" aria-hidden="true" />
             <div className="gdc-subtitle">
               <p>
-                ctDNA Database is a comprehensive database focusing on plasma circulating tumor DNA somatic mutation profiles of multiple cancers based on high-throughput sequencing, encompassing <span className="gdc-subtitle-stat">9,924 samples</span> (<span className="gdc-subtitle-stat">6,618 public</span> and <span className="gdc-subtitle-stat">3,306 internal</span>), <span className="gdc-subtitle-stat gdc-subtitle-stat--variant">51,099,363 variants</span>, and <span className="gdc-subtitle-stat">16 cancer types</span>. Among these variants, genome distribution analysis identified <span className="gdc-subtitle-stat gdc-subtitle-stat--variant">48,535,909 variants</span>, including <span className="gdc-subtitle-term">23,901,156 intergenic</span>, <span className="gdc-subtitle-term">17,771,249 intronic</span>, <span className="gdc-subtitle-term">2,217,583 exonic</span>, and <span className="gdc-subtitle-term">646,446 UTR3</span> variants.
+                ctDNA Database is a comprehensive database focusing on plasma circulating tumor DNA somatic mutation profiles of multiple cancers based on high-throughput sequencing, encompassing <span className="gdc-subtitle-stat">9,924 samples</span> (<span className="gdc-subtitle-stat">6,618 public</span> and <span className="gdc-subtitle-stat">3,306 collected</span>), <span className="gdc-subtitle-stat gdc-subtitle-stat--variant">51,099,363 variants</span>, and <span className="gdc-subtitle-stat">16 cancer types</span>. Among these variants, genome distribution analysis identified <span className="gdc-subtitle-stat gdc-subtitle-stat--variant">48,535,909 variants</span>, including <span className="gdc-subtitle-term">23,901,156 intergenic</span>, <span className="gdc-subtitle-term">17,771,249 intronic</span>, <span className="gdc-subtitle-term">2,217,583 exonic</span>, and <span className="gdc-subtitle-term">646,446 UTR</span> variants.
               </p>
               <p>
                 For functional annotation, we identified <span className="gdc-subtitle-stat gdc-subtitle-stat--mutation">2,499,460 non-synonymous mutations</span>, comprising <span className="gdc-subtitle-term">2,231,182 missense mutations</span>, <span className="gdc-subtitle-term">126,633 nonsense mutations</span>, <span className="gdc-subtitle-term">15,167 frame shift deletions</span>, and <span className="gdc-subtitle-term">113,284 frame shift insertions</span>. The database provides integrated analysis of <span className="gdc-subtitle-keyword">somatic mutations</span>, <span className="gdc-subtitle-keyword">VAF</span>, <span className="gdc-subtitle-keyword">oncoplots</span>, <span className="gdc-subtitle-keyword">transition/transversion (Ti/Tv) plots</span>, and <span className="gdc-subtitle-keyword">survival outcomes</span>. Beyond variant-level exploration, the database integrates additional epigenomic and structural genomics data including <span className="gdc-subtitle-keyword">DNA methylation</span>, <span className="gdc-subtitle-keyword">circulating tumor cells (CTCs)</span>, <span className="gdc-subtitle-keyword">histone modifications</span>, and <span className="gdc-subtitle-keyword">nucleosome positioning</span> to facilitate the assessment of how mutated genes exert their functional effects.
