@@ -25,20 +25,57 @@ import java.util.Optional;
 public class CsvStatisticsService {
 
     private final Path csvDir;
+    private volatile Optional<List<LabelCountDto>> cachedHomeSourceSamples;
+    private volatile Optional<List<CancerSummaryDto>> cachedHomeSampleCategories;
+    private volatile Optional<List<HomeBodyCalloutDto>> cachedHomeBodyCallouts;
 
     public CsvStatisticsService(@Value("${app.data-dir:/400T/cfdnaweb}") String dataDir) {
         this.csvDir = Path.of(dataDir).resolve("statistics").resolve("csv");
     }
 
     public Optional<List<LabelCountDto>> readHomeSourceSamples() {
-        return readUnifiedLabelCounts("home", "sourceSamples");
+        Optional<List<LabelCountDto>> snapshot = cachedHomeSourceSamples;
+        if (snapshot == null) {
+            synchronized (this) {
+                snapshot = cachedHomeSourceSamples;
+                if (snapshot == null) {
+                    snapshot = readUnifiedLabelCounts("home", "sourceSamples").map(List::copyOf);
+                    cachedHomeSourceSamples = snapshot;
+                }
+            }
+        }
+        return snapshot;
     }
 
     public Optional<List<CancerSummaryDto>> readHomeSampleCategories() {
-        return readUnifiedCancerSummaries("home", "sampleCategories");
+        Optional<List<CancerSummaryDto>> snapshot = cachedHomeSampleCategories;
+        if (snapshot == null) {
+            synchronized (this) {
+                snapshot = cachedHomeSampleCategories;
+                if (snapshot == null) {
+                    snapshot = readUnifiedCancerSummaries("home", "sampleCategories").map(List::copyOf);
+                    cachedHomeSampleCategories = snapshot;
+                }
+            }
+        }
+        return snapshot;
     }
 
     public Optional<List<HomeBodyCalloutDto>> readHomeBodyCallouts() {
+        Optional<List<HomeBodyCalloutDto>> snapshot = cachedHomeBodyCallouts;
+        if (snapshot == null) {
+            synchronized (this) {
+                snapshot = cachedHomeBodyCallouts;
+                if (snapshot == null) {
+                    snapshot = loadHomeBodyCallouts().map(List::copyOf);
+                    cachedHomeBodyCallouts = snapshot;
+                }
+            }
+        }
+        return snapshot;
+    }
+
+    private Optional<List<HomeBodyCalloutDto>> loadHomeBodyCallouts() {
         Path path = csvDir.resolve("home_body_callouts.csv");
         if (!Files.isRegularFile(path)) return Optional.empty();
         List<HomeBodyCalloutDto> rows = new ArrayList<>();
