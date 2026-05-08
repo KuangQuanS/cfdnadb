@@ -28,7 +28,7 @@ const RING_PALETTES = {
   sourceSamples: ["#143d79", "#1d56a7", "#2872cf", "#4b90df", "#75afe9", "#a7cff2"],
   cancerSamples: ["#8a2d12", "#b9471b", "#df6828", "#f08b3e", "#f5a85f", "#f8c187", "#fbd6ad"],
   annotated: ["#0f5a43", "#16805f", "#20a77c", "#45bf94", "#6ed2ae", "#9de3ca", "#c2eee0"],
-  mutations: ["#00b4d8", "#00f5d4", "#80ffdb", "#ffd166", "#f8961e", "#f94144", "#9b5de5"],
+  mutations: ["#4C1D95", "#5B21B6", "#7C3AED", "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE"],
 } as const;
 
 const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
@@ -198,6 +198,7 @@ function buildHeroSunburstOption(
   palette: readonly string[],
   centerTitle: string,
   centerValue: string,
+  centerColor?: string,
 ): EChartsOption {
   const isVariantCountChart = title === "Genome distribution" || title === "Variant Classification";
   const children = buildSunburstEntries(entries, palette);
@@ -256,7 +257,7 @@ function buildHeroSunburstOption(
           show: false,
         },
         itemStyle: {
-          color: palette[1] ?? palette[0],
+          color: centerColor ?? palette[1] ?? palette[0],
           borderColor: "#ffffff",
           borderWidth: 2,
         },
@@ -316,6 +317,7 @@ function HeroRingChart({
   palette,
   centerTitle,
   centerValue,
+  centerColor,
   onSliceClick,
 }: {
   title: string;
@@ -324,11 +326,12 @@ function HeroRingChart({
   palette: readonly string[];
   centerTitle: string;
   centerValue: string;
+  centerColor?: string;
   onSliceClick: (browseKey: string) => void;
 }) {
   const option = useMemo(
-    () => buildHeroSunburstOption(title, total, entries, palette, centerTitle, centerValue),
-    [centerTitle, centerValue, entries, palette, title, total],
+    () => buildHeroSunburstOption(title, total, entries, palette, centerTitle, centerValue, centerColor),
+    [centerColor, centerTitle, centerValue, entries, palette, title, total],
   );
 
   return (
@@ -513,6 +516,7 @@ export function HeroCarousel() {
         palette: RING_PALETTES.mutations,
         centerTitle: "Variants",
         centerValue: formatCompactCount(totalVariantClassification),
+        centerColor: "#A78BFA",
       },
     ],
     [genomeRingEntries, sampleRingEntries, sourceRingEntries, totalGenomeDistribution, totalSamples, totalSourceSamples, totalVariantClassification, variantClassRingEntries],
@@ -639,6 +643,7 @@ export function HeroCarousel() {
                   palette={card.palette}
                   centerTitle={card.centerTitle}
                   centerValue={card.centerValue}
+                  centerColor={card.centerColor}
                   onSliceClick={goToOverviewSlice}
                 />
               ))}
