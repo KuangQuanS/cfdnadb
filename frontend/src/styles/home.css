@@ -46,8 +46,9 @@
 }
 
 .gdc-hero-inner--intro {
-  grid-template-columns: minmax(0, 1.24fr) minmax(520px, 0.76fr);
-  gap: clamp(48px, 5vw, 110px);
+  width: min(1900px, calc(100% - 96px));
+  grid-template-columns: minmax(620px, 0.96fr) minmax(610px, 0.74fr);
+  gap: clamp(34px, 3vw, 70px);
   align-items: start;
 }
 
@@ -73,7 +74,9 @@
   }
 
   .gdc-hero-inner--intro {
-    grid-template-columns: minmax(0, 1.28fr) minmax(560px, 0.72fr);
+    width: min(1900px, calc(100% - 96px));
+    grid-template-columns: minmax(700px, 0.98fr) minmax(640px, 0.72fr);
+    gap: clamp(46px, 3vw, 86px);
   }
 }
 
@@ -86,8 +89,9 @@
   display: grid;
   gap: 18px;
   align-content: start;
+  min-width: 0;
   min-height: 620px;
-  margin-left: 2%;
+  margin-left: clamp(32px, 3vw, 58px);
   padding: 42px 0 18px;
 }
 
@@ -103,7 +107,7 @@
 .gdc-title {
   margin: 0;
   color: #18233f;
-  font-size: clamp(3.3rem, 4.6vw, 5.2rem);
+  font-size: clamp(3.3rem, 4.2vw, 4.6rem);
   line-height: 1;
   font-weight: 900;
   letter-spacing: 0;
@@ -148,18 +152,38 @@
   text-justify: inter-word;
 }
 
+.gdc-subtitle-stat,
+.gdc-subtitle-term,
+.gdc-subtitle-keyword {
+  font-weight: 850;
+  color: #176f91;
+}
+
 /* ---- Middle col: body map ---- */
 .gdc-col-middle {
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
   min-width: 0;
+  margin-left: clamp(24px, 2.4vw, 56px);
 }
 
 .body-map {
-  position: relative;
-  width: min(100%, 680px);
+  width: min(100%, 920px);
+  min-width: 900px;
   height: 800px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  overflow: visible;
+}
+
+.body-map-stage {
+  position: relative;
+  width: 680px;
+  flex: 0 0 680px;
+  height: 800px;
+  margin-right: clamp(18px, 1.6vw, 34px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -205,16 +229,17 @@
 .gdc-stat-inner {
   position: relative;
   z-index: 1;
-  width: min(1360px, calc(100% - 300px));
+  width: min(1600px, calc(100% - 160px));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(320px, 0.68fr) minmax(680px, 1.32fr);
+  grid-template-columns: minmax(780px, 1fr) minmax(360px, 0.48fr);
   gap: clamp(34px, 3vw, 54px);
   align-items: stretch;
 }
 
 .gdc-index-card,
-.gdc-stat-card {
+.gdc-stat-card,
+.gdc-body-card {
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -259,6 +284,28 @@
   box-shadow: 0 8px 30px rgba(23, 36, 70, 0.05), 0 1px 3px rgba(23, 36, 70, 0.03);
   border: 1px solid rgba(218, 228, 240, 0.6);
   padding: 16px;
+}
+
+.gdc-body-card {
+  min-height: 780px;
+}
+
+.gdc-body-card .body-map {
+  width: 100%;
+  min-width: 0;
+  height: 760px;
+  justify-content: center;
+}
+
+.gdc-body-card .body-map-stage {
+  width: min(100%, 760px);
+  flex: 0 1 760px;
+  height: 760px;
+  margin-right: 0;
+}
+
+.gdc-body-card .gdc-body-img {
+  height: 760px;
 }
 
 .gdc-tutorial-panel img {
@@ -675,7 +722,7 @@
   cursor: pointer;
   pointer-events: auto;
   gap: 2px;
-  width: 128px;
+  width: clamp(112px, 8.1vw, 128px);
   min-height: 42px;
   box-sizing: border-box;
   transform: translate(-50%, -50%);
@@ -768,6 +815,12 @@
   margin-right: 2%;
 }
 
+.gdc-hero-overview-card {
+  margin-right: 0;
+  padding-top: 34px;
+  justify-content: stretch;
+}
+
 .gdc-side-rail {
   width: min(100%, 620px);
   display: grid;
@@ -826,8 +879,29 @@
 
 .gdc-overview-chart-shell {
   position: relative;
-  width: min(100%, 290px);
-  min-height: 280px;
+  --gdc-overview-chart-size: clamp(320px, 23vw, 340px);
+  width: min(100%, var(--gdc-overview-chart-size));
+  min-height: var(--gdc-overview-chart-size);
+}
+
+.gdc-hero-overview-card .gdc-overview-grid {
+  width: 100%;
+  padding: 10px;
+  gap: 8px 14px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.gdc-hero-overview-card .gdc-overview-chart {
+  gap: 7px;
+  padding: 7px;
+}
+
+.gdc-hero-overview-card .gdc-overview-chart-title {
+  font-size: 0.86rem;
+}
+
+.gdc-hero-overview-card .gdc-overview-chart-shell {
+  --gdc-overview-chart-size: clamp(220px, 13.8vw, 270px);
 }
 
 .gdc-overview-chart-shell::before {
@@ -918,8 +992,13 @@
   color: #14213a;
   font-size: 0.97rem;
   font-weight: 600;
+  font-style: italic;
   outline: none;
   box-shadow: 0 10px 22px rgba(24, 35, 63, 0.06);
+}
+
+.gdc-quick-search-row input::placeholder {
+  font-style: italic;
 }
 
 .gdc-quick-search-row input:focus {
@@ -1156,13 +1235,19 @@
     width: calc(100% - 180px);
   }
 
+  .gdc-hero-inner--intro {
+    width: calc(100% - 96px);
+    grid-template-columns: minmax(560px, 0.96fr) minmax(500px, 0.74fr);
+    gap: 24px;
+  }
+
   .gdc-stat-inner,
   .gdc-pipeline-inner {
     width: calc(100% - 180px);
   }
 
   .gdc-stat-inner {
-    grid-template-columns: minmax(320px, 0.68fr) minmax(620px, 1.32fr);
+    grid-template-columns: minmax(700px, 1fr) minmax(340px, 0.5fr);
   }
 }
 
@@ -1201,6 +1286,14 @@
   }
 
   .body-map {
+    min-width: 0;
+    width: min(100%, 680px);
+    height: 344px;
+  }
+
+  .body-map-stage {
+    width: min(100%, 680px);
+    flex-basis: min(100%, 680px);
     height: 344px;
   }
 
@@ -1237,13 +1330,30 @@
   }
 
   .gdc-index-card,
-  .gdc-stat-card {
+  .gdc-stat-card,
+  .gdc-body-card {
     min-height: auto;
   }
 
   .gdc-stat-card {
     border-left: 0;
     padding-left: 0;
+  }
+
+  .gdc-hero-overview-card {
+    padding-top: 0;
+  }
+
+  .gdc-body-card .body-map {
+    height: 344px;
+  }
+
+  .gdc-body-card .body-map-stage {
+    height: 344px;
+  }
+
+  .gdc-body-card .gdc-body-img {
+    height: 360px;
   }
 }
 
@@ -1284,9 +1394,21 @@
     height: 278px;
   }
 
+  .gdc-body-card .body-map {
+    height: 278px;
+  }
+
+  .gdc-body-card .body-map-stage {
+    height: 278px;
+  }
+
   .gdc-body-img {
     height: 292px;
     transform: translateY(0);
+  }
+
+  .gdc-body-card .gdc-body-img {
+    height: 292px;
   }
 
   .gdc-overview-grid {
@@ -1294,8 +1416,7 @@
   }
 
   .gdc-overview-chart-shell {
-    width: min(100%, 252px);
-    min-height: 240px;
+    --gdc-overview-chart-size: min(252px, 100vw - 64px);
   }
 
   .gdc-quick-stat-grid {
@@ -1364,8 +1485,7 @@
   }
 
   .gdc-overview-chart-shell {
-    width: min(100%, 252px);
-    min-height: 240px;
+    --gdc-overview-chart-size: min(252px, 100vw - 64px);
   }
 
   .gdc-overview-media-grid {
@@ -2195,7 +2315,7 @@
 }
 
 .body-callout .callout-label {
-  animation: gdcCalloutLabelIn 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: gdcCalloutLabelIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .body-callout .callout-dot {
@@ -2203,31 +2323,31 @@
 }
 
 .body-callout:nth-of-type(1) .callout-label {
-  animation-delay: 360ms;
+  animation-delay: 80ms;
 }
 
 .body-callout:nth-of-type(2) .callout-label {
-  animation-delay: 410ms;
+  animation-delay: 100ms;
 }
 
 .body-callout:nth-of-type(3) .callout-label {
-  animation-delay: 460ms;
+  animation-delay: 120ms;
 }
 
 .body-callout:nth-of-type(4) .callout-label {
-  animation-delay: 510ms;
+  animation-delay: 140ms;
 }
 
 .body-callout:nth-of-type(5) .callout-label {
-  animation-delay: 560ms;
+  animation-delay: 160ms;
 }
 
 .body-callout:nth-of-type(6) .callout-label {
-  animation-delay: 610ms;
+  animation-delay: 180ms;
 }
 
 .body-callout:nth-of-type(n + 7) .callout-label {
-  animation-delay: 660ms;
+  animation-delay: 200ms;
 }
 
 .body-callout:nth-of-type(2) .callout-dot {

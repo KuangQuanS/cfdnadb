@@ -1,7 +1,7 @@
 export const CANCER_OPTIONS = [
-  "Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
-  "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
-  "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Benign_Tumor",
+  "Bladder", "Brain", "Breast", "Cervical", "Colorectal",
+  "Endometrial", "Esophageal", "Gastric", "HeadAndNeck", "Kidney",
+  "Liver", "Lung", "Ovarian", "Pancreatic", "Thyroid", "Benign_Tumor",
 ] as const;
 
 export const DEFAULT_CANCER = "Breast";

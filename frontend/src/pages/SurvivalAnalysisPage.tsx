@@ -157,7 +157,7 @@ function kmOption(result: KmResult, title: string): EChartsOption {
     });
   }
   return {
-    title: { text: title, left: "center", textStyle: { fontSize: 15, fontWeight: 600 } },
+    title: { text: title, left: "center", textStyle: { fontSize: 15, fontWeight: 600, fontStyle: "italic" } },
     tooltip: {
       trigger: "axis",
       valueFormatter: (v: any) => (typeof v === "number" ? v.toFixed(3) : v)
@@ -318,15 +318,15 @@ function boxOption(result: VafResult, title: string): EChartsOption {
       text: title,
       subtext: subtitle,
       left: "center",
-      textStyle: { fontSize: 15, fontWeight: 600 },
+      textStyle: { fontSize: 15, fontWeight: 600, fontStyle: "italic" },
       subtextStyle: { fontSize: 12 }
     },
     tooltip: { trigger: "item" },
     grid: {
       left: 72,
       right: 28,
-      top: 108,
-      bottom: labelRotate ? 132 : 96,
+      top: 76,
+      bottom: 118,
       show: true,
       borderColor: "#202020",
       borderWidth: 1,
@@ -337,7 +337,7 @@ function boxOption(result: VafResult, title: string): EChartsOption {
       data: names,
       name: result.xLabel,
       nameLocation: "middle",
-      nameGap: labelRotate ? 78 : 38,
+      nameGap: 88,
       nameTextStyle: { fontSize: 13 },
       axisLabel: {
         interval: 0,

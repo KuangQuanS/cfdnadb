@@ -12,25 +12,15 @@ import type { CancerSummary, LabelCount, VafDistribution } from "../types/api";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
 
-const PURPLE_SCALE = [
+const STAT_PIE_SCALE = [
   "#2C3A85",
-  "#FC812F",
-  "#4ABEDC",
-  "#38A169",
-  "#5E72B9",
-  "#F3A15D",
-  "#7FD4E6",
-  "#7BC79A",
-];
-
-const DONUT_SCALE = [
-  "#2C3A85",
-  "#FC812F",
-  "#4ABEDC",
-  "#38A169",
-  "#5E72B9",
-  "#F3A15D",
-  "#C7D2F1",
+  "#1D56A7",
+  "#2872CF",
+  "#4B90DF",
+  "#75AFE9",
+  "#A7CFF2",
+  "#C7DDF6",
+  "#E1ECFA",
 ];
 
 const CHART_LOADING_OPTION = {
@@ -45,6 +35,7 @@ const CHART_LOADING_OPTION = {
 };
 
 const STANDARD_STAT_CHART_STYLE = { width: "100%", height: 430 };
+const STATISTICS_PIE_MIN_ANGLE = 18;
 
 function cleanLabels(items: LabelCount[]): LabelCount[] {
   return items.filter(
@@ -171,12 +162,9 @@ function buildCohortDonutOption(
   cancers: CancerSummary[],
   total: number
 ): EChartsOption {
-  const normalized = withOtherGroup(
-    cancers
-      .filter((item) => item.sampleCount > 0)
-      .map((item) => ({ label: item.cancer, count: item.sampleCount })),
-    8
-  );
+  const normalized = cancers
+    .filter((item) => item.sampleCount > 0)
+    .map((item) => ({ label: item.cancer, count: item.sampleCount }));
 
   return {
     tooltip: {
@@ -187,44 +175,30 @@ function buildCohortDonutOption(
         return `${params.name}<br/>${formatNumber(value)} samples (${pct}%)`;
       },
     },
-    title: {
-      text: formatNumber(total),
-      subtext: "samples",
-      left: "38%",
-      top: "39%",
-      textAlign: "center",
-      textStyle: {
-        color: "#1d2742",
-        fontSize: 24,
-        fontWeight: 800,
-      },
-      subtextStyle: {
-        color: "#6b7893",
-        fontSize: 11,
-        fontWeight: 700,
-      },
-      itemGap: 2,
-    },
+    title: { show: false },
     legend: {
       orient: "vertical",
-      right: 0,
+      right: 56,
       top: "middle",
       icon: "circle",
-      itemWidth: 8,
-      itemHeight: 8,
-      itemGap: 10,
+      itemWidth: 10,
+      itemHeight: 10,
+      itemGap: 12,
       type: "scroll",
       pageIconColor: "#2C3A85",
-      pageTextStyle: { color: "#53627d", fontSize: 11 },
-      textStyle: { color: "#53627d", fontSize: 11, fontWeight: 600 },
+      pageTextStyle: { color: "#53627d", fontSize: 12 },
+      textStyle: { color: "#53627d", fontSize: 13, fontWeight: 700 },
     },
     series: [
       {
         type: "pie",
-        radius: ["56%", "84%"],
+        radius: "84%",
         center: ["38%", "50%"],
+        minAngle: STATISTICS_PIE_MIN_ANGLE,
         avoidLabelOverlap: true,
-        label: { show: false },
+        label: {
+          show: false,
+        },
         labelLine: { show: false },
         itemStyle: {
           borderColor: "#ffffff",
@@ -233,17 +207,14 @@ function buildCohortDonutOption(
         data: normalized.map((item, index) => ({
           name: item.label,
           value: item.count,
-          itemStyle: { color: PURPLE_SCALE[index % PURPLE_SCALE.length] },
+          itemStyle: { color: STAT_PIE_SCALE[index % STAT_PIE_SCALE.length] },
         })),
       },
     ],
   };
 }
 
-function buildDonutOption(
-  data: LabelCount[],
-  centerLabel: string
-): EChartsOption {
+function buildDonutOption(data: LabelCount[]): EChartsOption {
   const normalized = withOtherGroup(data, 5);
   const total = normalized.reduce((sum, item) => sum + item.count, 0);
   return {
@@ -255,50 +226,36 @@ function buildDonutOption(
         ).toFixed(1)}%)`;
       },
     },
-    title: {
-      text: formatNumber(total),
-      subtext: centerLabel,
-      left: "38%",
-      top: "39%",
-      textAlign: "center",
-      textStyle: {
-        color: "#1d2742",
-        fontSize: 22,
-        fontWeight: 800,
-      },
-      subtextStyle: {
-        color: "#6b7893",
-        fontSize: 11,
-        fontWeight: 700,
-      },
-      itemGap: 2,
-    },
+    title: { show: false },
     legend: {
       orient: "vertical",
-      right: 0,
+      right: 56,
       top: "middle",
       icon: "circle",
-      itemHeight: 8,
-      itemWidth: 8,
-      itemGap: 10,
-      textStyle: { color: "#53627d", fontSize: 11, fontWeight: 600 },
+      itemHeight: 10,
+      itemWidth: 10,
+      itemGap: 12,
+      textStyle: { color: "#53627d", fontSize: 13, fontWeight: 700 },
       type: "scroll",
       pageIconColor: "#2C3A85",
-      pageTextStyle: { color: "#53627d", fontSize: 11 },
+      pageTextStyle: { color: "#53627d", fontSize: 12 },
     },
     series: [
       {
         type: "pie",
-        radius: ["56%", "84%"],
+        radius: "84%",
         center: ["38%", "50%"],
+        minAngle: STATISTICS_PIE_MIN_ANGLE,
         avoidLabelOverlap: true,
-        label: { show: false },
+        label: {
+          show: false,
+        },
         labelLine: { show: false },
         itemStyle: { borderColor: "#ffffff", borderWidth: 3 },
         data: normalized.map((item, index) => ({
           name: item.label,
           value: item.count,
-          itemStyle: { color: DONUT_SCALE[index % DONUT_SCALE.length] },
+          itemStyle: { color: STAT_PIE_SCALE[index % STAT_PIE_SCALE.length] },
         })),
       },
     ],
@@ -631,7 +588,7 @@ function RidgelinePlot({ data }: { data: VafDistribution[] }) {
       ctx.font = "600 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      ctx.fillText(d.cancerType.replace(/_/g, " "), plotLeft - 12, by);
+      ctx.fillText(formatVafCancerLabel(d.cancerType), plotLeft - 12, by);
     }
 
     // X-axis line
@@ -755,6 +712,11 @@ function RidgelinePlot({ data }: { data: VafDistribution[] }) {
   );
 }
 
+function formatVafCancerLabel(value: string): string {
+  if (value === "EGA") return "EGA_Lung";
+  return value.replace(/_/g, " ");
+}
+
 export function StatisticsPage() {
   const [source, setSource] = useState<"private" | "public">("private");
   const [publicCohort, setPublicCohort] = useState<string | null>(null);
@@ -847,7 +809,7 @@ export function StatisticsPage() {
         <div>
           <h1>Statistic Of Dataset</h1>
           <p>
-            <strong>{isPublic ? "Public cohort" : "Internal Data"} statistics</strong> across cfDNA mutation datasets in our collection.
+            <strong>{isPublic ? "Public cohort" : "Collected Samples"} statistics</strong> across ctDNA mutation datasets in our collection.
           </p>
         </div>
         <div className="statistics-rna-controls">
@@ -856,7 +818,7 @@ export function StatisticsPage() {
             className={!isPublic ? "active" : ""}
             onClick={() => setSource("private")}
           >
-            Internal Data
+            Collected Samples
           </button>
           <button
             type="button"
@@ -885,28 +847,30 @@ export function StatisticsPage() {
             </button>
           ))}
         </div>
-      ) : null}
+      ) : (
+        <div className="statistics-rna-cohort-strip">
+          <button type="button" className="active">Collected Samples</button>
+        </div>
+      )}
 
       {loading ? (
         <p className="panel-note">Loading database statistics...</p>
       ) : null}
 
-      {!isPublic ? (
-        <StatisticsSplitSection
-          title="Statistic Of Disease"
-          intro={<><strong>Disease</strong> across cfDNA cohorts in our collection.</>}
-          rows={cohortRows}
-          labelHeader="Disease"
-          countHeader="Sample Count"
-        >
-          <ReactECharts
-            option={buildCohortDonutOption(activeCohorts, totalSamples)}
-            showLoading={cohortChartLoading}
-            loadingOption={CHART_LOADING_OPTION}
-            style={STANDARD_STAT_CHART_STYLE}
-          />
-        </StatisticsSplitSection>
-      ) : null}
+      <StatisticsSplitSection
+        title="Statistic Of Disease"
+        intro={<><strong>Cancer type and Healthy</strong> across ctDNA cohorts in our collection.</>}
+        rows={cohortRows}
+        labelHeader="Disease"
+        countHeader="Sample Count"
+      >
+        <ReactECharts
+          option={buildCohortDonutOption(activeCohorts, totalSamples)}
+          showLoading={cohortChartLoading}
+          loadingOption={CHART_LOADING_OPTION}
+          style={STANDARD_STAT_CHART_STYLE}
+        />
+      </StatisticsSplitSection>
 
       <StatisticsSplitSection
         title="Statistic Of Genomic Region"
@@ -915,7 +879,7 @@ export function StatisticsPage() {
         labelHeader="Region"
       >
         <ReactECharts
-          option={buildDonutOption(overview?.funcDistribution ?? [], "variants")}
+          option={buildDonutOption(overview?.funcDistribution ?? [])}
           showLoading={funcChartLoading}
           loadingOption={CHART_LOADING_OPTION}
           style={STANDARD_STAT_CHART_STYLE}

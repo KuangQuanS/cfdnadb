@@ -9,7 +9,7 @@ const navItems = [
   { to: "/browse", label: "Browser" },
   { to: "/statistics", label: "Statistics" },
   { to: "/downloads", label: "Download" },
-  { to: "/help", label: "Tutorial" }
+  { to: "/tutorial", label: "Tutorial" }
 ];
 
 const breadcrumbLabels: Array<[string, string]> = [
@@ -17,9 +17,10 @@ const breadcrumbLabels: Array<[string, string]> = [
   ["/statistics", "Statistic"],
   ["/gene-search", "Gene Search"],
   ["/survival", "Survival Analysis"],
-  ["/vaf-analysis", "cf-vaf Analysis"],
+  ["/vaf-analysis", "ctDNA VAF"],
   ["/downloads", "Download"],
-  ["/help", "Help"],
+  ["/tutorial", "Tutorial"],
+  ["/help", "Tutorial"],
   ["/studies", "Study Detail"],
 ];
 
@@ -74,7 +75,7 @@ function GeneMenu({ geneMenuActive }: { geneMenuActive: boolean }) {
           onClick={dismiss}
           className={({ isActive }) => `site-nav-dropdown-link${isActive ? " active" : ""}`}
         >
-          cf-vaf Analysis
+          ctDNA VAF
         </NavLink>
       </div>
     </div>
@@ -180,7 +181,7 @@ export function AppShell({ children }: PropsWithChildren) {
       ) : null}
 
       <main
-        key={location.key}
+        key={location.pathname}
         className={`page-content page-content-route${showLoader ? " page-content-loading" : ""}`}
       >
         {children}

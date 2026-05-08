@@ -7,6 +7,8 @@ import {
   queryMafGenes
 } from "../api/client";
 import { Link, useSearchParams } from "react-router-dom";
+import { GeneSymbol } from "../components/GeneSymbol";
+import { CANCER_OPTIONS } from "../constants/cfdna";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
 
@@ -14,7 +16,7 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 10;
 const DATA_SOURCE_OPTIONS = ["private", "Public"] as const;
 const DATA_SOURCE_LABELS: Record<string, string> = {
-  private: "Internal Data",
+  private: "Collected Samples",
   Public: "Public Cohorts",
 };
 
@@ -24,7 +26,7 @@ export function GeneSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const selectedDataSources = searchParams.getAll("dataSource");
-  // none selected defaults to Internal Data; selecting both queries the combined cfDNA view.
+  // none selected defaults to Collected Samples; selecting both queries the combined cfDNA view.
   const dataSources = selectedDataSources.length === 0 ? ["private"] : selectedDataSources;
   const source = dataSources.length === 1 ? dataSources[0] : "cfDNA";
   const gene = searchParams.get("gene") ?? "";
@@ -124,7 +126,11 @@ export function GeneSearchPage() {
 
   const submitSearch = (event?: FormEvent) => {
     event?.preventDefault();
-    const nextGene = geneInput.trim();
+    submitGeneValue(geneInput);
+  };
+
+  const submitGeneValue = (value: string) => {
+    const nextGene = value.trim();
     mutateSearchParams((params) => {
       if (nextGene) params.set("gene", nextGene);
       else params.delete("gene");
@@ -191,7 +197,10 @@ export function GeneSearchPage() {
               suggestions={geneSuggestionsQ.data ?? []}
               loading={geneSuggestionsQ.isFetching}
               onChange={setGeneInput}
-              onSelect={setGeneInput}
+              onSelect={(value) => {
+                setGeneInput(value);
+                submitGeneValue(value);
+              }}
             />
             <div className="maf-toolbar-actions">
               <button className="button-primary" type="submit">Search</button>
@@ -213,8 +222,8 @@ export function GeneSearchPage() {
               <MultiSelectGroup
                 title="Cancer Type"
                 values={cancerTypes}
-                options={filterQ.data?.cancerTypes ?? []}
-                loading={filterQ.isLoading}
+                options={[...CANCER_OPTIONS]}
+                loading={false}
                 formatLabel={formatCohortLabel}
                 onToggle={(value) => toggleMultiValue("cancerType", value)}
               />
@@ -265,7 +274,7 @@ export function GeneSearchPage() {
           label={isCfDNA ? "Cancer Cohorts" : "Variant Classes"}
           value={
             isCfDNA
-              ? formatNumber(filterQ.data?.cancerTypes.length ?? 0)
+              ? formatNumber(CANCER_OPTIONS.length)
               : formatNumber(filterQ.data?.variantClassifications.length ?? 0)
           }
         />
@@ -274,10 +283,10 @@ export function GeneSearchPage() {
       <section className="maf-active-panel tool-section-panel">
         <div className="maf-active-header">
           <h3>Current Query</h3>
-          <span>{dataSources.length === 0 ? "All Internal Data" : dataSources.map((s) => DATA_SOURCE_LABELS[s] ?? s).join(" + ")}</span>
+          <span>{dataSources.length === 0 ? "All Collected Samples" : dataSources.map((s) => DATA_SOURCE_LABELS[s] ?? s).join(" + ")}</span>
         </div>
         <div className="maf-active-tags">
-          {gene ? <span className="maf-tag"><strong>Gene:</strong> {gene}</span> : null}
+          {gene ? <span className="maf-tag"><strong>Gene:</strong> <GeneSymbol symbol={gene} /></span> : null}
           {activeFilters.length === 0 && !gene ? <span className="maf-tag">No active filters</span> : null}
           {activeFilters.map((filter) => (
             <span key={`${filter.label}-${filter.value}`} className="maf-tag">
@@ -310,7 +319,7 @@ export function GeneSearchPage() {
             <div className="browse-empty-state">
               <h4>No genes found</h4>
               <p>
-                Gene Search uses exact gene symbols. Try a full symbol such as TP53, or choose one from the suggestions.
+                Gene Search uses exact gene symbols. Try a full symbol such as <GeneSymbol symbol="TP53" />, or choose one from the suggestions.
                 {activeFilters.length > 0 ? " You can also remove filters to broaden the result set." : ""}
               </p>
             </div>
@@ -346,7 +355,7 @@ export function GeneSearchPage() {
                         <td>
                           <div className="maf-cell-title">
                             <Link className="maf-gene-link" to={buildDetailLink(row.hugoSymbol)}>
-                              {row.hugoSymbol}
+                              <GeneSymbol symbol={row.hugoSymbol} />
                             </Link>
                           </div>
                           <div className="maf-cell-sub">
@@ -463,7 +472,7 @@ function AutocompleteField({
                 setIsOpen(false);
               }}
             >
-              {item}
+              <GeneSymbol symbol={item} />
             </button>
           ))}
         </div>

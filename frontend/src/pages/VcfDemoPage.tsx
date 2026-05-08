@@ -4,6 +4,7 @@ import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { getVcfDemo } from "../api/client";
 import { ChartCard } from "../components/ChartCard";
 import { DataTable } from "../components/DataTable";
+import { GeneSymbol } from "../components/GeneSymbol";
 import { SectionHeader } from "../components/SectionHeader";
 import { StatGrid } from "../components/StatGrid";
 import type { VcfVariantRecord } from "../types/api";
@@ -20,7 +21,7 @@ export function VcfDemoPage() {
     columnHelper.accessor("sampleId", { header: "Sample" }),
     columnHelper.accessor("gene", {
       header: "Gene",
-      cell: (info) => <strong>{info.getValue()}</strong>
+      cell: (info) => <strong><GeneSymbol symbol={info.getValue()} /></strong>
     }),
     columnHelper.accessor("chromosome", { header: "Chr" }),
     columnHelper.accessor("position", { header: "Pos" }),

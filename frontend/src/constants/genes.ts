@@ -35,7 +35,7 @@ export const COMMON_CANCER_GENES: string[] = [
   "MAPK1", "MAPK3", "MAP2K1", "MAP2K2", "RAF1",
   // DNA repair
   "RAD51", "RAD51B", "RAD51C", "RAD51D", "BRIP1", "FANCA", "FANCC",
-  // cfDNA commonly mutated
+  // ctDNA commonly mutated
   "MUC16", "MUC4", "MUC12", "OBSCN", "TTN", "CSMD3", "CSMD1",
   "RYR2", "RYR3", "DNAH5", "DNAH11", "FLG", "SYNE1", "SYNE2",
   "ZFHX4", "LRRTM4", "PCLO", "XIRP2", "COL11A1", "COL12A1",

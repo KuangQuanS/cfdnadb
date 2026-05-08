@@ -66,7 +66,7 @@ function buildTopGeneOption(data: LabelCount[], cancer: string): EChartsOption {
   return {
     grid: { left: 48, right: 24, top: 24, bottom: 56 },
     tooltip: { trigger: "axis" },
-    xAxis: { type: "category", axisLabel: { rotate: 35 }, data: data.map((d) => d.label) },
+    xAxis: { type: "category", axisLabel: { rotate: 35, fontStyle: "italic" }, data: data.map((d) => d.label) },
     yAxis: { type: "value", name: "Variants" },
     series: [{ type: "bar", data: data.map((d) => d.count), itemStyle: { color: cancer === "Breast" ? "#FC812F" : "#5470c6" } }]
   };
@@ -84,7 +84,7 @@ function buildCompareOption(breastData: LabelCount[], colonData: LabelCount[]): 
     grid: { left: 60, right: 24, top: 40, bottom: 68 },
     tooltip: { trigger: "axis" },
     legend: { data: ["Breast", "Colonrector"], top: 8 },
-    xAxis: { type: "category", axisLabel: { rotate: 40, fontSize: 10 }, data: genes },
+    xAxis: { type: "category", axisLabel: { rotate: 40, fontSize: 10, fontStyle: "italic" }, data: genes },
     yAxis: { type: "value", name: "Variants" },
     series: [
       { name: "Breast", type: "bar", data: genes.map((g) => bMap.get(g) ?? 0), itemStyle: { color: "#FC812F" } },

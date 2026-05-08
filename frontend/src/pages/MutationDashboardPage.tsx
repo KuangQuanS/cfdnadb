@@ -99,7 +99,7 @@ function buildCompareOption(
     legend: { data: ["Breast", "Colonrector"], top: 8 },
     xAxis: {
       type: "category",
-      axisLabel: { rotate: 40, fontSize: 10 },
+      axisLabel: { rotate: 40, fontSize: 10, fontStyle: "italic" },
       data: sortedGenes
     },
     yAxis: { type: "value", name: "Variants" },

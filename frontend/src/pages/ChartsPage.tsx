@@ -52,7 +52,7 @@ export function ChartsPage() {
             tooltip: { trigger: "axis" },
             xAxis: {
               type: "category",
-              axisLabel: { rotate: 35 },
+              axisLabel: { rotate: 35, fontStyle: "italic" },
               data: topGenesQuery.data.map((item) => item.gene)
             },
             yAxis: { type: "value", name: "Variants" },

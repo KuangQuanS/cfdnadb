@@ -21,6 +21,7 @@ import type {
   StatisticsOverview,
   VafDistribution,
   VafBodyMap,
+  HomeBodyCallout,
   VisualizationSummary,
   VcfDemo,
   CancerAsset,
@@ -61,6 +62,7 @@ function resolveMock(path: string): unknown {
   if (path.startsWith("/api/v1/vcf-demo")) return vcfDemoMock;
   if (path.startsWith("/api/v1/downloads")) return downloadsMock;
   if (path.startsWith("/api/v1/summary/cancers")) return cancerSummaryMock;
+  if (path.startsWith("/api/v1/home/body-callouts")) return [];
   if (path.startsWith("/api/v1/statistics/overview")) return statisticsOverviewMock;
   if (path.startsWith("/api/v1/cohort/source-distribution")) return sourceDistributionMock;
   if (path.startsWith("/api/v1/variants/func-distribution")) return funcDistributionMock;
@@ -135,6 +137,10 @@ export function getStudy(id: string) {
 
 export function getCancerSummary() {
   return requestLive<CancerSummary[]>("/api/v1/summary/cancers");
+}
+
+export function getHomeBodyCallouts() {
+  return request<HomeBodyCallout[]>("/api/v1/home/body-callouts");
 }
 
 export function getStatisticsOverview() {

@@ -1,105 +1,57 @@
 package org.cfdna.database.service;
 
-import org.cfdna.database.dto.CancerSummaryDto;
-import org.cfdna.database.dto.LabelCountDto;
 import org.cfdna.database.dto.MafSummaryDto;
 import org.cfdna.database.dto.StatisticsOverviewDto;
-import org.cfdna.database.dto.TopGeneDto;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @Service
 public class StatisticsOverviewService {
 
-    private static final Logger log = LoggerFactory.getLogger(StatisticsOverviewService.class);
-    private static final String ALL_COHORTS = String.join(",",
-            List.of("Breast", "Colorectal", "Liver", "Lung", "Pancreatic",
-                    "Bladder", "Cervical", "Endometrial", "Esophageal", "Gastric",
-                    "HeadAndNeck", "Kidney", "Ovarian", "Thyroid", "Brain", "Benign_Tumor"));
-
-    private final DuckDbService duckDbService;
-    private final long refreshMs;
+    private final CsvStatisticsService csvStatisticsService;
 
     private volatile StatisticsOverviewDto cachedOverview;
-    private volatile long cachedAtMillis;
+    private final ConcurrentMap<String, StatisticsOverviewDto> publicOverviewCache = new ConcurrentHashMap<>();
 
-    public StatisticsOverviewService(DuckDbService duckDbService,
-                                     @Value("${app.statistics-overview-refresh-ms:1800000}") long refreshMs) {
-        this.duckDbService = duckDbService;
-        this.refreshMs = Math.max(refreshMs, 60_000L);
+    public StatisticsOverviewService(CsvStatisticsService csvStatisticsService) {
+        this.csvStatisticsService = csvStatisticsService;
     }
 
     @PostConstruct
     public void warmCacheOnStartup() {
-        refreshCacheSafely("startup");
-    }
-
-    @Scheduled(fixedDelayString = "${app.statistics-overview-refresh-ms:1800000}")
-    public void scheduledRefresh() {
-        refreshCacheSafely("scheduled");
+        cachedOverview = loadCfDnaOverview();
     }
 
     public StatisticsOverviewDto getCfDnaOverview() {
         StatisticsOverviewDto snapshot = cachedOverview;
-        long age = System.currentTimeMillis() - cachedAtMillis;
-        if (snapshot == null || age > refreshMs) {
+        if (snapshot == null) {
             synchronized (this) {
                 snapshot = cachedOverview;
-                age = System.currentTimeMillis() - cachedAtMillis;
-                if (snapshot == null || age > refreshMs) {
-                    refreshCacheSafely("lazy");
+                if (snapshot == null) {
+                    cachedOverview = loadCfDnaOverview();
                     snapshot = cachedOverview;
                 }
             }
         }
-        return snapshot != null ? snapshot : emptyOverview();
+        return snapshot != null ? snapshot : emptyOverview("cfDNA");
     }
 
-    private void refreshCacheSafely(String trigger) {
-        try {
-            long start = System.currentTimeMillis();
-            StatisticsOverviewDto computed = computeOverview();
-            cachedOverview = computed;
-            cachedAtMillis = System.currentTimeMillis();
-            log.info("[StatisticsOverview] Refreshed cache via {} in {} ms", trigger, cachedAtMillis - start);
-        } catch (Exception exception) {
-            log.warn("[StatisticsOverview] Failed to refresh cache via {}: {}", trigger, exception.getMessage(), exception);
-        }
+    private StatisticsOverviewDto loadCfDnaOverview() {
+        return csvStatisticsService.readStatisticsOverview("internal", "cfDNA").orElseGet(() -> emptyOverview("cfDNA"));
     }
 
-    private StatisticsOverviewDto computeOverview() {
-        List<CancerSummaryDto> cancerSummary = duckDbService.getCancerSummary();
-        MafSummaryDto mafSummary = duckDbService.getMafSummary("cfDNA", null, null, null, null, null, null);
-        List<LabelCountDto> funcDistribution = duckDbService.getFuncDistribution(ALL_COHORTS);
-        List<LabelCountDto> exonicDistribution = duckDbService.getExonicDistribution(ALL_COHORTS);
-        List<LabelCountDto> chromDistribution = duckDbService.getChromDistribution(ALL_COHORTS);
-        List<TopGeneDto> topGenes = duckDbService.getMafTopGenes("cfDNA", 15);
-
+    private StatisticsOverviewDto emptyOverview(String source) {
         return new StatisticsOverviewDto(
-                "cfDNA",
-                Instant.now().toString(),
-                cancerSummary,
-                mafSummary,
-                funcDistribution,
-                exonicDistribution,
-                chromDistribution,
-                topGenes
-        );
-    }
-
-    private StatisticsOverviewDto emptyOverview() {
-        return new StatisticsOverviewDto(
-                "cfDNA",
+                source,
                 Instant.now().toString(),
                 List.of(),
-                new MafSummaryDto("cfDNA", 0, 0, 0),
+                new MafSummaryDto(source, 0, 0, 0),
                 List.of(),
                 List.of(),
                 List.of(),
@@ -108,30 +60,14 @@ public class StatisticsOverviewService {
     }
 
     public StatisticsOverviewDto getPublicOverview(String cancer) {
-        String cohort = (cancer == null || cancer.isBlank()) ? null : cancer.trim();
-        String targetCohorts = cohort == null ? String.join(",", duckDbService.listPublicCohortNames()) : cohort;
-        if (targetCohorts == null || targetCohorts.isBlank()) {
-            return new StatisticsOverviewDto(
-                    "Public",
-                    Instant.now().toString(),
-                    List.of(),
-                    new MafSummaryDto("Public", 0, 0, 0),
-                    List.of(), List.of(), List.of(), List.of()
-            );
-        }
-        return new StatisticsOverviewDto(
-                "Public",
-                Instant.now().toString(),
-                List.of(),
-                duckDbService.getPublicMafSummary(targetCohorts),
-                duckDbService.getPublicFuncDistribution(targetCohorts),
-                duckDbService.getPublicExonicDistribution(targetCohorts),
-                duckDbService.getPublicChromDistribution(targetCohorts),
-                List.of()
+        String cacheKey = cancer == null || cancer.isBlank() ? "__all__" : cancer.trim().toLowerCase(Locale.ROOT);
+        return publicOverviewCache.computeIfAbsent(
+                cacheKey,
+                ignored -> csvStatisticsService.readStatisticsOverview("public", "Public").orElseGet(() -> emptyOverview("Public"))
         );
     }
 
     public List<String> listPublicCohortNames() {
-        return duckDbService.listPublicCohortNames();
+        return List.of("Public Cohort");
     }
 }

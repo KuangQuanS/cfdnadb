@@ -29,8 +29,6 @@ import java.util.stream.Stream;
 
 @Service
 public class VafAnalysisService {
-    private static final long BODY_MAP_CACHE_TTL_MS = 10 * 60_000L;
-
     private static final Map<String, String> CANCER_TYPE_ALIASES = Map.ofEntries(
             Map.entry("Colonrector", "Colorectal"),
             Map.entry("Endometrium", "Endometrial"),
@@ -70,14 +68,14 @@ public class VafAnalysisService {
     public VafBodyMapDto getBodyMap(String gene) {
         String normalizedGene = normalizeGene(gene);
         CachedBodyMap cached = bodyMapCache.get(normalizedGene);
-        long now = System.currentTimeMillis();
-        if (cached != null && now - cached.cachedAtMillis <= BODY_MAP_CACHE_TTL_MS) {
+        if (cached != null) {
             return cached.value;
         }
 
         VafBodyMapDto computed = buildBodyMap(normalizedGene);
-        bodyMapCache.put(normalizedGene, new CachedBodyMap(computed, now));
-        return computed;
+        CachedBodyMap fresh = new CachedBodyMap(computed);
+        CachedBodyMap raced = bodyMapCache.putIfAbsent(normalizedGene, fresh);
+        return raced != null ? raced.value : fresh.value;
     }
 
     private VafBodyMapDto buildBodyMap(String normalizedGene) {
@@ -384,11 +382,9 @@ public class VafAnalysisService {
 
     private static class CachedBodyMap {
         private final VafBodyMapDto value;
-        private final long cachedAtMillis;
 
-        private CachedBodyMap(VafBodyMapDto value, long cachedAtMillis) {
+        private CachedBodyMap(VafBodyMapDto value) {
             this.value = value;
-            this.cachedAtMillis = cachedAtMillis;
         }
     }
 }

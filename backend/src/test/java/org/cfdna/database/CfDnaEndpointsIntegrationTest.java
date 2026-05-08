@@ -1,6 +1,7 @@
 package org.cfdna.database;
 
 import org.cfdna.database.service.DuckDbService;
+import org.cfdna.database.service.CsvStatisticsService;
 import org.cfdna.database.service.MafDuckDbImportService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,7 @@ class CfDnaEndpointsIntegrationTest {
     void cancerSummaryReflectsFilesystemProgress() throws Exception {
         mockMvc.perform(get("/api/v1/summary/cancers"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(15)))
+                .andExpect(jsonPath("$.data", hasSize(16)))
                 .andExpect(jsonPath("$.data[0].cancer").value("Breast"))
                 .andExpect(jsonPath("$.data[0].sampleCount").value(2))
                 .andExpect(jsonPath("$.data[0].rawImportStatus").value("Completed"))
@@ -59,7 +60,9 @@ class CfDnaEndpointsIntegrationTest {
                 .andExpect(jsonPath("$.data[4].rawImportStatus").value("Not started"))
                 .andExpect(jsonPath("$.data[9].cancer").value("Gastric"))
                 .andExpect(jsonPath("$.data[9].sampleCount").value(1))
-                .andExpect(jsonPath("$.data[9].rawImportStatus").value("Completed"));
+                .andExpect(jsonPath("$.data[9].rawImportStatus").value("Completed"))
+                .andExpect(jsonPath("$.data[14].cancer").value("Brain"))
+                .andExpect(jsonPath("$.data[14].sampleCount").value(1));
     }
 
     @Test
@@ -184,6 +187,12 @@ class CfDnaEndpointsIntegrationTest {
     static class CfDnaTestConfig {
         @Bean
         @Primary
+        CsvStatisticsService csvStatisticsService() {
+            return new CsvStatisticsService(TEST_DATA_DIR.toString());
+        }
+
+        @Bean
+        @Primary
         DuckDbService duckDbService() {
             Path panCancerDir = TEST_DATA_DIR.resolve("statistics").resolve("oncoplot").resolve("pan_cancer");
             MafDuckDbImportService importService = new MafDuckDbImportService(
@@ -206,9 +215,11 @@ class CfDnaEndpointsIntegrationTest {
             Path root = Files.createTempDirectory("cfdna-test-data");
             createMafInputs(root);
             createPanCancerInputs(root);
+            createStatisticsCsv(root);
             createBreastData(root.resolve("Breast"));
             createLungData(root.resolve("Lung"));
             createCellLineData(root.resolve("Cell_Line"));
+            createBrainData(root.resolve("Brain"));
             // create empty dirs for all remaining cancers
             for (String cancer : new String[]{
                     "Colorectal", "Liver", "Pancreatic", "Bladder", "Cervical",
@@ -249,6 +260,29 @@ class CfDnaEndpointsIntegrationTest {
                 "Hugo_Symbol\tTumor_Sample_Barcode\tVariant_Classification\n" +
                         "TP53\tBR-001\tMissense_Mutation\n" +
                         "KRAS\tBR-002\tMissense_Mutation\n");
+    }
+
+    private static void createStatisticsCsv(Path root) throws IOException {
+        Path csvDir = root.resolve("statistics").resolve("csv");
+        Files.createDirectories(csvDir);
+        Files.writeString(csvDir.resolve("statistics.csv"),
+                "scope,section,label,count,rawImportStatus,filteredStatus,annotatedStatus,plotStatus,externalStatus\n" +
+                        "home,sampleCategories,Breast,2,Completed,Completed,Completed,Completed,Completed\n" +
+                        "home,sampleCategories,Colorectal,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Liver,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Lung,1,Completed,Completed,Not started,Completed,Completed\n" +
+                        "home,sampleCategories,Pancreatic,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Bladder,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Cervical,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Endometrial,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Esophageal,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Gastric,1,Completed,Completed,Completed,Completed,Completed\n" +
+                        "home,sampleCategories,HeadAndNeck,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Kidney,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Ovarian,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Thyroid,0,Not started,Not started,Not started,Not started,Not started\n" +
+                        "home,sampleCategories,Brain,1,Completed,Completed,Completed,Not started,Not started\n" +
+                        "home,sampleCategories,Benign_Tumor,0,Not started,Not started,Not started,Not started,Not started\n");
     }
 
     private static void createBreastData(Path cancerDir) throws IOException {
@@ -297,6 +331,14 @@ class CfDnaEndpointsIntegrationTest {
 
         Files.writeString(cancerDir.resolve("private/avinput/CL-001.avinput"), "sample");
         Files.writeString(cancerDir.resolve("private/vcf/CL-001.filtered.vcf.gz"), "vcf");
+    }
+
+    private static void createBrainData(Path cancerDir) throws IOException {
+        Files.createDirectories(cancerDir.resolve("private/avinput"));
+        Files.createDirectories(cancerDir.resolve("private/vcf"));
+
+        Files.writeString(cancerDir.resolve("private/avinput/BRN-001.avinput"), "sample");
+        Files.writeString(cancerDir.resolve("private/vcf/BRN-001.filtered.vcf.gz"), "vcf");
     }
 
     private static void createEmptyCancer(Path cancerDir) throws IOException {

@@ -1,15 +1,18 @@
 import type { SVGProps } from "react";
 import {
   NeurologyOutline,
+  EarsNoseAndThroatOutline,
   LungsOutline,
   BreastsOutline,
   ThyroidOutline,
   KidneysOutline,
   FemaleReproductiveSystemOutline,
+  CervicalCancerOutline,
   BladderOutline,
   ColonOutline,
   LiverOutline,
   StomachOutline,
+  OesophagusCancerOutline,
   PancreasOutline,
   HeartOrganOutline
 } from "healthicons-react";
@@ -17,8 +20,9 @@ import {
 export function OrganIcon({ organ, ...props }: { organ: string } & SVGProps<SVGSVGElement>) {
   switch (organ) {
     case "brain":
-    case "headAndNeck":
       return <NeurologyOutline {...props} />;
+    case "headAndNeck":
+      return <EarsNoseAndThroatOutline {...props} />;
     case "lung":
       return <LungsOutline {...props} />;
     case "breast":
@@ -30,6 +34,8 @@ export function OrganIcon({ organ, ...props }: { organ: string } & SVGProps<SVGS
     case "ovarian":
     case "endometrial":
       return <FemaleReproductiveSystemOutline {...props} />;
+    case "cervical":
+      return <CervicalCancerOutline {...props} />;
     case "bladder":
       return <BladderOutline {...props} />;
     case "colorectal":
@@ -38,6 +44,8 @@ export function OrganIcon({ organ, ...props }: { organ: string } & SVGProps<SVGS
       return <LiverOutline {...props} />;
     case "gastric":
       return <StomachOutline {...props} />;
+    case "esophageal":
+      return <OesophagusCancerOutline {...props} />;
     case "pancreatic":
       return <PancreasOutline {...props} />;
     default:
