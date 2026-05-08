@@ -538,6 +538,59 @@ export function HeroCarousel() {
     const gene = quickGene.trim();
     navigate(gene ? `/gene-search?gene=${encodeURIComponent(gene)}` : "/gene-search");
   };
+  const bodyMap = (
+    <div className="body-map">
+      <div className="body-map-stage">
+        <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" loading="eager" decoding="async" />
+
+        {visibleCallouts.map((cfg) => (
+          <div key={cfg.id} className={`body-callout body-callout--${cfg.side}`}>
+            {cfg.showConnector === false ? null : (
+              <svg className="callout-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points={buildCalloutPolyline(cfg)} />
+              </svg>
+            )}
+
+            {cfg.showConnector === false ? null : (
+              <div
+                className="callout-dot"
+                style={{ left: `${cfg.pointXPct}%`, top: `${cfg.pointYPct}%` } as CSSProperties}
+                aria-hidden="true"
+              />
+            )}
+
+            <button
+              type="button"
+              className={`callout-label callout-label--${cfg.side}`}
+              style={{ top: `${cfg.labelTopPct}%`, left: `${getLabelCenterX(cfg)}%` } as CSSProperties}
+              onClick={() => goToBrowse(cfg.browseKey)}
+              aria-label={`Browse ${cfg.label} cohort`}
+            >
+              <strong>{cfg.label}</strong>
+              <span>{formatNumber(cfg.count ?? countMap[cfg.id] ?? 0)}</span>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+  const overviewGrid = (
+    <div className="gdc-overview-grid">
+      {overviewCards.map((card) => (
+        <HeroRingChart
+          key={card.id}
+          title={card.title}
+          total={card.total}
+          entries={card.entries}
+          palette={card.palette}
+          centerTitle={card.centerTitle}
+          centerValue={card.centerValue}
+          centerColor={card.centerColor}
+          onSliceClick={goToOverviewSlice}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <>
@@ -572,47 +625,21 @@ export function HeroCarousel() {
             </div>
           </div>
 
-          <div className="gdc-col-middle">
-            <div className="body-map">
-              <div className="body-map-stage">
-                <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" loading="eager" decoding="async" />
-
-                {visibleCallouts.map((cfg) => (
-                  <div key={cfg.id} className={`body-callout body-callout--${cfg.side}`}>
-                    {cfg.showConnector === false ? null : (
-                      <svg className="callout-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                        <polyline points={buildCalloutPolyline(cfg)} />
-                      </svg>
-                    )}
-
-                    {cfg.showConnector === false ? null : (
-                      <div
-                        className="callout-dot"
-                        style={{ left: `${cfg.pointXPct}%`, top: `${cfg.pointYPct}%` } as CSSProperties}
-                        aria-hidden="true"
-                      />
-                    )}
-
-                    <button
-                      type="button"
-                      className={`callout-label callout-label--${cfg.side}`}
-                      style={{ top: `${cfg.labelTopPct}%`, left: `${getLabelCenterX(cfg)}%` } as CSSProperties}
-                      onClick={() => goToBrowse(cfg.browseKey)}
-                      aria-label={`Browse ${cfg.label} cohort`}
-                    >
-                      <strong>{cfg.label}</strong>
-                      <span>{formatNumber(cfg.count ?? countMap[cfg.id] ?? 0)}</span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="gdc-col-right gdc-hero-overview-card">
+            {overviewGrid}
           </div>
         </div>
       </section>
 
       <section className="gdc-stat-section">
         <div className="gdc-stat-inner">
+          <article className="gdc-body-card">
+            <div className="gdc-card-head">
+              <p className="section-eyebrow">Cancer Type</p>
+            </div>
+            {bodyMap}
+          </article>
+
           <article className="gdc-index-card">
             <div className="gdc-card-head">
               <p className="section-eyebrow">Tutorial</p>
@@ -626,27 +653,6 @@ export function HeroCarousel() {
               >
                 <img src={tutorialImg} alt="ctDNAdb tutorial workflow" loading="lazy" decoding="async" />
               </button>
-            </div>
-          </article>
-
-          <article className="gdc-stat-card">
-            <div className="gdc-card-head">
-              <p className="section-eyebrow">Statistic</p>
-            </div>
-            <div className="gdc-overview-grid">
-              {overviewCards.map((card) => (
-                <HeroRingChart
-                  key={card.id}
-                  title={card.title}
-                  total={card.total}
-                  entries={card.entries}
-                  palette={card.palette}
-                  centerTitle={card.centerTitle}
-                  centerValue={card.centerValue}
-                  centerColor={card.centerColor}
-                  onSliceClick={goToOverviewSlice}
-                />
-              ))}
             </div>
           </article>
         </div>
