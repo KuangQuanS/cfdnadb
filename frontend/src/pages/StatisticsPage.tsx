@@ -12,17 +12,6 @@ import type { CancerSummary, LabelCount, VafDistribution } from "../types/api";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
 
-const STAT_PIE_SCALE = [
-  "#2C3A85",
-  "#1D56A7",
-  "#2872CF",
-  "#4B90DF",
-  "#75AFE9",
-  "#A7CFF2",
-  "#C7DDF6",
-  "#E1ECFA",
-];
-
 const CHART_LOADING_OPTION = {
   text: "Loading chart...",
   color: "#2C3A85",
@@ -35,7 +24,7 @@ const CHART_LOADING_OPTION = {
 };
 
 const STANDARD_STAT_CHART_STYLE = { width: "100%", height: 430 };
-const STATISTICS_PIE_MIN_ANGLE = 18;
+const STAT_BAR_COLORS = ["#2C3A85", "#1D56A7", "#2872CF", "#4B90DF", "#75AFE9"];
 
 function cleanLabels(items: LabelCount[]): LabelCount[] {
   return items.filter(
@@ -158,108 +147,98 @@ function StatisticsSplitSection({
   );
 }
 
-function buildCohortDonutOption(
-  cancers: CancerSummary[],
-  total: number
-): EChartsOption {
-  const normalized = cancers
-    .filter((item) => item.sampleCount > 0)
-    .map((item) => ({ label: item.cancer, count: item.sampleCount }));
+function formatAxisCount(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
+  return String(value);
+}
 
+function buildSortedBarOption(
+  data: LabelCount[],
+  unitLabel: string,
+): EChartsOption {
+  const normalized = [...cleanLabels(data)].sort((a, b) => b.count - a.count);
+  const chartData = [...normalized].reverse();
+  const total = normalized.reduce((sum, item) => sum + item.count, 0);
   return {
     tooltip: {
-      trigger: "item",
-      formatter: (params: { name?: string; value?: number; percent?: number }) => {
-        const value = params.value ?? 0;
-        const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0.0";
-        return `${params.name}<br/>${formatNumber(value)} samples (${pct}%)`;
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      formatter: (params: Array<{ name: string; value: number }>) => {
+        const p = params[0];
+        const pct = total > 0 ? ((p.value / total) * 100).toFixed(1) : "0.0";
+        return `${p.name}<br/>${formatNumber(p.value)} ${unitLabel} (${pct}%)`;
       },
     },
-    title: { show: false },
-    legend: {
-      orient: "vertical",
-      right: 56,
-      top: "middle",
-      icon: "circle",
-      itemWidth: 10,
-      itemHeight: 10,
-      itemGap: 12,
-      type: "scroll",
-      pageIconColor: "#2C3A85",
-      pageTextStyle: { color: "#53627d", fontSize: 12 },
-      textStyle: { color: "#53627d", fontSize: 13, fontWeight: 700 },
+    grid: { left: 154, right: 78, top: 20, bottom: normalized.length > 12 ? 44 : 24, containLabel: true },
+    dataZoom: normalized.length > 12 ? [
+      {
+        type: "slider",
+        yAxisIndex: 0,
+        right: 8,
+        width: 12,
+        startValue: Math.max(chartData.length - 12, 0),
+        endValue: chartData.length - 1,
+        borderColor: "#d7deeb",
+        fillerColor: "rgba(44, 58, 133, 0.18)",
+        handleSize: 0,
+        showDetail: false,
+      },
+      { type: "inside", yAxisIndex: 0 },
+    ] : undefined,
+    xAxis: {
+      type: "value",
+      splitLine: { lineStyle: { color: "rgba(80, 95, 128, 0.12)" } },
+      axisLabel: {
+        color: "#5c6b86",
+        fontSize: 11,
+        formatter: (value: number) => formatAxisCount(value),
+      },
+    },
+    yAxis: {
+      type: "category",
+      data: chartData.map((item) => item.label),
+      axisLabel: {
+        color: "#33415c",
+        fontSize: 11,
+        fontWeight: 700,
+        width: 132,
+        overflow: "truncate",
+      },
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: "#c6cfde" } },
     },
     series: [
       {
-        type: "pie",
-        radius: "84%",
-        center: ["38%", "50%"],
-        minAngle: STATISTICS_PIE_MIN_ANGLE,
-        avoidLabelOverlap: true,
-        label: {
-          show: false,
-        },
-        labelLine: { show: false },
-        itemStyle: {
-          borderColor: "#ffffff",
-          borderWidth: 3,
-        },
-        data: normalized.map((item, index) => ({
-          name: item.label,
+        type: "bar",
+        data: chartData.map((item, index) => ({
           value: item.count,
-          itemStyle: { color: STAT_PIE_SCALE[index % STAT_PIE_SCALE.length] },
+          itemStyle: { color: STAT_BAR_COLORS[index % STAT_BAR_COLORS.length] },
         })),
+        barMaxWidth: 22,
+        itemStyle: {
+          borderRadius: [0, 9, 9, 0],
+        },
+        label: {
+          show: true,
+          position: "right",
+          color: "#2C3A85",
+          fontWeight: 700,
+          fontSize: 11,
+          formatter: (p: { value: number }) => formatNumber(p.value),
+        },
       },
     ],
   };
 }
 
-function buildDonutOption(data: LabelCount[]): EChartsOption {
-  const normalized = withOtherGroup(data, 5);
-  const total = normalized.reduce((sum, item) => sum + item.count, 0);
-  return {
-    tooltip: {
-      trigger: "item",
-      formatter: (params: { name?: string; value?: number; percent?: number }) => {
-        return `${params.name}<br/>${formatNumber(params.value ?? 0)} (${(
-          params.percent ?? 0
-        ).toFixed(1)}%)`;
-      },
-    },
-    title: { show: false },
-    legend: {
-      orient: "vertical",
-      right: 56,
-      top: "middle",
-      icon: "circle",
-      itemHeight: 10,
-      itemWidth: 10,
-      itemGap: 12,
-      textStyle: { color: "#53627d", fontSize: 13, fontWeight: 700 },
-      type: "scroll",
-      pageIconColor: "#2C3A85",
-      pageTextStyle: { color: "#53627d", fontSize: 12 },
-    },
-    series: [
-      {
-        type: "pie",
-        radius: "84%",
-        center: ["38%", "50%"],
-        minAngle: STATISTICS_PIE_MIN_ANGLE,
-        avoidLabelOverlap: true,
-        label: {
-          show: false,
-        },
-        labelLine: { show: false },
-        itemStyle: { borderColor: "#ffffff", borderWidth: 3 },
-        data: normalized.map((item, index) => ({
-          name: item.label,
-          value: item.count,
-          itemStyle: { color: STAT_PIE_SCALE[index % STAT_PIE_SCALE.length] },
-        })),
-      },
-    ],
-  };
+function buildCohortBarOption(cancers: CancerSummary[]): EChartsOption {
+  return buildSortedBarOption(
+    cancers
+      .filter((item) => item.sampleCount > 0)
+      .map((item) => ({ label: formatCohortLabel(item.cancer), count: item.sampleCount })),
+    "samples",
+  );
 }
 
 const CHROM_ORDER = [
@@ -768,13 +747,6 @@ export function StatisticsPage() {
     () => activeCohorts.filter((item) => item.cancer !== "Healthy"),
     [activeCohorts]
   );
-  const sampleSum = activeCohorts.reduce(
-    (sum, item) => sum + item.sampleCount,
-    0
-  );
-  const mafSummary = overview?.mafSummary;
-  const totalSamples = isPublic ? mafSummary?.totalSamples ?? 0 : sampleSum;
-
   const vafData = vafQ.data ?? [];
 
   const activeQ = isPublic ? publicOverviewQ : overviewQ;
@@ -865,7 +837,7 @@ export function StatisticsPage() {
         countHeader="Sample Count"
       >
         <ReactECharts
-          option={buildCohortDonutOption(activeCohorts, totalSamples)}
+          option={buildCohortBarOption(activeCohorts)}
           showLoading={cohortChartLoading}
           loadingOption={CHART_LOADING_OPTION}
           style={STANDARD_STAT_CHART_STYLE}
@@ -879,7 +851,7 @@ export function StatisticsPage() {
         labelHeader="Region"
       >
         <ReactECharts
-          option={buildDonutOption(overview?.funcDistribution ?? [])}
+          option={buildSortedBarOption(overview?.funcDistribution ?? [], "variants")}
           showLoading={funcChartLoading}
           loadingOption={CHART_LOADING_OPTION}
           style={STANDARD_STAT_CHART_STYLE}

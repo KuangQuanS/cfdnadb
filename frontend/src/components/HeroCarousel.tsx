@@ -199,6 +199,7 @@ function buildHeroSunburstOption(
   centerTitle: string,
   centerValue: string,
   centerColor?: string,
+  minAngle = 15,
 ): EChartsOption {
   const isVariantCountChart = title === "Genome distribution" || title === "Variant Classification";
   const children = buildSunburstEntries(entries, palette);
@@ -274,7 +275,7 @@ function buildHeroSunburstOption(
         startAngle: 180,
         sort: undefined,
         clockwise: true,
-        minAngle: 15,
+        minAngle,
         avoidLabelOverlap: false,
         labelLine: {
           show: false,
@@ -318,6 +319,7 @@ function HeroRingChart({
   centerTitle,
   centerValue,
   centerColor,
+  minAngle,
   onSliceClick,
 }: {
   title: string;
@@ -327,11 +329,12 @@ function HeroRingChart({
   centerTitle: string;
   centerValue: string;
   centerColor?: string;
+  minAngle?: number;
   onSliceClick: (browseKey: string) => void;
 }) {
   const option = useMemo(
-    () => buildHeroSunburstOption(title, total, entries, palette, centerTitle, centerValue, centerColor),
-    [centerColor, centerTitle, centerValue, entries, palette, title, total],
+    () => buildHeroSunburstOption(title, total, entries, palette, centerTitle, centerValue, centerColor, minAngle),
+    [centerColor, centerTitle, centerValue, entries, minAngle, palette, title, total],
   );
 
   return (
@@ -489,6 +492,7 @@ export function HeroCarousel() {
         palette: RING_PALETTES.sourceSamples,
         centerTitle: "Samples",
         centerValue: formatNumber(totalSourceSamples),
+        minAngle: 30,
       },
       {
         id: "cancer-samples",
@@ -517,6 +521,7 @@ export function HeroCarousel() {
         centerTitle: "Variants",
         centerValue: formatCompactCount(totalVariantClassification),
         centerColor: "#A78BFA",
+        minAngle: 30,
       },
     ],
     [genomeRingEntries, sampleRingEntries, sourceRingEntries, totalGenomeDistribution, totalSamples, totalSourceSamples, totalVariantClassification, variantClassRingEntries],
@@ -644,6 +649,7 @@ export function HeroCarousel() {
                   centerTitle={card.centerTitle}
                   centerValue={card.centerValue}
                   centerColor={card.centerColor}
+                  minAngle={card.minAngle}
                   onSliceClick={goToOverviewSlice}
                 />
               ))}
