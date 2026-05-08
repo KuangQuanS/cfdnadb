@@ -502,6 +502,7 @@ export function HeroCarousel() {
         palette: RING_PALETTES.cancerSamples,
         centerTitle: "Samples",
         centerValue: formatNumber(totalSamples),
+        minAngle: 23,
       },
       {
         id: "genome-distribution",
