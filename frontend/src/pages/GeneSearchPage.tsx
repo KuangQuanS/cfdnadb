@@ -16,7 +16,7 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 10;
 const DATA_SOURCE_OPTIONS = ["private", "Public"] as const;
 const DATA_SOURCE_LABELS: Record<string, string> = {
-  private: "Collected samples",
+  private: "Collected Samples",
   Public: "Public Cohorts",
 };
 
@@ -26,7 +26,7 @@ export function GeneSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const selectedDataSources = searchParams.getAll("dataSource");
-  // none selected defaults to Collected samples; selecting both queries the combined cfDNA view.
+  // none selected defaults to Collected Samples; selecting both queries the combined cfDNA view.
   const dataSources = selectedDataSources.length === 0 ? ["private"] : selectedDataSources;
   const source = dataSources.length === 1 ? dataSources[0] : "cfDNA";
   const gene = searchParams.get("gene") ?? "";
@@ -283,7 +283,7 @@ export function GeneSearchPage() {
       <section className="maf-active-panel tool-section-panel">
         <div className="maf-active-header">
           <h3>Current Query</h3>
-          <span>{dataSources.length === 0 ? "All Collected samples" : dataSources.map((s) => DATA_SOURCE_LABELS[s] ?? s).join(" + ")}</span>
+          <span>{dataSources.length === 0 ? "All Collected Samples" : dataSources.map((s) => DATA_SOURCE_LABELS[s] ?? s).join(" + ")}</span>
         </div>
         <div className="maf-active-tags">
           {gene ? <span className="maf-tag"><strong>Gene:</strong> <GeneSymbol symbol={gene} /></span> : null}

@@ -28,7 +28,7 @@ const RING_PALETTES = {
   sourceSamples: ["#143d79", "#1d56a7", "#2872cf", "#4b90df", "#75afe9", "#a7cff2"],
   cancerSamples: ["#8a2d12", "#b9471b", "#df6828", "#f08b3e", "#f5a85f", "#f8c187", "#fbd6ad"],
   annotated: ["#0f5a43", "#16805f", "#20a77c", "#45bf94", "#6ed2ae", "#9de3ca", "#c2eee0"],
-  mutations: ["#0f4c5c", "#0f766e", "#14b8a6", "#2dd4bf", "#f59e0b", "#fbbf24", "#fde68a"],
+  mutations: ["#00b4d8", "#00f5d4", "#80ffdb", "#ffd166", "#f8961e", "#f94144", "#9b5de5"],
 } as const;
 
 const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
@@ -36,7 +36,7 @@ const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] 
 const SOURCE_RING_ORDER = ["internal", "public", "tcga"] as const;
 
 const SOURCE_RING_LABELS: Record<typeof SOURCE_RING_ORDER[number], { label: string; browseSource: string }> = {
-  internal: { label: "Collected samples", browseSource: "cfDNA" },
+  internal: { label: "Collected Samples", browseSource: "cfDNA" },
   public: { label: "Public Cohort", browseSource: "Public" },
   tcga: { label: "TCGA", browseSource: "tcga" },
 };
@@ -273,7 +273,7 @@ function buildHeroSunburstOption(
         startAngle: 180,
         sort: undefined,
         clockwise: true,
-        minAngle: 25,
+        minAngle: 15,
         avoidLabelOverlap: false,
         labelLine: {
           show: false,

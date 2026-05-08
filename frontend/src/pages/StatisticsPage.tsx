@@ -12,25 +12,15 @@ import type { CancerSummary, LabelCount, VafDistribution } from "../types/api";
 import { formatCohortLabel } from "../utils/cohortLabels";
 import { formatNumber } from "../utils/format";
 
-const PURPLE_SCALE = [
+const STAT_PIE_SCALE = [
   "#2C3A85",
-  "#FC812F",
-  "#4ABEDC",
-  "#38A169",
-  "#5E72B9",
-  "#F3A15D",
-  "#7FD4E6",
-  "#7BC79A",
-];
-
-const DONUT_SCALE = [
-  "#2C3A85",
-  "#FC812F",
-  "#4ABEDC",
-  "#38A169",
-  "#5E72B9",
-  "#F3A15D",
-  "#C7D2F1",
+  "#1D56A7",
+  "#2872CF",
+  "#4B90DF",
+  "#75AFE9",
+  "#A7CFF2",
+  "#C7DDF6",
+  "#E1ECFA",
 ];
 
 const CHART_LOADING_OPTION = {
@@ -185,19 +175,7 @@ function buildCohortDonutOption(
         return `${params.name}<br/>${formatNumber(value)} samples (${pct}%)`;
       },
     },
-    title: {
-      show: true,
-      text: `Samples\n${formatNumber(total)}`,
-      left: "38%",
-      top: "44%",
-      textAlign: "center",
-      textStyle: {
-        color: "#ffffff",
-        fontSize: 16,
-        fontWeight: 800,
-        lineHeight: 20,
-      },
-    },
+    title: { show: false },
     legend: {
       orient: "vertical",
       right: 0,
@@ -229,28 +207,14 @@ function buildCohortDonutOption(
         data: normalized.map((item, index) => ({
           name: item.label,
           value: item.count,
-          itemStyle: { color: PURPLE_SCALE[index % PURPLE_SCALE.length] },
+          itemStyle: { color: STAT_PIE_SCALE[index % STAT_PIE_SCALE.length] },
         })),
-      },
-      {
-        type: "pie",
-        radius: "40%",
-        center: ["38%", "50%"],
-        silent: true,
-        label: { show: false },
-        labelLine: { show: false },
-        tooltip: { show: false },
-        data: [{ value: 1, itemStyle: { color: "#bd4820", borderColor: "#ffffff", borderWidth: 3 } }],
-        z: 3,
       },
     ],
   };
 }
 
-function buildDonutOption(
-  data: LabelCount[],
-  centerLabel: string
-): EChartsOption {
+function buildDonutOption(data: LabelCount[]): EChartsOption {
   const normalized = withOtherGroup(data, 5);
   const total = normalized.reduce((sum, item) => sum + item.count, 0);
   return {
@@ -262,25 +226,7 @@ function buildDonutOption(
         ).toFixed(1)}%)`;
       },
     },
-    title: {
-      show: false,
-      text: formatNumber(total),
-      subtext: centerLabel,
-      left: "38%",
-      top: "39%",
-      textAlign: "center",
-      textStyle: {
-        color: "#1d2742",
-        fontSize: 22,
-        fontWeight: 800,
-      },
-      subtextStyle: {
-        color: "#6b7893",
-        fontSize: 11,
-        fontWeight: 700,
-      },
-      itemGap: 2,
-    },
+    title: { show: false },
     legend: {
       orient: "vertical",
       right: 0,
@@ -302,20 +248,14 @@ function buildDonutOption(
         minAngle: STATISTICS_PIE_MIN_ANGLE,
         avoidLabelOverlap: true,
         label: {
-          show: true,
-          position: "inside",
-          color: "#ffffff",
-          fontSize: 11,
-          fontWeight: 800,
-          formatter: (params: { name?: string; percent?: number }) =>
-            `${params.name ?? ""}\n${(params.percent ?? 0).toFixed(1)}%`,
+          show: false,
         },
         labelLine: { show: false },
         itemStyle: { borderColor: "#ffffff", borderWidth: 3 },
         data: normalized.map((item, index) => ({
           name: item.label,
           value: item.count,
-          itemStyle: { color: DONUT_SCALE[index % DONUT_SCALE.length] },
+          itemStyle: { color: STAT_PIE_SCALE[index % STAT_PIE_SCALE.length] },
         })),
       },
     ],
@@ -869,7 +809,7 @@ export function StatisticsPage() {
         <div>
           <h1>Statistic Of Dataset</h1>
           <p>
-            <strong>{isPublic ? "Public cohort" : "Collected samples"} statistics</strong> across ctDNA mutation datasets in our collection.
+            <strong>{isPublic ? "Public cohort" : "Collected Samples"} statistics</strong> across ctDNA mutation datasets in our collection.
           </p>
         </div>
         <div className="statistics-rna-controls">
@@ -878,7 +818,7 @@ export function StatisticsPage() {
             className={!isPublic ? "active" : ""}
             onClick={() => setSource("private")}
           >
-            Collected samples
+            Collected Samples
           </button>
           <button
             type="button"
@@ -909,11 +849,7 @@ export function StatisticsPage() {
         </div>
       ) : (
         <div className="statistics-rna-cohort-strip">
-          {activeCohorts.map((cohort) => (
-            <button type="button" key={cohort.cancer}>
-              {formatCohortLabel(cohort.cancer)}
-            </button>
-          ))}
+          <button type="button" className="active">Collected Samples</button>
         </div>
       )}
 
@@ -943,7 +879,7 @@ export function StatisticsPage() {
         labelHeader="Region"
       >
         <ReactECharts
-          option={buildDonutOption(overview?.funcDistribution ?? [], "variants")}
+          option={buildDonutOption(overview?.funcDistribution ?? [])}
           showLoading={funcChartLoading}
           loadingOption={CHART_LOADING_OPTION}
           style={STANDARD_STAT_CHART_STYLE}

@@ -15,7 +15,7 @@ const DEFAULT_PAGE_SIZE = 5;
 type SourceKey = "cfDNA" | "TCGA";
 
 const SOURCE_LABELS: Record<SourceKey, string> = {
-  cfDNA: "Collected samples All",
+  cfDNA: "Collected Samples All",
   TCGA: "TCGA",
 };
 
