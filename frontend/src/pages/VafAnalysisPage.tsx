@@ -95,6 +95,8 @@ function boxOption(result: VafBoxplot, title: string): EChartsOption {
   const colors = names.map((n, i) => GROUP_COLORS[n] ?? BOX_PALETTE[i % BOX_PALETTE.length]);
   const hasLongLabels = names.some((name) => name.length > 10);
   const labelRotate = names.length > 7 ? 45 : hasLongLabels ? 30 : 0;
+  const bottomPadding = 112;
+  const xAxisNameGap = 82;
   const boxData = names.map((n, i) => ({
     value: (() => {
       const b = result.groups[n];
@@ -122,7 +124,7 @@ function boxOption(result: VafBoxplot, title: string): EChartsOption {
       left: 72,
       right: 28,
       top: 76,
-      bottom: labelRotate ? 108 : 72,
+      bottom: bottomPadding,
       show: true,
       borderColor: "#202020",
       borderWidth: 1,
@@ -133,7 +135,7 @@ function boxOption(result: VafBoxplot, title: string): EChartsOption {
       data: names,
       name: result.xLabel,
       nameLocation: "middle",
-      nameGap: labelRotate ? 78 : 38,
+      nameGap: xAxisNameGap,
       nameTextStyle: { fontSize: 13 },
       axisLabel: {
         interval: 0,

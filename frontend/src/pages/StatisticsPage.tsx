@@ -25,6 +25,7 @@ const CHART_LOADING_OPTION = {
 
 const STANDARD_STAT_CHART_STYLE = { width: "100%", height: 430 };
 const STAT_BAR_COLORS = ["#2C3A85", "#1D56A7", "#2872CF", "#4B90DF", "#75AFE9"];
+const STAT_BAR_GRID = { left: 154, right: 78, top: 22, bottom: 34, containLabel: true } as const;
 
 function cleanLabels(items: LabelCount[]): LabelCount[] {
   return items.filter(
@@ -170,7 +171,7 @@ function buildSortedBarOption(
         return `${p.name}<br/>${formatNumber(p.value)} ${unitLabel} (${pct}%)`;
       },
     },
-    grid: { left: 154, right: 78, top: 20, bottom: normalized.length > 12 ? 44 : 24, containLabel: true },
+    grid: STAT_BAR_GRID,
     dataZoom: normalized.length > 12 ? [
       {
         type: "slider",
@@ -247,155 +248,21 @@ const CHROM_ORDER = [
   "21", "22", "X", "Y", "M", "MT",
 ];
 
-function buildChromOption(data: LabelCount[]): EChartsOption {
+function normalizeChromData(data: LabelCount[]): LabelCount[] {
   const normalized = cleanLabels(data).map((item) => ({
     label: item.label.replace(/^chr/i, "").toUpperCase(),
     count: item.count,
   }));
-  const ordered = normalized
+  return normalized
     .filter((item) => CHROM_ORDER.includes(item.label))
-    .sort(
-      (a, b) => CHROM_ORDER.indexOf(a.label) - CHROM_ORDER.indexOf(b.label)
-    );
-  const categories = ordered.map((item) => item.label);
-  const total = ordered.reduce((sum, item) => sum + item.count, 0);
-  return {
-    tooltip: {
-      trigger: "axis",
-      axisPointer: { type: "shadow" },
-      formatter: (params: Array<{ name: string; value: number }>) => {
-        const p = params[0];
-        const pct = total > 0 ? ((p.value / total) * 100).toFixed(1) : "0.0";
-        return `chr${p.name}<br/>${formatNumber(p.value)} variants (${pct}%)`;
-      },
-    },
-    grid: { left: 54, right: 18, top: 26, bottom: 42, containLabel: true },
-    xAxis: {
-      type: "category",
-      data: categories,
-      axisLabel: {
-        color: "#5c6b86",
-        fontSize: 9,
-        interval: (index: number, value: string) => {
-          if (["X", "Y", "M", "MT"].includes(value)) return false;
-          const numeric = Number(value);
-          return Number.isNaN(numeric) ? false : numeric % 2 === 1;
-        },
-        margin: 10,
-      },
-      axisTick: { alignWithLabel: true, lineStyle: { color: "#c6cfde" } },
-      axisLine: { lineStyle: { color: "#c6cfde" } },
-    },
-    yAxis: {
-      type: "value",
-      splitLine: { lineStyle: { color: "rgba(80, 95, 128, 0.12)" } },
-      axisLabel: {
-        color: "#5c6b86",
-        fontSize: 11,
-        formatter: (value: number) => {
-          if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-          if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
-          return String(value);
-        },
-      },
-    },
-    series: [
-      {
-        type: "bar",
-        data: ordered.map((item) => item.count),
-        barMaxWidth: 24,
-        itemStyle: {
-          color: {
-            type: "linear",
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: "#FC812F" },
-              { offset: 1, color: "#2C3A85" },
-            ],
-          },
-          borderRadius: [5, 5, 0, 0],
-        },
-      },
-    ],
-  };
+    .map((item) => ({ label: `chr${item.label}`, count: item.count }));
 }
 
 function buildCompositionBarOption(
   data: LabelCount[],
   unitLabel: string
 ): EChartsOption {
-  const normalized = withOtherGroup(data, 6)
-    .sort((a, b) => b.count - a.count)
-    .reverse();
-  const total = normalized.reduce((sum, item) => sum + item.count, 0);
-  return {
-    tooltip: {
-      trigger: "axis",
-      axisPointer: { type: "shadow" },
-      formatter: (params: Array<{ name: string; value: number }>) => {
-        const p = params[0];
-        const pct = total > 0 ? ((p.value / total) * 100).toFixed(1) : "0.0";
-        return `${p.name}<br/>${formatNumber(p.value)} ${unitLabel} (${pct}%)`;
-      },
-    },
-    grid: { left: 150, right: 64, top: 22, bottom: 30, containLabel: true },
-    xAxis: {
-      type: "value",
-      splitLine: { lineStyle: { color: "rgba(80, 95, 128, 0.12)" } },
-      axisLabel: {
-        color: "#5c6b86",
-        fontSize: 11,
-        formatter: (value: number) => {
-          if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-          if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
-          return String(value);
-        },
-      },
-    },
-    yAxis: {
-      type: "category",
-      data: normalized.map((item) => item.label),
-      axisLabel: {
-        color: "#33415c",
-        fontSize: 11,
-        fontWeight: 700,
-      },
-      axisTick: { show: false },
-      axisLine: { lineStyle: { color: "#c6cfde" } },
-    },
-    series: [
-      {
-        type: "bar",
-        data: normalized.map((item) => item.count),
-        barMaxWidth: 24,
-        itemStyle: {
-          color: {
-            type: "linear",
-            x: 0,
-            y: 0,
-            x2: 1,
-            y2: 0,
-            colorStops: [
-              { offset: 0, color: "#4ABEDC" },
-              { offset: 1, color: "#2C3A85" },
-            ],
-          },
-          borderRadius: [0, 10, 10, 0],
-        },
-        label: {
-          show: true,
-          position: "right",
-          color: "#2C3A85",
-          fontWeight: 700,
-          fontSize: 11,
-          formatter: (p: { value: number }) => formatNumber(p.value),
-        },
-      },
-    ],
-  };
+  return buildSortedBarOption(withOtherGroup(data, 6), unitLabel);
 }
 
 // ---- Ridgeline / KDE helpers ----
@@ -759,17 +626,13 @@ export function StatisticsPage() {
   const funcRows = useMemo(() => toStatRows(overview?.funcDistribution ?? [], 10), [overview?.funcDistribution]);
   const exonicRows = useMemo(() => toStatRows(overview?.exonicDistribution ?? [], 10), [overview?.exonicDistribution]);
   const chromRows = useMemo(() => {
-    const normalized = cleanLabels(overview?.chromDistribution ?? []).map((item) => ({
-      label: item.label.replace(/^chr/i, "").toUpperCase(),
-      count: item.count,
-    }));
+    const normalized = normalizeChromData(overview?.chromDistribution ?? []);
     const total = normalized.reduce((sum, item) => sum + item.count, 0);
     return normalized
-      .filter((item) => CHROM_ORDER.includes(item.label))
-      .sort((a, b) => CHROM_ORDER.indexOf(a.label) - CHROM_ORDER.indexOf(b.label))
+      .sort((a, b) => b.count - a.count)
       .slice(0, 10)
       .map((item) => ({
-        label: `chr${item.label}`,
+        label: item.label,
         count: item.count,
         percentage: total > 0 ? (item.count / total) * 100 : 0,
       }));
@@ -879,7 +742,7 @@ export function StatisticsPage() {
         labelHeader="Chromosome"
       >
         <ReactECharts
-          option={buildChromOption(overview?.chromDistribution ?? [])}
+          option={buildSortedBarOption(normalizeChromData(overview?.chromDistribution ?? []), "variants")}
           showLoading={chromChartLoading}
           loadingOption={CHART_LOADING_OPTION}
           style={STANDARD_STAT_CHART_STYLE}
