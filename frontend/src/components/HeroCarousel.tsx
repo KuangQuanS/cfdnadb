@@ -28,7 +28,7 @@ const RING_PALETTES = {
   sourceSamples: ["#143d79", "#1d56a7", "#2872cf", "#4b90df", "#75afe9", "#a7cff2"],
   cancerSamples: ["#8a2d12", "#b9471b", "#df6828", "#f08b3e", "#f5a85f", "#f8c187", "#fbd6ad"],
   annotated: ["#0f5a43", "#16805f", "#20a77c", "#45bf94", "#6ed2ae", "#9de3ca", "#c2eee0"],
-  mutations: ["#4b247f", "#6731a7", "#8648c7", "#a66add", "#bf8fec", "#d4b3f3", "#e6d3f8"],
+  mutations: ["#0f4c5c", "#0f766e", "#14b8a6", "#2dd4bf", "#f59e0b", "#fbbf24", "#fde68a"],
 } as const;
 
 const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
@@ -273,7 +273,7 @@ function buildHeroSunburstOption(
         startAngle: 180,
         sort: undefined,
         clockwise: true,
-        minAngle: 20,
+        minAngle: 25,
         avoidLabelOverlap: false,
         labelLine: {
           show: false,
