@@ -683,11 +683,11 @@ export function SurvivalAnalysisPage() {
     [vafMut]
   );
   const cfMethOpt = useMemo(
-    () => (cfMeth ? boxOption(cfMeth, `${cfMeth.gene} cfMethDB methylation across cancer types`) : null),
+    () => (cfMeth ? boxOption(cfMeth, `${cfMeth.gene} tumor-normal methylation difference across cancer types`) : null),
     [cfMeth]
   );
   const cfOmicsMethOpt = useMemo(
-    () => (cfOmicsMeth ? boxOption(cfOmicsMeth, `${cfOmicsMeth.gene} cfOmics methylation across cancer types`) : null),
+    () => (cfOmicsMeth ? boxOption(cfOmicsMeth, `${cfOmicsMeth.gene} DNA methylation levels across cancer types`) : null),
     [cfOmicsMeth]
   );
   const ctcExprOpt = useMemo(
@@ -786,8 +786,8 @@ export function SurvivalAnalysisPage() {
                     ["mutType", "Survival by Mutation Type"],
                     ["vafStage", "VAF by Stage"],
                     ["vafMut", "VAF by Mutation Type"],
-                    ["cfMeth", "cfMethDB methylation"],
-                    ["cfOmicsMeth", "cfOmics methylation"],
+                    ["cfMeth", "Differential methylation"],
+                    ["cfOmicsMeth", "Methylation level"],
                     ["ctcExpr", "CTC FPKM expression"]
                   ] as const
                 ).map(([key, label]) => (
@@ -969,13 +969,13 @@ export function SurvivalAnalysisPage() {
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <h3>cfMethDB methylation</h3>
+                <h3>Differential methylation</h3>
               </div>
               <div className="survival-plot-actions">
-                <button type="button" onClick={() => exportChart("cfMeth", "png", `${gene}_cfMethDB_methylation`)}>
+                <button type="button" onClick={() => exportChart("cfMeth", "png", `${gene}_differential_methylation`)}>
                   PNG
                 </button>
-                <button type="button" onClick={() => exportChart("cfMeth", "pdf", `${gene}_cfMethDB_methylation`)}>
+                <button type="button" onClick={() => exportChart("cfMeth", "pdf", `${gene}_differential_methylation`)}>
                   PDF
                 </button>
               </div>
@@ -995,13 +995,13 @@ export function SurvivalAnalysisPage() {
           <article className="survival-plot-card">
             <div className="survival-plot-card-header">
               <div>
-                <h3>cfOmics methylation</h3>
+                <h3>Methylation level</h3>
               </div>
               <div className="survival-plot-actions">
-                <button type="button" onClick={() => exportChart("cfOmicsMeth", "png", `${gene}_cfOmics_methylation`)}>
+                <button type="button" onClick={() => exportChart("cfOmicsMeth", "png", `${gene}_methylation_level`)}>
                   PNG
                 </button>
-                <button type="button" onClick={() => exportChart("cfOmicsMeth", "pdf", `${gene}_cfOmics_methylation`)}>
+                <button type="button" onClick={() => exportChart("cfOmicsMeth", "pdf", `${gene}_methylation_level`)}>
                   PDF
                 </button>
               </div>

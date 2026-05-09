@@ -202,14 +202,14 @@ export function VafAnalysisPage() {
   const cancerTypeOpt = useMemo(
     () =>
       hasBoxGroups(cancerTypeBoxplot)
-        ? boxOption(cancerTypeBoxplot!, cancerTypeBoxplot!.title || `${queryGene.toUpperCase()} VAF by cancer type`)
+        ? boxOption(cancerTypeBoxplot!, queryGene.toUpperCase())
         : null,
     [cancerTypeBoxplot, queryGene]
   );
   const mutationTypeOpt = useMemo(
     () =>
       hasBoxGroups(mutationTypeBoxplot)
-        ? boxOption(mutationTypeBoxplot!, mutationTypeBoxplot!.title || `${queryGene.toUpperCase()} VAF by mutation type`)
+        ? boxOption(mutationTypeBoxplot!, queryGene.toUpperCase())
         : null,
     [mutationTypeBoxplot, queryGene]
   );
