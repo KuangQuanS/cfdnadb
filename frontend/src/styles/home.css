@@ -472,7 +472,7 @@
 .gdc-pipeline-inner {
   position: relative;
   z-index: 1;
-  width: min(1360px, calc(100% - 300px));
+  width: min(1520px, calc(100% - 120px));
   margin: 0 auto;
   display: grid;
   gap: 24px;
@@ -480,14 +480,14 @@
 
 .gdc-pipeline-frame {
   min-width: 0;
-  width: min(100%, 1120px);
+  width: 100%;
   margin: 0 auto;
   overflow: visible;
   background: #ffffff;
   border-radius: 16px;
   box-shadow: 0 8px 30px rgba(23, 36, 70, 0.05), 0 1px 3px rgba(23, 36, 70, 0.03);
   border: 1px solid rgba(218, 228, 240, 0.6);
-  padding: 24px;
+  padding: 10px;
 }
 
 .gdc-pipeline-frame img {
@@ -1386,7 +1386,7 @@
   }
 
   .gdc-pipeline-frame {
-    width: min(100%, 980px);
+    width: 100%;
   }
 
   .gdc-lightbox {
