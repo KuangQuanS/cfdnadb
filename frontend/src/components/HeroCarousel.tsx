@@ -128,17 +128,17 @@ type BodyCalloutConfig = {
 
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 14, labelXPct: 8.5, pointXPct: 41.3, pointYPct: 18, browseKey: "HeadAndNeck" },
-  { id: "Thyroid", label: "Thyroid", side: "left", labelTopPct: 21.5, labelXPct: 8.5, pointXPct: 41.2, pointYPct: 21.5, browseKey: "Thyroid" },
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 14, labelXPct: 8.5, pointXPct: 41.6, pointYPct: 18, browseKey: "HeadAndNeck" },
+  { id: "Thyroid", label: "Thyroid", side: "left", labelTopPct: 21.5, labelXPct: 8.5, pointXPct: 41.5, pointYPct: 21.5, browseKey: "Thyroid" },
   { id: "Lung", label: "Lung", side: "left", labelTopPct: 34.5, labelXPct: 8.5, pointXPct: 37, pointYPct: 30, browseKey: "Lung" },
-  { id: "Esophageal", label: "Esophageal", side: "left", labelTopPct: 28, labelXPct: 8.5, pointXPct: 41.2, pointYPct: 23.5, browseKey: "Esophageal" },
+  { id: "Esophageal", label: "Esophageal", side: "left", labelTopPct: 28, labelXPct: 8.5, pointXPct: 41.5, pointYPct: 23.5, browseKey: "Esophageal" },
   { id: "Liver", label: "Liver", side: "left", labelTopPct: 42, labelXPct: 8.5, pointXPct: 38, pointYPct: 37.5, browseKey: "Liver" },
   { id: "Pancreatic", label: "Pancreas", side: "left", labelTopPct: 50.5, labelXPct: 8.5, pointXPct: 43.2, pointYPct: 40, browseKey: "Pancreatic" },
   { id: "Colorectal", label: "Colorectal", side: "left", labelTopPct: 60.5, labelXPct: 8.5, pointXPct: 47, pointYPct: 48.5, browseKey: "Colorectal" },
-  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 71, labelXPct: 8.5, pointXPct: 41.2, pointYPct: 54, browseKey: "Bladder" },
+  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 71, labelXPct: 8.5, pointXPct: 41.5, pointYPct: 54, browseKey: "Bladder" },
   { id: "Healthy", label: "Healthy", side: "left", labelTopPct: 82, labelXPct: 8.5, pointXPct: 0, pointYPct: 0, browseKey: "Healthy", showConnector: false },
   /* ── right side (top → bottom) ── */
-  { id: "Brain", label: "Brain", side: "right", labelTopPct: 14, labelXPct: 91.5, pointXPct: 41.8, pointYPct: 14, browseKey: "Brain" },
+  { id: "Brain", label: "Brain", side: "right", labelTopPct: 14, labelXPct: 91.5, pointXPct: 42.1, pointYPct: 14, browseKey: "Brain" },
   { id: "Breast", label: "Breast", side: "right", labelTopPct: 24, labelXPct: 91.5, pointXPct: 67, pointYPct: 33.2, browseKey: "Breast" },
   { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 34, labelXPct: 91.5, pointXPct: 45.5, pointYPct: 40, browseKey: "Gastric" },
   { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 41, labelXPct: 91.5, pointXPct: 48.5, pointYPct: 41, browseKey: "Kidney" },
