@@ -31,8 +31,7 @@ export function TutorialPage() {
 
         <article className="detail-card prose-block help-article">
           <section id="orientation">
-            <p className="section-eyebrow">Orientation</p>
-            <h3>Workflow Overview</h3>
+            <h3>Overview</h3>
             <figure className="help-flowchart">
               <img src={tutorialFlowchart} alt="ctDNAdb workflow overview" loading="lazy" decoding="async" />
             </figure>

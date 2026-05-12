@@ -34,6 +34,7 @@ const COHORT_NODES: CohortNode[] = [
   { organKey: "liver", label: "Liver", code: "LIHC", left: 10, top: 43 },
   { organKey: "gastric", label: "Gastric", code: "GAST", left: 30, top: 57 },
   { organKey: "pancreatic", label: "Pancreatic", code: "PDAC", left: 70, top: 57 },
+  { organKey: "benign_tumor", label: "Benign Tumor", code: "BENIGN", left: 90, top: 94 },
 ];
 
 const GROUP_COLORS: Record<string, string> = {
@@ -84,6 +85,18 @@ function buildOrganEntryMap(entries: VafBodyMapEntry[]) {
   return map;
 }
 
+function isBenignTumor(label: string) {
+  return label.replace(/\s+/g, "_").toLowerCase() === "benign_tumor";
+}
+
+function sortBenignTumorLast<T>(items: T[], getLabel: (item: T) => string) {
+  return [...items].sort((a, b) => {
+    const benignDiff = Number(isBenignTumor(getLabel(a))) - Number(isBenignTumor(getLabel(b)));
+    if (benignDiff !== 0) return benignDiff;
+    return 0;
+  });
+}
+
 function markerColor(ratio: number) {
   if (ratio >= 0.67) return "#d95f45";
   if (ratio >= 0.34) return "#f0a142";
@@ -91,7 +104,7 @@ function markerColor(ratio: number) {
 }
 
 function boxOption(result: VafBoxplot, title: string): EChartsOption {
-  const names = Object.keys(result.groups);
+  const names = sortBenignTumorLast(Object.keys(result.groups), (name) => name);
   const colors = names.map((n, i) => GROUP_COLORS[n] ?? BOX_PALETTE[i % BOX_PALETTE.length]);
   const hasLongLabels = names.some((name) => name.length > 10);
   const labelRotate = names.length > 7 ? 45 : hasLongLabels ? 30 : 0;
@@ -194,6 +207,7 @@ export function VafAnalysisPage() {
     staleTime: 5 * 60_000,
   });
   const entries = vafQ.data?.entries ?? [];
+  const displayEntries = useMemo(() => sortBenignTumorLast(entries, (entry) => entry.cancerType), [entries]);
   const maxMean = vafQ.data?.maxMeanVaf ?? 0;
   const organEntries = useMemo(() => buildOrganEntryMap(entries), [entries]);
   const totalSamples = entries.reduce((sum, entry) => sum + entry.sampleCount, 0);
@@ -309,7 +323,7 @@ export function VafAnalysisPage() {
               <p className="panel-note">Loading VAF data...</p>
             ) : vafQ.isError ? (
               <p className="panel-note">VAF data request failed. Check that the backend is running with the mounted VAF directory.</p>
-            ) : entries.length > 0 ? (
+            ) : displayEntries.length > 0 ? (
               <table className="vaf-analysis-table">
                 <thead>
                   <tr>
@@ -321,7 +335,7 @@ export function VafAnalysisPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {entries.map((entry) => (
+                  {displayEntries.map((entry) => (
                     <tr key={entry.cohort}>
                       <td>{entry.cancerType}</td>
                       <td>{formatVaf(entry.meanVaf)} <span>{formatPercent(entry.meanVaf)}</span></td>

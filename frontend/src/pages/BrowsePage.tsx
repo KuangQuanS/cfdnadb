@@ -14,8 +14,8 @@ import { formatCohortLabel } from "../utils/cohortLabels";
 const PdfPagePreview = lazy(() => import("../components/PdfPagePreview").then((module) => ({ default: module.PdfPagePreview })));
 const WaterfallChart = lazy(() => import("../components/WaterfallChart").then((module) => ({ default: module.WaterfallChart })));
 
-const MAX_ONCOPLOT_GENES = 30;
-const DEFAULT_ONCOPLOT_LIMIT = 40;
+const MAX_ONCOPLOT_GENES = 50;
+const DEFAULT_ONCOPLOT_LIMIT = 50;
 const GENE_INPUT_EXAMPLES = [
   ["TTN", "MUC12", "OBSCN", "HRNR", "EPPK1"],
 ];

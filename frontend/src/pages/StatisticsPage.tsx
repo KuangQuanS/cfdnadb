@@ -36,6 +36,23 @@ function cleanLabels(items: LabelCount[]): LabelCount[] {
   );
 }
 
+function labelLastSort(label: string, lastLabel: string) {
+  return label === lastLabel ? 1 : 0;
+}
+
+function normalizeGenomicRegionLabel(label: string) {
+  return /^UTR3$/i.test(label.trim()) ? "UTR" : label;
+}
+
+function normalizeGenomicRegionData(items: LabelCount[]): LabelCount[] {
+  const counts = new Map<string, number>();
+  for (const item of cleanLabels(items)) {
+    const label = normalizeGenomicRegionLabel(item.label);
+    counts.set(label, (counts.get(label) ?? 0) + item.count);
+  }
+  return Array.from(counts, ([label, count]) => ({ label, count }));
+}
+
 function withOtherGroup(items: LabelCount[], limit = 6): LabelCount[] {
   const sorted = [...cleanLabels(items)].sort((a, b) => b.count - a.count);
   if (sorted.length <= limit) return sorted;
@@ -65,7 +82,11 @@ function toStatRows(items: LabelCount[], limit = 10): StatRow[] {
 function toCohortRows(items: CancerSummary[], limit = 10): StatRow[] {
   const sorted = [...items]
     .filter((item) => item.sampleCount > 0)
-    .sort((a, b) => b.sampleCount - a.sampleCount);
+    .sort((a, b) => {
+      const lastDiff = labelLastSort(a.cancer, "Healthy") - labelLastSort(b.cancer, "Healthy");
+      if (lastDiff !== 0) return lastDiff;
+      return b.sampleCount - a.sampleCount;
+    });
   const total = sorted.reduce((sum, item) => sum + item.sampleCount, 0);
   return sorted.slice(0, limit).map((item) => ({
     label: formatCohortLabel(item.cancer),
@@ -158,7 +179,11 @@ function buildSortedBarOption(
   data: LabelCount[],
   unitLabel: string,
 ): EChartsOption {
-  const normalized = [...cleanLabels(data)].sort((a, b) => b.count - a.count);
+  const normalized = [...cleanLabels(data)].sort((a, b) => {
+    const lastDiff = labelLastSort(a.label, "Healthy") - labelLastSort(b.label, "Healthy");
+    if (lastDiff !== 0) return lastDiff;
+    return b.count - a.count;
+  });
   const chartData = [...normalized].reverse();
   const total = normalized.reduce((sum, item) => sum + item.count, 0);
   return {
@@ -237,7 +262,12 @@ function buildCohortBarOption(cancers: CancerSummary[]): EChartsOption {
   return buildSortedBarOption(
     cancers
       .filter((item) => item.sampleCount > 0)
-      .map((item) => ({ label: formatCohortLabel(item.cancer), count: item.sampleCount })),
+      .map((item) => ({ label: formatCohortLabel(item.cancer), count: item.sampleCount }))
+      .sort((a, b) => {
+        const lastDiff = labelLastSort(a.label, "Healthy") - labelLastSort(b.label, "Healthy");
+        if (lastDiff !== 0) return lastDiff;
+        return b.count - a.count;
+      }),
     "samples",
   );
 }
@@ -615,6 +645,10 @@ export function StatisticsPage() {
     [activeCohorts]
   );
   const vafData = vafQ.data ?? [];
+  const genomicRegionDistribution = useMemo(
+    () => normalizeGenomicRegionData(overview?.funcDistribution ?? []),
+    [overview?.funcDistribution]
+  );
 
   const activeQ = isPublic ? publicOverviewQ : overviewQ;
   const loading = activeQ.isLoading;
@@ -622,8 +656,8 @@ export function StatisticsPage() {
   const funcChartLoading = activeQ.isLoading;
   const exonicChartLoading = activeQ.isLoading;
   const chromChartLoading = activeQ.isLoading;
-  const cohortRows = useMemo(() => toCohortRows(activeCohorts, 10), [activeCohorts]);
-  const funcRows = useMemo(() => toStatRows(overview?.funcDistribution ?? [], 10), [overview?.funcDistribution]);
+  const cohortRows = useMemo(() => toCohortRows(activeCohorts, activeCohorts.length), [activeCohorts]);
+  const funcRows = useMemo(() => toStatRows(genomicRegionDistribution, 10), [genomicRegionDistribution]);
   const exonicRows = useMemo(() => toStatRows(overview?.exonicDistribution ?? [], 10), [overview?.exonicDistribution]);
   const chromRows = useMemo(() => {
     const normalized = normalizeChromData(overview?.chromDistribution ?? []);
@@ -714,7 +748,7 @@ export function StatisticsPage() {
         labelHeader="Region"
       >
         <ReactECharts
-          option={buildSortedBarOption(overview?.funcDistribution ?? [], "variants")}
+          option={buildSortedBarOption(genomicRegionDistribution, "variants")}
           showLoading={funcChartLoading}
           loadingOption={CHART_LOADING_OPTION}
           style={STANDARD_STAT_CHART_STYLE}
