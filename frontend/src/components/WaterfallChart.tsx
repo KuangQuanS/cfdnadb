@@ -151,8 +151,8 @@ export function WaterfallChart({ data, title, cellHeight = 18 }: WaterfallChartP
       topBarData: displaySamples.map((sample) => sampleCounts[sample] ?? 0),
       geneTypeCounts: typeCounts,
       visibleMutationTypes: [
-        { cls: "__empty__", color: EMPTY_CELL_COLOR, label: "No alteration" },
         ...MUTATION_TYPES.filter((item) => visible.has(item.cls)),
+        { cls: "__empty__", color: EMPTY_CELL_COLOR, label: "No alteration" },
       ],
       visibleSeriesTypes: MUTATION_TYPES.filter((item) => visible.has(item.cls)),
     };
