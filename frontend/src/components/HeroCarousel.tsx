@@ -2,7 +2,7 @@ import { lazy, Suspense, type CSSProperties, type FormEvent, useMemo, useState }
 import { useQuery } from "@tanstack/react-query";
 import type { EChartsOption } from "echarts";
 import { useNavigate } from "react-router-dom";
-import { getCancerSummary, getHomeBodyCallouts, getSourceDistribution, getStatisticsOverview } from "../api/client";
+import { getCancerSummary, getSourceDistribution, getStatisticsOverview } from "../api/client";
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/body_simple_man.png";
@@ -135,10 +135,10 @@ const ALL_CALLOUTS = [
   { id: "Liver", label: "Liver", side: "left", labelTopPct: 42, labelXPct: 8.5, pointXPct: 38, pointYPct: 37.5, browseKey: "Liver" },
   { id: "Pancreatic", label: "Pancreas", side: "left", labelTopPct: 50.5, labelXPct: 8.5, pointXPct: 43.2, pointYPct: 40, browseKey: "Pancreatic" },
   { id: "Colorectal", label: "Colorectal", side: "left", labelTopPct: 60.5, labelXPct: 8.5, pointXPct: 47, pointYPct: 48.5, browseKey: "Colorectal" },
-  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 71, labelXPct: 8.5, pointXPct: 39, pointYPct: 54, browseKey: "Bladder" },
+  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 71, labelXPct: 8.5, pointXPct: 41.2, pointYPct: 54, browseKey: "Bladder" },
   { id: "Healthy", label: "Healthy", side: "left", labelTopPct: 82, labelXPct: 8.5, pointXPct: 0, pointYPct: 0, browseKey: "Healthy", showConnector: false },
   /* ── right side (top → bottom) ── */
-  { id: "Brain", label: "Brain", side: "right", labelTopPct: 14, labelXPct: 91.5, pointXPct: 41.3, pointYPct: 14, browseKey: "Brain" },
+  { id: "Brain", label: "Brain", side: "right", labelTopPct: 14, labelXPct: 91.5, pointXPct: 41.8, pointYPct: 14, browseKey: "Brain" },
   { id: "Breast", label: "Breast", side: "right", labelTopPct: 24, labelXPct: 91.5, pointXPct: 67, pointYPct: 33.2, browseKey: "Breast" },
   { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 34, labelXPct: 91.5, pointXPct: 45.5, pointYPct: 40, browseKey: "Gastric" },
   { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 41, labelXPct: 91.5, pointXPct: 48.5, pointYPct: 41, browseKey: "Kidney" },
@@ -152,11 +152,17 @@ function getLabelCenterX(cfg: BodyCalloutConfig) {
   return cfg.labelXPct ?? (cfg.side === "left" ? 14 : 86);
 }
 
+function getPointX(cfg: BodyCalloutConfig) {
+  if (cfg.showConnector === false) return cfg.pointXPct;
+  return cfg.pointXPct + (cfg.side === "left" ? 0.3 : -0.3);
+}
+
 function buildCalloutPolyline(cfg: BodyCalloutConfig) {
   const labelCenterX = getLabelCenterX(cfg);
   const labelEdgeX = cfg.side === "left" ? labelCenterX + 10 : labelCenterX - 10;
-  const elbowX = labelEdgeX + (cfg.pointXPct - labelEdgeX) * 0.45;
-  return `${labelEdgeX},${cfg.labelTopPct} ${elbowX},${cfg.labelTopPct} ${elbowX},${cfg.pointYPct} ${cfg.pointXPct},${cfg.pointYPct}`;
+  const pointX = getPointX(cfg);
+  const elbowX = labelEdgeX + (pointX - labelEdgeX) * 0.45;
+  return `${labelEdgeX},${cfg.labelTopPct} ${elbowX},${cfg.labelTopPct} ${elbowX},${cfg.pointYPct} ${pointX},${cfg.pointYPct}`;
 }
 
 type HeroRingEntry = { 
@@ -387,12 +393,6 @@ export function HeroCarousel() {
     staleTime: HOME_STATS_CACHE_MS,
     gcTime: HOME_STATS_CACHE_MS,
   });
-  const bodyCalloutsQuery = useQuery({
-    queryKey: ["home-body-callouts"],
-    queryFn: getHomeBodyCallouts,
-    staleTime: HOME_STATS_CACHE_MS,
-    gcTime: HOME_STATS_CACHE_MS,
-  });
   const cohorts = cancerQuery.data?.length ? cancerQuery.data : MOCK_COHORTS;
   const sourceDistribution = sourceQuery.data ?? [];
   const overview = overviewQuery.data;
@@ -463,7 +463,7 @@ export function HeroCarousel() {
     () => variantClassDistribution.reduce((sum, entry) => sum + entry.count, 0),
     [variantClassDistribution],
   );
-  const visibleCallouts = bodyCalloutsQuery.data?.length ? bodyCalloutsQuery.data : ALL_CALLOUTS;
+  const visibleCallouts = ALL_CALLOUTS;
   const genomeRingEntries = useMemo(
     () => genomeDistribution.map((entry, index) => ({
       id: `genome-${index}-${entry.label}`,
@@ -512,6 +512,7 @@ export function HeroCarousel() {
         palette: RING_PALETTES.annotated,
         centerTitle: "Variants",
         centerValue: formatCompactCount(totalGenomeDistribution),
+        minAngle: 20,
       },
       {
         id: "variant-classification",
@@ -579,7 +580,35 @@ export function HeroCarousel() {
           </div>
 
           <div className="gdc-col-middle">
-            <div className="body-map">
+            <div className="gdc-hero-stat-panel">
+              <div className="gdc-overview-grid gdc-overview-grid--hero">
+                {overviewCards.map((card) => (
+                  <HeroRingChart
+                    key={card.id}
+                    title={card.title}
+                    total={card.total}
+                    entries={card.entries}
+                    palette={card.palette}
+                    centerTitle={card.centerTitle}
+                    centerValue={card.centerValue}
+                    centerColor={card.centerColor}
+                    minAngle={card.minAngle}
+                    onSliceClick={goToOverviewSlice}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="gdc-stat-section">
+        <div className="gdc-stat-inner">
+          <article className="gdc-stat-card gdc-stat-card--body">
+            <div className="gdc-card-head">
+              <p className="section-eyebrow">Statistic</p>
+            </div>
+            <div className="body-map body-map--stat">
               <div className="body-map-stage">
                 <img src={humanBodyImg} alt="Human body diagram with cancer sites" className="gdc-body-img" loading="eager" decoding="async" />
 
@@ -594,7 +623,7 @@ export function HeroCarousel() {
                     {cfg.showConnector === false ? null : (
                       <div
                         className="callout-dot"
-                        style={{ left: `${cfg.pointXPct}%`, top: `${cfg.pointYPct}%` } as CSSProperties}
+                        style={{ left: `${getPointX(cfg)}%`, top: `${cfg.pointYPct}%` } as CSSProperties}
                         aria-hidden="true"
                       />
                     )}
@@ -613,12 +642,8 @@ export function HeroCarousel() {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </article>
 
-      <section className="gdc-stat-section">
-        <div className="gdc-stat-inner">
           <article className="gdc-index-card">
             <div className="gdc-card-head">
               <p className="section-eyebrow">Tutorial</p>
@@ -632,28 +657,6 @@ export function HeroCarousel() {
               >
                 <img src={tutorialImg} alt="ctDNAdb tutorial workflow" loading="lazy" decoding="async" />
               </button>
-            </div>
-          </article>
-
-          <article className="gdc-stat-card">
-            <div className="gdc-card-head">
-              <p className="section-eyebrow">Statistic</p>
-            </div>
-            <div className="gdc-overview-grid">
-              {overviewCards.map((card) => (
-                <HeroRingChart
-                  key={card.id}
-                  title={card.title}
-                  total={card.total}
-                  entries={card.entries}
-                  palette={card.palette}
-                  centerTitle={card.centerTitle}
-                  centerValue={card.centerValue}
-                  centerColor={card.centerColor}
-                  minAngle={card.minAngle}
-                  onSliceClick={goToOverviewSlice}
-                />
-              ))}
             </div>
           </article>
         </div>
