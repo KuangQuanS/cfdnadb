@@ -47,7 +47,7 @@
 
 .gdc-hero-inner--intro {
   width: min(1900px, calc(100% - 96px));
-  grid-template-columns: minmax(0, 1fr) minmax(520px, 0.72fr);
+  grid-template-columns: minmax(0, 0.92fr) minmax(620px, 0.8fr);
   gap: clamp(24px, 2.2vw, 44px);
   align-items: start;
 }
@@ -141,7 +141,7 @@
   color: #43567a;
   font-size: clamp(1rem, 1.08vw, 1.14rem);
   line-height: 1.9;
-  max-width: 980px;
+  max-width: 920px;
   display: grid;
   gap: 16px;
 }
@@ -166,6 +166,11 @@
   align-items: flex-start;
   min-width: 0;
   margin-left: clamp(24px, 2.4vw, 56px);
+}
+
+.gdc-hero-stat-panel {
+  width: min(100%, 780px);
+  margin-top: 34px;
 }
 
 .body-map {
@@ -194,7 +199,7 @@
 
 .gdc-stat-section {
   position: relative;
-  padding: 58px 0 74px;
+  padding: 38px 0 56px;
   overflow: hidden;
   background:
     radial-gradient(circle at 12% 18%, rgba(54, 96, 170, 0.08), transparent 28%),
@@ -231,12 +236,12 @@
 .gdc-stat-inner {
   position: relative;
   z-index: 1;
-  width: min(1520px, calc(100% - 120px));
+  width: min(1820px, calc(100% - 136px));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(460px, 0.82fr) minmax(680px, 1.18fr);
-  gap: clamp(24px, 2.2vw, 40px);
-  align-items: stretch;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(28px, 2.2vw, 44px);
+  align-items: start;
 }
 
 .gdc-index-card,
@@ -244,8 +249,8 @@
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 24px;
-  min-height: 780px;
+  gap: 20px;
+  min-height: 600px;
   overflow: visible;
 }
 
@@ -267,7 +272,7 @@
 .gdc-card-head .section-eyebrow {
   margin: 0;
   color: #1f5f9f;
-  font-size: 1.35rem;
+  font-size: 1.16rem;
   font-weight: 800;
   text-transform: none;
   letter-spacing: 0;
@@ -276,29 +281,35 @@
 .gdc-tutorial-panel {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   overflow: visible;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(23, 36, 70, 0.05), 0 1px 3px rgba(23, 36, 70, 0.03);
-  border: 1px solid rgba(218, 228, 240, 0.6);
-  padding: 10px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  border: 0;
+  padding: 0;
 }
 
 .gdc-tutorial-panel img {
   width: 100%;
-  height: 100%;
-  max-height: 840px;
+  height: auto;
+  max-width: 860px;
+  max-height: 760px;
   display: block;
   object-fit: contain;
   object-position: center top;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .gdc-tutorial-zoom {
   width: 100%;
+  height: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   min-width: 0;
   min-height: 0;
   padding: 0;
@@ -408,6 +419,22 @@
   -webkit-backdrop-filter: none;
 }
 
+.gdc-stat-card--body {
+  justify-items: stretch;
+}
+
+.gdc-stat-card--body .body-map {
+  width: min(100%, 760px);
+  margin: -28px auto 0;
+  aspect-ratio: 680 / 800;
+  height: 100%;
+}
+
+.gdc-stat-card--body .body-map-stage {
+  width: 100%;
+  height: 100%;
+}
+
 .gdc-stat-card {
   border-left: 0;
   padding-left: 0;
@@ -472,7 +499,7 @@
 .gdc-pipeline-inner {
   position: relative;
   z-index: 1;
-  width: min(1520px, calc(100% - 120px));
+  width: min(1820px, calc(100% - 136px));
   margin: 0 auto;
   display: grid;
   gap: 24px;
@@ -807,15 +834,24 @@
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 24px;
+  gap: 14px 22px;
   align-items: start;
-  padding: 16px;
+  padding: 6px 16px 10px;
   border: 1px solid rgba(218, 228, 240, 0.6);
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 8px 30px rgba(23, 36, 70, 0.05), 0 1px 3px rgba(23, 36, 70, 0.03);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+.gdc-overview-grid--hero {
+  padding: 0;
+  border: 0;
+}
+
+.gdc-overview-grid--hero .gdc-overview-chart-shell {
+  --gdc-overview-chart-size: clamp(248px, 18.5vw, 305px);
 }
 
 .gdc-overview-grid::before,
@@ -846,13 +882,13 @@
 .gdc-overview-chart {
   display: grid;
   justify-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 8px;
+  padding: 6px;
 }
 
 .gdc-overview-chart-shell {
   position: relative;
-  --gdc-overview-chart-size: clamp(320px, 23vw, 340px);
+  --gdc-overview-chart-size: clamp(228px, 18vw, 270px);
   width: min(100%, var(--gdc-overview-chart-size));
   min-height: var(--gdc-overview-chart-size);
 }
@@ -869,7 +905,7 @@
 .gdc-overview-chart-title {
   margin: 0;
   color: #18233f;
-  font-size: 1.15rem;
+  font-size: 0.92rem;
   font-weight: 700;
   line-height: 1.25;
   text-align: center;
@@ -1190,7 +1226,7 @@
 
   .gdc-hero-inner--intro {
     width: calc(100% - 72px);
-    grid-template-columns: minmax(520px, 1fr) minmax(460px, 0.72fr);
+    grid-template-columns: minmax(480px, 0.9fr) minmax(560px, 0.82fr);
     gap: 24px;
   }
 
@@ -1205,11 +1241,11 @@
 
   .gdc-stat-inner,
   .gdc-pipeline-inner {
-    width: calc(100% - 80px);
+    width: calc(100% - 96px);
   }
 
   .gdc-stat-inner {
-    grid-template-columns: minmax(420px, 0.82fr) minmax(620px, 1.18fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 24px;
   }
 }
