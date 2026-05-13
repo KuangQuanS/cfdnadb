@@ -283,22 +283,6 @@ export function BrowsePage() {
     <div className="page-stack rnabrowse-page">
       <div className="rnabrowse-layout">
         <aside className="rnabrowse-sidebar">
-          <div className="rnabrowse-sidebar-title">
-            <h2>Filters</h2>
-          </div>
-
-          <textarea
-            ref={geneInputRef}
-            className="rnabrowse-global-search"
-            value={geneInput}
-            onChange={(event) => {
-              onGeneInputChange(event.target.value);
-              syncGeneInputHeight(event.target);
-            }}
-            placeholder="Global Search"
-            rows={1}
-          />
-
           <FilterSection title="Disease">
             <select value={cancer} onChange={(event) => setParam("cancer", event.target.value)}>
               {CANCER_OPTIONS.map((option) => (
@@ -320,6 +304,17 @@ export function BrowsePage() {
           </FilterSection>
 
           <FilterSection title="Gene Input">
+            <textarea
+              ref={geneInputRef}
+              className="rnabrowse-global-search rnabrowse-gene-input"
+              value={geneInput}
+              onChange={(event) => {
+                onGeneInputChange(event.target.value);
+                syncGeneInputHeight(event.target);
+              }}
+              placeholder="TP53, KRAS, PIK3CA..."
+              rows={1}
+            />
             <div className="rnabrowse-example-list">
               {GENE_INPUT_EXAMPLES.map((example) => {
                 const text = example.join(", ");
@@ -365,11 +360,6 @@ export function BrowsePage() {
         </aside>
 
         <main className="rnabrowse-main">
-          <div className="rnabrowse-results-title">
-            <span className="rnabrowse-collapse-icon" aria-hidden="true" />
-            <h2>Results</h2>
-          </div>
-
           {activeSource ? (
             <article className="stat-pdf-card stat-pdf-card--oncoplot statistics-oncoplot-card rnabrowse-result-card">
               <div className="statistics-panel-header statistics-panel-header--plot">
@@ -437,8 +427,7 @@ function FilterSection({ title, children }: { title: string; children: ReactNode
   return (
     <section className="rnabrowse-filter-section">
       <div className="rnabrowse-filter-title">
-        <span>{title}</span>
-        <span aria-hidden="true" />
+        {title}
       </div>
       <div className="rnabrowse-filter-body">{children}</div>
     </section>

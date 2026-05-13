@@ -285,7 +285,7 @@
   height: 100%;
   display: flex;
   align-items: flex-start;
-  justify-content: flex-start;
+  justify-content: center;
   overflow: visible;
   background: transparent;
   border-radius: 0;
@@ -861,7 +861,7 @@
 }
 
 .gdc-overview-grid--hero .gdc-overview-chart-shell {
-  --gdc-overview-chart-size: clamp(248px, 18.5vw, 305px);
+  --gdc-overview-chart-size: clamp(268px, 19.8vw, 335px);
 }
 
 .gdc-overview-grid::before,
@@ -898,7 +898,7 @@
 
 .gdc-overview-chart-shell {
   position: relative;
-  --gdc-overview-chart-size: clamp(228px, 18vw, 270px);
+  --gdc-overview-chart-size: clamp(248px, 19vw, 300px);
   width: min(100%, var(--gdc-overview-chart-size));
   min-height: var(--gdc-overview-chart-size);
 }

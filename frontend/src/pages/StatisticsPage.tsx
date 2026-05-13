@@ -23,9 +23,9 @@ const CHART_LOADING_OPTION = {
   lineWidth: 3,
 };
 
-const STANDARD_STAT_CHART_STYLE = { width: "100%", height: 430 };
+const STANDARD_STAT_CHART_STYLE = { width: "100%", height: "100%" };
 const STAT_BAR_COLORS = ["#2C3A85", "#1D56A7", "#2872CF", "#4B90DF", "#75AFE9"];
-const STAT_BAR_GRID = { left: 154, right: 78, top: 22, bottom: 34, containLabel: true } as const;
+const STAT_BAR_GRID = { left: 72, right: 34, top: 18, bottom: 34, containLabel: true } as const;
 
 function cleanLabels(items: LabelCount[]): LabelCount[] {
   return items.filter(
@@ -241,7 +241,7 @@ function buildSortedBarOption(
           value: item.count,
           itemStyle: { color: STAT_BAR_COLORS[index % STAT_BAR_COLORS.length] },
         })),
-        barMaxWidth: 22,
+        barMaxWidth: 30,
         itemStyle: {
           borderRadius: [0, 9, 9, 0],
         },

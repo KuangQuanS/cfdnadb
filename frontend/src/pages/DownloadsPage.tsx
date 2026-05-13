@@ -175,7 +175,7 @@ export function DownloadsPage() {
         <div>
           <h1>Download</h1>
           <p>
-            Cohort-level resources and filtered sample exports for mounted ctDNA mutation datasets.
+            Cancer-level resources and filtered sample exports for mounted ctDNA mutation datasets.
           </p>
         </div>
         <div className="downloads-mode-switch">
@@ -184,7 +184,7 @@ export function DownloadsPage() {
             className={`statistics-cohort-pill${mode === "cohort" ? " active" : ""}`}
             onClick={() => setMode("cohort")}
           >
-            Cohort-level files
+            Cancer-level files
           </button>
           <button
             type="button"
@@ -198,7 +198,7 @@ export function DownloadsPage() {
 
       {mode === "cohort" ? (
         <section className={`downloads-cohort-layout${selectedHealthy ? " downloads-cohort-layout--with-detail" : ""}`}>
-          <aside className="downloads-cohort-sidebar tool-sidebar-panel" aria-label="Cohort-level file filters">
+          <aside className="downloads-cohort-sidebar tool-sidebar-panel" aria-label="Cancer-level file filters">
             <div className="downloads-sidebar-head">
               <h3>Filter</h3>
             </div>
@@ -208,7 +208,7 @@ export function DownloadsPage() {
                 <span className="browse-filters-label">Active filters</span>
                 {selectedCohorts.map((cohort) => (
                   <button key={cohort} className="browse-filter-pill" type="button" onClick={() => toggleCohortFilter(cohort)}>
-                    Cohort: {formatCohortLabel(cohort)} &times;
+                    Cancer: {formatCohortLabel(cohort)} &times;
                   </button>
                 ))}
                 {selectedFileTypes.map((fileType) => (
@@ -220,7 +220,7 @@ export function DownloadsPage() {
             ) : null}
 
             <div className="downloads-cohort-filter-group">
-              <span>Cohort</span>
+              <span>Cancer</span>
               <div className="downloads-cohort-filter-list">
                 {cohortOptions.map((cohort) => (
                   <button
@@ -257,7 +257,7 @@ export function DownloadsPage() {
           </aside>
 
           <article className="downloads-table-card tool-section-panel">
-            <h2>Cohort-level file table</h2>
+            <h2>Cancer-level file table</h2>
             <div className="statistics-pdf-shell downloads-table-shell">
               {filesQuery.isLoading && <p className="panel-note">Scanning available files...</p>}
               {filesQuery.isError && (
@@ -270,13 +270,13 @@ export function DownloadsPage() {
                 <section className="detail-card empty-card">
                   {allTableRows.length === 0 ? (
                     <>
-                      <h3>No cohort-level files available yet</h3>
+                      <h3>No cancer-level files available yet</h3>
                       <p>Data files will appear here as pipeline processing completes for each cohort.</p>
                     </>
                   ) : (
                     <>
-                      <h3>No cohort-level files match the filters</h3>
-                      <p>Reset the cohort or file-type filters to review all mounted cohort resources.</p>
+                      <h3>No cancer-level files match the filters</h3>
+                      <p>Reset the cancer or file-type filters to review all mounted cancer resources.</p>
                     </>
                   )}
                 </section>
@@ -307,7 +307,7 @@ export function DownloadsPage() {
                     <table className="data-table downloads-table">
                       <thead>
                         <tr>
-                          <th>Cohort</th>
+                          <th>Cancer</th>
                           <th>Type</th>
                           <th>File</th>
                           <th>Size</th>

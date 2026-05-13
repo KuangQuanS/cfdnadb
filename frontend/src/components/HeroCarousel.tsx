@@ -26,9 +26,9 @@ const MOCK_COHORTS: CancerSummary[] = [
 
 const RING_PALETTES = {
   sourceSamples: ["#143d79", "#1d56a7", "#2872cf", "#4b90df", "#75afe9", "#a7cff2"],
-  cancerSamples: ["#8a2d12", "#b9471b", "#df6828", "#f08b3e", "#f5a85f", "#f8c187", "#fbd6ad"],
-  annotated: ["#0f5a43", "#16805f", "#20a77c", "#45bf94", "#6ed2ae", "#9de3ca", "#c2eee0"],
-  mutations: ["#4C1D95", "#5B21B6", "#7C3AED", "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE"],
+  cancerSamples: ["#8a2d12", "#a83816", "#bf481d", "#d95d24", "#ed782f", "#f08f47", "#f3a862", "#d26d2f", "#b64a1c"],
+  annotated: ["#0f5a43", "#137253", "#178a65", "#1fa078", "#33b18b", "#53bd9d", "#73c9ae", "#2f8f73", "#1b765c"],
+  mutations: ["#4C1D95", "#5B21B6", "#6D28D9", "#7C3AED", "#8B5CF6", "#9668E8", "#7E54D2", "#6542B4", "#52329A"],
 } as const;
 
 const COHORT_PRIORITY = ["Breast", "Colorectal", "Lung", "Liver", "Pancreatic"] as const;
@@ -133,7 +133,7 @@ const ALL_CALLOUTS = [
   { id: "Lung", label: "Lung", side: "left", labelTopPct: 34.5, labelXPct: 8.5, pointXPct: 37, pointYPct: 30, browseKey: "Lung" },
   { id: "Esophageal", label: "Esophageal", side: "left", labelTopPct: 28, labelXPct: 8.5, pointXPct: 41.5, pointYPct: 23.5, browseKey: "Esophageal" },
   { id: "Liver", label: "Liver", side: "left", labelTopPct: 42, labelXPct: 8.5, pointXPct: 38, pointYPct: 37.5, browseKey: "Liver" },
-  { id: "Pancreatic", label: "Pancreas", side: "left", labelTopPct: 50.5, labelXPct: 8.5, pointXPct: 43.2, pointYPct: 40, browseKey: "Pancreatic" },
+  { id: "Pancreatic", label: "Pancreatic", side: "left", labelTopPct: 50.5, labelXPct: 8.5, pointXPct: 43.2, pointYPct: 40, browseKey: "Pancreatic" },
   { id: "Colorectal", label: "Colorectal", side: "left", labelTopPct: 60.5, labelXPct: 8.5, pointXPct: 47, pointYPct: 48.5, browseKey: "Colorectal" },
   { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 71, labelXPct: 8.5, pointXPct: 41.5, pointYPct: 54, browseKey: "Bladder" },
   { id: "Healthy", label: "Healthy", side: "left", labelTopPct: 82, labelXPct: 8.5, pointXPct: 0, pointYPct: 0, browseKey: "Healthy", showConnector: false },
@@ -207,7 +207,7 @@ function buildHeroSunburstOption(
   centerColor?: string,
   minAngle = 15,
 ): EChartsOption {
-  const isVariantCountChart = title === "Genome distribution" || title === "Variant Classification";
+  const isVariantCountChart = title === "Genome distribution" || title === "Variant Type Classification";
   const children = buildSunburstEntries(entries, palette);
   const formatValue = (value: number) => (isVariantCountChart ? formatCompactCount(value) : formatNumber(value));
 
@@ -234,7 +234,7 @@ function buildHeroSunburstOption(
         top: 0,
         right: 0,
         bottom: 0,
-        radius: [0, "44%"],
+        radius: [0, "36%"],
         center: ["50%", "50%"],
         silent: true,
         tooltip: {
@@ -276,7 +276,7 @@ function buildHeroSunburstOption(
         top: 0,
         right: 0,
         bottom: 0,
-        radius: ["46%", "88%"],
+        radius: ["39%", "94%"],
         center: ["50%", "50%"],
         startAngle: 180,
         sort: undefined,
@@ -496,7 +496,7 @@ export function HeroCarousel() {
       },
       {
         id: "cancer-samples",
-        title: "Sample categories",
+        title: "Collected Sample Categories",
         total: totalSamples,
         entries: sampleRingEntries,
         palette: RING_PALETTES.cancerSamples,
@@ -510,13 +510,13 @@ export function HeroCarousel() {
         total: totalGenomeDistribution,
         entries: genomeRingEntries,
         palette: RING_PALETTES.annotated,
-        centerTitle: "Variants",
+        centerTitle: "Locations",
         centerValue: formatCompactCount(totalGenomeDistribution),
         minAngle: 20,
       },
       {
         id: "variant-classification",
-        title: "Variant Classification",
+        title: "Variant Type Classification",
         total: totalVariantClassification,
         entries: variantClassRingEntries,
         palette: RING_PALETTES.mutations,

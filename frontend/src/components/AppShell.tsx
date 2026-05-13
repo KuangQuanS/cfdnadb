@@ -24,6 +24,35 @@ const breadcrumbLabels: Array<[string, string]> = [
   ["/studies", "Study Detail"],
 ];
 
+function VisitorMap() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.innerHTML = "";
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.id = "mapmyvisitors";
+    script.src = "https://mapmyvisitors.com/map.js?d=oKaSLVePNdgXFoqOaGCJyhsVnZm0JLTieq3Lbb7Aaco&cl=ffffff&w=a";
+    script.async = true;
+    container.appendChild(script);
+
+    return () => {
+      container.innerHTML = "";
+    };
+  }, []);
+
+  return (
+    <div className="footer-visitor-map" ref={containerRef} aria-label="Visit tracker">
+      <a href="https://mapmyvisitors.com/web/1c4h3" title="Visit tracker" target="_blank" rel="noopener noreferrer">
+        <img src="https://mapmyvisitors.com/map.png?d=oKaSLVePNdgXFoqOaGCJyhsVnZm0JLTieq3Lbb7Aaco&cl=ffffff" alt="Visit tracker" />
+      </a>
+    </div>
+  );
+}
+
 function getBreadcrumbLabel(pathname: string) {
   if (pathname === "/") return null;
   return breadcrumbLabels.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? "Page";
@@ -188,17 +217,38 @@ export function AppShell({ children }: PropsWithChildren) {
       </main>
 
       <footer className="site-footer">
-        <div className="footer-bottom">
-          <div className="footer-bottom-inner">
-            <span>
+        <div className="footer-main">
+          <section className="footer-col footer-col--explore" aria-label="Explore ctDNAdb">
+            <h4>Explore</h4>
+            <div className="footer-link-grid">
+              <Link to="/">Home</Link>
+              <Link to="/browse">Browser</Link>
+              <Link to="/gene-search">Gene Search</Link>
+              <Link to="/statistics">Statistics</Link>
+              <Link to="/downloads">Download</Link>
+              <Link to="/tutorial">Tutorial</Link>
+              <Link to="/survival">Survival Analysis</Link>
+              <Link to="/vaf-analysis">ctDNA VAF</Link>
+            </div>
+          </section>
+
+          <section className="footer-col footer-col--contact" aria-label="Contact information">
+            <h4>Contact Info</h4>
+            <address>
+              Lee Laboratory, Kunming Medical University
+              <br />
+              Kunming, Yunnan, China
+              <br />
+              <a href="mailto:lijie@kmmu.edu.cn">lijie@kmmu.edu.cn</a>
+            </address>
+            <p className="footer-copyright">
               &copy; 2026 ctDNAdb &mdash; Lee Laboratory, Kunming Medical University.
-            </span>
-            <span>
-              <a href="mailto:lijie@kmmu.edu.cn" style={{ color: "rgba(255,255,255,0.8)" }}>Contact Us</a>
-              &nbsp;&middot;&nbsp;
-              <a href="https://leelab.kmmu.edu.cn/leelabindex/" style={{ color: "rgba(255,255,255,0.8)" }} target="_blank" rel="noopener noreferrer">Lee Lab</a>
-            </span>
-          </div>
+            </p>
+          </section>
+
+          <section className="footer-map-card" aria-label="Visitor map">
+            <VisitorMap />
+          </section>
         </div>
       </footer>
     </div>
