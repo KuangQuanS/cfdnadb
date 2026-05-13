@@ -1,6 +1,7 @@
 backend/target/
 frontend/dist/
 frontend/node_modules/
+node_modules/
 frontend/.vite/
 .m2/
 .idea/
@@ -40,3 +41,10 @@ CLAUDE.md
 *.zip
 *.tmp
 .codex
+
+# Local working assets and exported image drafts.
+photo/
+tutorial/
+*.psd
+body_simple*.png
+index_mutect.png
