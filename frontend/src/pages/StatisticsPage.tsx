@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useCallback, useState, type ReactNode } from "react";
+import { useMemo, useRef, useEffect, useCallback, useState, type CSSProperties, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
@@ -26,6 +26,10 @@ const CHART_LOADING_OPTION = {
 const STANDARD_STAT_CHART_STYLE = { width: "100%", height: "100%" };
 const STAT_BAR_COLORS = ["#2C3A85", "#1D56A7", "#2872CF", "#4B90DF", "#75AFE9"];
 const STAT_BAR_GRID = { left: 72, right: 34, top: 18, bottom: 34, containLabel: true } as const;
+const STAT_BAR_VISIBLE_ROW_LIMIT = 24;
+const STAT_CHART_MIN_HEIGHT = 460;
+const STAT_TABLE_ROW_HEIGHT = 52;
+const STAT_TABLE_STATIC_HEIGHT = 94;
 
 function cleanLabels(items: LabelCount[]): LabelCount[] {
   return items.filter(
@@ -155,6 +159,15 @@ function StatisticsSplitSection({
   countHeader?: string;
   children: ReactNode;
 }) {
+  const visibleRowCount = Math.max(rows.length, 1);
+  const chartHeight = Math.max(
+    STAT_CHART_MIN_HEIGHT,
+    STAT_TABLE_STATIC_HEIGHT + visibleRowCount * STAT_TABLE_ROW_HEIGHT
+  );
+  const chartStyle = {
+    "--statistics-chart-height": `${chartHeight}px`,
+  } as CSSProperties;
+
   return (
     <section className="statistics-rna-section">
       <div className="statistics-rna-section-title">
@@ -163,7 +176,7 @@ function StatisticsSplitSection({
       </div>
       <div className="statistics-rna-split">
         <StatTable rows={rows} labelHeader={labelHeader} countHeader={countHeader} />
-        <div className="statistics-rna-chart">{children}</div>
+        <div className="statistics-rna-chart" style={chartStyle}>{children}</div>
       </div>
     </section>
   );
@@ -197,13 +210,13 @@ function buildSortedBarOption(
       },
     },
     grid: STAT_BAR_GRID,
-    dataZoom: normalized.length > 12 ? [
+    dataZoom: normalized.length > STAT_BAR_VISIBLE_ROW_LIMIT ? [
       {
         type: "slider",
         yAxisIndex: 0,
         right: 8,
         width: 12,
-        startValue: Math.max(chartData.length - 12, 0),
+        startValue: Math.max(chartData.length - STAT_BAR_VISIBLE_ROW_LIMIT, 0),
         endValue: chartData.length - 1,
         borderColor: "#d7deeb",
         fillerColor: "rgba(44, 58, 133, 0.18)",
