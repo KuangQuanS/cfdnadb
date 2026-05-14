@@ -199,7 +199,7 @@
 
 .gdc-stat-section {
   position: relative;
-  padding: 38px 0 56px;
+  padding: 34px 0 24px;
   overflow: hidden;
   background:
     radial-gradient(circle at 12% 18%, rgba(54, 96, 170, 0.08), transparent 28%),
@@ -299,7 +299,7 @@
 }
 
 .gdc-index-card {
-  width: min(100%, 920px);
+  width: min(100%, 1040px);
   justify-self: end;
   min-height: auto;
 }
@@ -307,8 +307,8 @@
 .gdc-tutorial-panel img {
   width: 100%;
   height: auto;
-  max-width: 920px;
-  max-height: 675px;
+  max-width: 1040px;
+  max-height: 760px;
   display: block;
   object-fit: contain;
   object-position: center top;
@@ -435,10 +435,10 @@
 }
 
 .gdc-stat-card--body .body-map {
-  width: min(100%, 760px);
+  width: min(100%, 820px);
   margin: -28px auto 0;
-  aspect-ratio: 680 / 800;
-  height: 100%;
+  aspect-ratio: auto;
+  height: clamp(680px, 48vw, 800px);
 }
 
 .gdc-stat-card--body .body-map-stage {
@@ -457,15 +457,15 @@
   z-index: 3000;
   display: grid;
   place-items: center;
-  padding: 48px;
+  padding: 28px;
   background: rgba(10, 22, 39, 0.74);
   cursor: zoom-out;
 }
 
 .gdc-lightbox-frame {
-  max-width: min(1280px, calc(100vw - 112px));
-  max-height: calc(100vh - 112px);
-  padding: 18px;
+  width: min(1180px, calc(100vw - 56px));
+  max-height: calc(100vh - 56px);
+  padding: 14px;
   overflow: auto;
   border: 1px solid rgba(209, 221, 235, 0.78);
   border-radius: 8px;
@@ -475,9 +475,10 @@
 
 .gdc-lightbox-frame img {
   display: block;
-  max-width: 100%;
-  max-height: calc(100vh - 150px);
-  object-fit: contain;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  height: auto;
 }
 
 .gdc-lightbox-close {
@@ -536,7 +537,7 @@
 }
 
 .gdc-body-img {
-  height: 95%;
+  height: 98%;
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -1419,7 +1420,7 @@
   }
 
   .gdc-stat-section {
-    padding: 34px 0 46px;
+    padding: 30px 0 26px;
   }
 
   .gdc-stat-inner,
@@ -1441,13 +1442,14 @@
   }
 
   .gdc-lightbox-frame {
-    max-width: calc(100vw - 44px);
+    width: calc(100vw - 44px);
     max-height: calc(100vh - 76px);
     padding: 10px;
   }
 
   .gdc-lightbox-frame img {
-    max-height: calc(100vh - 98px);
+    width: 100%;
+    max-height: none;
   }
 
   .gdc-lightbox-close {

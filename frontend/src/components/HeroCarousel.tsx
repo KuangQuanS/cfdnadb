@@ -127,23 +127,23 @@ type BodyCalloutConfig = {
 
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 14, labelXPct: 8.5, pointXPct: 41.6, pointYPct: 18, browseKey: "HeadAndNeck" },
-  { id: "Thyroid", label: "Thyroid", side: "left", labelTopPct: 21.5, labelXPct: 8.5, pointXPct: 41.5, pointYPct: 21.5, browseKey: "Thyroid" },
-  { id: "Lung", label: "Lung", side: "left", labelTopPct: 34.5, labelXPct: 8.5, pointXPct: 37, pointYPct: 30, browseKey: "Lung" },
-  { id: "Esophageal", label: "Esophageal", side: "left", labelTopPct: 28, labelXPct: 8.5, pointXPct: 41.5, pointYPct: 23.5, browseKey: "Esophageal" },
-  { id: "Liver", label: "Liver", side: "left", labelTopPct: 42, labelXPct: 8.5, pointXPct: 38, pointYPct: 37.5, browseKey: "Liver" },
-  { id: "Pancreatic", label: "Pancreatic", side: "left", labelTopPct: 50.5, labelXPct: 8.5, pointXPct: 43.2, pointYPct: 40, browseKey: "Pancreatic" },
-  { id: "Colorectal", label: "Colorectal", side: "left", labelTopPct: 60.5, labelXPct: 8.5, pointXPct: 47, pointYPct: 48.5, browseKey: "Colorectal" },
-  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 71, labelXPct: 8.5, pointXPct: 41.5, pointYPct: 54, browseKey: "Bladder" },
+  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 14, labelXPct: 8.5, pointXPct: 42.5, pointYPct: 19, browseKey: "HeadAndNeck" },
+  { id: "Thyroid", label: "Thyroid", side: "left", labelTopPct: 21.5, labelXPct: 8.5, pointXPct: 42.5, pointYPct: 21.5, browseKey: "Thyroid" },
+  { id: "Lung", label: "Lung", side: "left", labelTopPct: 34.5, labelXPct: 8.5, pointXPct: 39.4, pointYPct: 31, browseKey: "Lung" },
+  { id: "Esophageal", label: "Esophageal", side: "left", labelTopPct: 28, labelXPct: 8.5, pointXPct: 42.5, pointYPct: 24.5, browseKey: "Esophageal" },
+  { id: "Liver", label: "Liver", side: "left", labelTopPct: 42, labelXPct: 8.5, pointXPct: 40.6, pointYPct: 38.8, browseKey: "Liver" },
+  { id: "Pancreatic", label: "Pancreatic", side: "left", labelTopPct: 50.5, labelXPct: 8.5, pointXPct: 43.8, pointYPct: 42.8, browseKey: "Pancreatic" },
+  { id: "Colorectal", label: "Colorectal", side: "left", labelTopPct: 60.5, labelXPct: 8.5, pointXPct: 49.4, pointYPct: 48.8, browseKey: "Colorectal" },
+  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 71, labelXPct: 8.5, pointXPct: 42.6, pointYPct: 56.2, browseKey: "Bladder" },
   { id: "Healthy", label: "Healthy", side: "left", labelTopPct: 82, labelXPct: 8.5, pointXPct: 0, pointYPct: 0, browseKey: "Healthy", showConnector: false },
   /* ── right side (top → bottom) ── */
-  { id: "Brain", label: "Brain", side: "right", labelTopPct: 14, labelXPct: 91.5, pointXPct: 42.1, pointYPct: 14, browseKey: "Brain" },
-  { id: "Breast", label: "Breast", side: "right", labelTopPct: 24, labelXPct: 91.5, pointXPct: 67, pointYPct: 33.2, browseKey: "Breast" },
-  { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 34, labelXPct: 91.5, pointXPct: 45.5, pointYPct: 40, browseKey: "Gastric" },
-  { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 41, labelXPct: 91.5, pointXPct: 48.5, pointYPct: 41, browseKey: "Kidney" },
-  { id: "Cervical", label: "Cervical", side: "right", labelTopPct: 59, labelXPct: 91, pointXPct: 61, pointYPct: 56.2, browseKey: "Cervical" },
-  { id: "Endometrial", label: "Endometrial", side: "right", labelTopPct: 50, labelXPct: 91.5, pointXPct: 61, pointYPct: 53, browseKey: "Endometrial" },
-  { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 68, labelXPct: 91.5, pointXPct: 65, pointYPct: 53.5, browseKey: "Ovarian" },
+  { id: "Brain", label: "Brain", side: "right", labelTopPct: 14, labelXPct: 91.5, pointXPct: 42.5, pointYPct: 14, browseKey: "Brain" },
+  { id: "Breast", label: "Breast", side: "right", labelTopPct: 24, labelXPct: 91.5, pointXPct: 64.5, pointYPct: 34.2, browseKey: "Breast" },
+  { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 34, labelXPct: 91.5, pointXPct: 46, pointYPct: 41, browseKey: "Gastric" },
+  { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 41, labelXPct: 91.5, pointXPct: 48.4, pointYPct: 42.4, browseKey: "Kidney" },
+  { id: "Cervical", label: "Cervical", side: "right", labelTopPct: 59, labelXPct: 91, pointXPct: 59.3, pointYPct: 58, browseKey: "Cervical" },
+  { id: "Endometrial", label: "Endometrial", side: "right", labelTopPct: 50, labelXPct: 91.5, pointXPct: 59.3, pointYPct: 55.1, browseKey: "Endometrial" },
+  { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 68, labelXPct: 91.5, pointXPct: 62.8, pointYPct: 55, browseKey: "Ovarian" },
   { id: "Benign_Tumor", label: "Benign Tumor", side: "right", labelTopPct: 82, labelXPct: 91.5, pointXPct: 0, pointYPct: 0, browseKey: "Benign_Tumor", showConnector: false },
 ] as const satisfies readonly BodyCalloutConfig[];
 
@@ -153,7 +153,7 @@ function getLabelCenterX(cfg: BodyCalloutConfig) {
 
 function getPointX(cfg: BodyCalloutConfig) {
   if (cfg.showConnector === false) return cfg.pointXPct;
-  return cfg.pointXPct + (cfg.side === "left" ? 0.3 : -0.3);
+  return cfg.pointXPct;
 }
 
 function buildCalloutPolyline(cfg: BodyCalloutConfig) {
@@ -554,10 +554,10 @@ export function HeroCarousel() {
             <div className="gdc-title-rule" aria-hidden="true" />
             <div className="gdc-subtitle">
               <p>
-                ctDNA Database is a comprehensive database focusing on plasma circulating tumor DNA somatic mutation profiles of multiple cancers based on high-throughput sequencing, encompassing <span className="gdc-subtitle-stat">9,924 samples</span> (<span className="gdc-subtitle-stat">6,618 public</span> and <span className="gdc-subtitle-stat">3,306 collected</span>), <span className="gdc-subtitle-stat gdc-subtitle-stat--variant">51,099,363 variants</span>, and <span className="gdc-subtitle-stat">16 cancer types</span>. Among these variants, genome distribution analysis identified <span className="gdc-subtitle-stat gdc-subtitle-stat--variant">48,535,909 variants</span>, including <span className="gdc-subtitle-term">23,901,156 intergenic</span>, <span className="gdc-subtitle-term">17,771,249 intronic</span>, <span className="gdc-subtitle-term">2,217,583 exonic</span>, and <span className="gdc-subtitle-term">646,446 UTR</span> variants.
+                ctDNA Database is a comprehensive database focusing on plasma circulating tumor DNA somatic mutation profiles across multiple cancer types based on high-throughput sequencing. It encompasses <span className="gdc-subtitle-stat">9,924 samples</span>, including <span className="gdc-subtitle-stat">6,618 publicly available samples</span> and <span className="gdc-subtitle-stat">3,306 collected samples</span>, <span className="gdc-subtitle-stat gdc-subtitle-stat--variant">51,099,363 variants</span>, and <span className="gdc-subtitle-stat">16 cancer types</span>. Genome distribution analysis classified <span className="gdc-subtitle-stat gdc-subtitle-stat--variant">48,535,909 variants</span> with mapped genomic locations, including <span className="gdc-subtitle-term">23,901,156 intergenic variants</span>, <span className="gdc-subtitle-term">17,771,249 intronic variants</span>, <span className="gdc-subtitle-term">2,217,583 exonic variants</span>, and <span className="gdc-subtitle-term">646,446 UTR variants</span>.
               </p>
               <p>
-                For functional annotation, we identified <span className="gdc-subtitle-stat gdc-subtitle-stat--mutation">2,499,460 non-synonymous mutations</span>, comprising <span className="gdc-subtitle-term">2,231,182 missense mutations</span>, <span className="gdc-subtitle-term">126,633 nonsense mutations</span>, <span className="gdc-subtitle-term">15,167 frame shift deletions</span>, and <span className="gdc-subtitle-term">113,284 frame shift insertions</span>. The database provides integrated analysis of <span className="gdc-subtitle-keyword">somatic mutations</span>, <span className="gdc-subtitle-keyword">VAF</span>, <span className="gdc-subtitle-keyword">oncoplots</span>, <span className="gdc-subtitle-keyword">transition/transversion (Ti/Tv) plots</span>, and <span className="gdc-subtitle-keyword">survival outcomes</span>. Beyond variant-level exploration, the database integrates additional epigenomic and structural genomics data including <span className="gdc-subtitle-keyword">DNA methylation</span>, <span className="gdc-subtitle-keyword">circulating tumor cells (CTCs)</span>, <span className="gdc-subtitle-keyword">histone modifications</span>, and <span className="gdc-subtitle-keyword">nucleosome positioning</span> to facilitate the assessment of how mutated genes exert their functional effects.
+                Functional annotation categorized <span className="gdc-subtitle-stat gdc-subtitle-stat--mutation">2,499,460 variants</span> as non-synonymous mutations, comprising <span className="gdc-subtitle-term">2,231,182 missense mutations</span>, <span className="gdc-subtitle-term">126,633 nonsense mutations</span>, <span className="gdc-subtitle-term">15,167 frameshift deletions</span>, and <span className="gdc-subtitle-term">113,284 frameshift insertions</span>. The database provides integrated analyses of <span className="gdc-subtitle-keyword">somatic mutations</span>, <span className="gdc-subtitle-keyword">variant allele frequency (VAF)</span>, <span className="gdc-subtitle-keyword">oncoplots</span>, <span className="gdc-subtitle-keyword">transition/transversion (Ti/Tv) plots</span>, and <span className="gdc-subtitle-keyword">survival outcomes</span>. Beyond variant-level exploration, the database integrates additional epigenomic and structural genomics data, including <span className="gdc-subtitle-keyword">DNA methylation</span>, <span className="gdc-subtitle-keyword">circulating tumor cells (CTCs)</span>, <span className="gdc-subtitle-keyword">histone modifications</span>, and <span className="gdc-subtitle-keyword">nucleosome positioning</span>, to facilitate the assessment of how mutated genes exert their functional effects.
               </p>
             </div>
 
