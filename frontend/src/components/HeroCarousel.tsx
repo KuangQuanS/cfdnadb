@@ -127,23 +127,23 @@ type BodyCalloutConfig = {
 
 const ALL_CALLOUTS = [
   /* ── left side (top → bottom) ── */
-  { id: "HeadAndNeck", label: "Head & Neck", side: "left", labelTopPct: 14, labelXPct: 8.5, pointXPct: 42.5, pointYPct: 19, browseKey: "HeadAndNeck" },
-  { id: "Thyroid", label: "Thyroid", side: "left", labelTopPct: 21.5, labelXPct: 8.5, pointXPct: 42.5, pointYPct: 21.5, browseKey: "Thyroid" },
-  { id: "Lung", label: "Lung", side: "left", labelTopPct: 34.5, labelXPct: 8.5, pointXPct: 39.4, pointYPct: 31, browseKey: "Lung" },
-  { id: "Esophageal", label: "Esophageal", side: "left", labelTopPct: 28, labelXPct: 8.5, pointXPct: 42.5, pointYPct: 24.5, browseKey: "Esophageal" },
-  { id: "Liver", label: "Liver", side: "left", labelTopPct: 42, labelXPct: 8.5, pointXPct: 40.6, pointYPct: 38.8, browseKey: "Liver" },
-  { id: "Pancreatic", label: "Pancreatic", side: "left", labelTopPct: 50.5, labelXPct: 8.5, pointXPct: 43.8, pointYPct: 42.8, browseKey: "Pancreatic" },
-  { id: "Colorectal", label: "Colorectal", side: "left", labelTopPct: 60.5, labelXPct: 8.5, pointXPct: 49.4, pointYPct: 48.8, browseKey: "Colorectal" },
-  { id: "Bladder", label: "Bladder", side: "left", labelTopPct: 71, labelXPct: 8.5, pointXPct: 42.6, pointYPct: 56.2, browseKey: "Bladder" },
+  { id: "HeadAndNeck", label: "Head & Neck Cancer", side: "left", labelTopPct: 14, labelXPct: 8.5, pointXPct: 42.5, pointYPct: 19, browseKey: "HeadAndNeck" },
+  { id: "Thyroid", label: "Thyroid Cancer", side: "left", labelTopPct: 21.5, labelXPct: 8.5, pointXPct: 42.5, pointYPct: 21.5, browseKey: "Thyroid" },
+  { id: "Lung", label: "Lung Cancer", side: "left", labelTopPct: 34.5, labelXPct: 8.5, pointXPct: 39.4, pointYPct: 31, browseKey: "Lung" },
+  { id: "Esophageal", label: "Esophageal Cancer", side: "left", labelTopPct: 28, labelXPct: 8.5, pointXPct: 42.5, pointYPct: 24.5, browseKey: "Esophageal" },
+  { id: "Liver", label: "Liver Cancer", side: "left", labelTopPct: 42, labelXPct: 8.5, pointXPct: 40.6, pointYPct: 38.8, browseKey: "Liver" },
+  { id: "Pancreatic", label: "Pancreatic Cancer", side: "left", labelTopPct: 50.5, labelXPct: 8.5, pointXPct: 43.8, pointYPct: 42.8, browseKey: "Pancreatic" },
+  { id: "Colorectal", label: "Colorectal Cancer", side: "left", labelTopPct: 60.5, labelXPct: 8.5, pointXPct: 49.4, pointYPct: 48.8, browseKey: "Colorectal" },
+  { id: "Bladder", label: "Bladder Cancer", side: "left", labelTopPct: 71, labelXPct: 8.5, pointXPct: 42.6, pointYPct: 56.2, browseKey: "Bladder" },
   { id: "Healthy", label: "Healthy", side: "left", labelTopPct: 82, labelXPct: 8.5, pointXPct: 0, pointYPct: 0, browseKey: "Healthy", showConnector: false },
   /* ── right side (top → bottom) ── */
-  { id: "Brain", label: "Brain", side: "right", labelTopPct: 14, labelXPct: 91.5, pointXPct: 42.5, pointYPct: 14, browseKey: "Brain" },
-  { id: "Breast", label: "Breast", side: "right", labelTopPct: 24, labelXPct: 91.5, pointXPct: 64.5, pointYPct: 34.2, browseKey: "Breast" },
-  { id: "Gastric", label: "Gastric", side: "right", labelTopPct: 34, labelXPct: 91.5, pointXPct: 46, pointYPct: 41, browseKey: "Gastric" },
-  { id: "Kidney", label: "Kidney", side: "right", labelTopPct: 41, labelXPct: 91.5, pointXPct: 48.4, pointYPct: 42.4, browseKey: "Kidney" },
-  { id: "Cervical", label: "Cervical", side: "right", labelTopPct: 59, labelXPct: 91, pointXPct: 59.3, pointYPct: 58, browseKey: "Cervical" },
-  { id: "Endometrial", label: "Endometrial", side: "right", labelTopPct: 50, labelXPct: 91.5, pointXPct: 59.3, pointYPct: 55.1, browseKey: "Endometrial" },
-  { id: "Ovarian", label: "Ovarian", side: "right", labelTopPct: 68, labelXPct: 91.5, pointXPct: 62.8, pointYPct: 55, browseKey: "Ovarian" },
+  { id: "Brain", label: "Brain Cancer", side: "right", labelTopPct: 14, labelXPct: 91.5, pointXPct: 42.5, pointYPct: 14, browseKey: "Brain" },
+  { id: "Breast", label: "Breast Cancer", side: "right", labelTopPct: 24, labelXPct: 91.5, pointXPct: 64.5, pointYPct: 34.2, browseKey: "Breast" },
+  { id: "Gastric", label: "Gastric Cancer", side: "right", labelTopPct: 34, labelXPct: 91.5, pointXPct: 46, pointYPct: 41, browseKey: "Gastric" },
+  { id: "Kidney", label: "Kidney Cancer", side: "right", labelTopPct: 41, labelXPct: 91.5, pointXPct: 48.4, pointYPct: 42.4, browseKey: "Kidney" },
+  { id: "Cervical", label: "Cervical Cancer", side: "right", labelTopPct: 59, labelXPct: 91, pointXPct: 59.3, pointYPct: 58, browseKey: "Cervical" },
+  { id: "Endometrial", label: "Endometrial Cancer", side: "right", labelTopPct: 50, labelXPct: 91.5, pointXPct: 59.3, pointYPct: 55.1, browseKey: "Endometrial" },
+  { id: "Ovarian", label: "Ovarian Cancer", side: "right", labelTopPct: 68, labelXPct: 91.5, pointXPct: 62.8, pointYPct: 55, browseKey: "Ovarian" },
   { id: "Benign_Tumor", label: "Benign Tumor", side: "right", labelTopPct: 82, labelXPct: 91.5, pointXPct: 0, pointYPct: 0, browseKey: "Benign_Tumor", showConnector: false },
 ] as const satisfies readonly BodyCalloutConfig[];
 
@@ -206,7 +206,7 @@ function buildHeroSunburstOption(
   centerColor?: string,
   minAngle = 15,
 ): EChartsOption {
-  const isVariantCountChart = title === "Genome distribution" || title === "Variant Type Classification";
+  const isVariantCountChart = title === "Genome distribution" || title === "Variant Types";
   const children = buildSunburstEntries(entries, palette);
   const formatValue = (value: number) => (isVariantCountChart ? formatCompactCount(value) : formatNumber(value));
 
@@ -495,13 +495,13 @@ export function HeroCarousel() {
       },
       {
         id: "cancer-samples",
-        title: "Collected Sample Categories",
+        title: "Cancer Types",
         total: totalSamples,
         entries: sampleRingEntries,
         palette: RING_PALETTES.cancerSamples,
-        centerTitle: "Samples",
+        centerTitle: "Collected\nSamples",
         centerValue: formatNumber(totalSamples),
-        minAngle: 23,
+        minAngle: 21,
       },
       {
         id: "genome-distribution",
@@ -515,7 +515,7 @@ export function HeroCarousel() {
       },
       {
         id: "variant-classification",
-        title: "Variant Type Classification",
+        title: "Variant Types",
         total: totalVariantClassification,
         entries: variantClassRingEntries,
         palette: RING_PALETTES.mutations,
