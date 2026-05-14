@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import tutorialFlowchart from "../assets/ctdnadb.png";
+import pipelineWorkflow from "../assets/index_mutect.png";
 import browserTutorial from "../assets/tutorial/browser.png";
 import cfdnaVafTutorial from "../assets/tutorial/cfdna_vaf.png";
 import downloadTutorial from "../assets/tutorial/download.png";
@@ -34,6 +35,10 @@ export function TutorialPage() {
             <h3>Overview</h3>
             <figure className="help-flowchart">
               <img src={tutorialFlowchart} alt="ctDNAdb workflow overview" loading="lazy" decoding="async" />
+            </figure>
+            <h4>Pipeline</h4>
+            <figure className="help-pipeline-figure">
+              <img src={pipelineWorkflow} alt="ctDNAdb mutation analysis workflow" loading="lazy" decoding="async" />
             </figure>
             <p>
               ctDNAdb organizes ctDNA mutation data by cohort, gene, sample, and downloadable file. Select a workflow from the analysis

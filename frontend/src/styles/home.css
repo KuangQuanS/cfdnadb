@@ -282,7 +282,7 @@
 .gdc-tutorial-panel {
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  height: auto;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -299,15 +299,16 @@
 }
 
 .gdc-index-card {
-  width: min(100%, 940px);
+  width: min(100%, 920px);
   justify-self: end;
+  min-height: auto;
 }
 
 .gdc-tutorial-panel img {
   width: 100%;
   height: auto;
-  max-width: 940px;
-  max-height: 820px;
+  max-width: 920px;
+  max-height: 675px;
   display: block;
   object-fit: contain;
   object-position: center top;
@@ -315,7 +316,7 @@
 }
 
 .gdc-tutorial-zoom {
-  width: auto;
+  width: 100%;
   height: auto;
   display: flex;
   align-items: flex-start;

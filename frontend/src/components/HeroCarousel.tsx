@@ -6,7 +6,6 @@ import { getCancerSummary, getSourceDistribution, getStatisticsOverview } from "
 import type { CancerSummary } from "../types/api";
 import { formatNumber } from "../utils/format";
 import humanBodyImg from "../assets/body_simple_man.png";
-import indexMutectImg from "../assets/index_mutect.png";
 import tutorialImg from "../assets/ctdnadb.png";
 import "../styles/home.css";
 
@@ -686,16 +685,6 @@ export function HeroCarousel() {
         </div>
       ) : null}
 
-      <section className="gdc-pipeline-section">
-        <div className="gdc-pipeline-inner">
-          <div className="gdc-card-head">
-            <p className="section-eyebrow">Pipeline</p>
-          </div>
-          <div className="gdc-pipeline-frame">
-            <img src={indexMutectImg} alt="ctDNAdb mutation analysis workflow" loading="lazy" decoding="async" />
-          </div>
-        </div>
-      </section>
     </>
   );
 }

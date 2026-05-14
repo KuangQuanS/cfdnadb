@@ -9247,6 +9247,7 @@ button:disabled:hover {
 }
 
 .help-flowchart,
+.help-pipeline-figure,
 .help-tutorial-figure {
   margin: 4px 0 26px;
   padding: 14px;
@@ -9260,7 +9261,12 @@ button:disabled:hover {
   margin-bottom: 18px;
 }
 
+.help-pipeline-figure {
+  margin-top: 10px;
+}
+
 .help-flowchart img,
+.help-pipeline-figure img,
 .help-tutorial-figure img {
   display: block;
   width: 100%;
