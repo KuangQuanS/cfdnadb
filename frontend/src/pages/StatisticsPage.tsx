@@ -25,11 +25,19 @@ const CHART_LOADING_OPTION = {
 
 const STANDARD_STAT_CHART_STYLE = { width: "100%", height: "100%" };
 const STAT_BAR_COLORS = ["#2C3A85", "#1D56A7", "#2872CF", "#4B90DF", "#75AFE9"];
-const STAT_BAR_GRID = { left: 72, right: 34, top: 18, bottom: 34, containLabel: true } as const;
+const STAT_TABLE_HEADER_HEIGHT = 44;
+const STAT_TABLE_ROW_HEIGHT = 52;
+const STAT_TABLE_META_HEIGHT = 30;
+const STAT_BAR_GRID = {
+  left: 72,
+  right: 34,
+  top: STAT_TABLE_HEADER_HEIGHT,
+  bottom: STAT_TABLE_META_HEIGHT,
+  containLabel: true,
+} as const;
 const STAT_BAR_VISIBLE_ROW_LIMIT = 24;
 const STAT_CHART_MIN_HEIGHT = 460;
-const STAT_TABLE_ROW_HEIGHT = 52;
-const STAT_TABLE_STATIC_HEIGHT = 94;
+const STAT_TABLE_STATIC_HEIGHT = STAT_TABLE_HEADER_HEIGHT + STAT_TABLE_META_HEIGHT;
 
 function cleanLabels(items: LabelCount[]): LabelCount[] {
   return items.filter(

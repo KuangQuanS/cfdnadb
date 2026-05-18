@@ -148,6 +148,7 @@
 
 .gdc-subtitle p {
   margin: 0;
+  text-indent: 2em;
   text-align: justify;
   text-justify: inter-word;
 }

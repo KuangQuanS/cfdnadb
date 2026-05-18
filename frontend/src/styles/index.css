@@ -8484,16 +8484,22 @@ button:disabled:hover {
 
 .statistics-rna-table th,
 .statistics-rna-table td {
-  padding: 11px 13px;
   border-bottom: 1px solid #dde2e9;
   text-align: left;
   vertical-align: middle;
 }
 
 .statistics-rna-table th {
+  height: 44px;
+  padding: 0 13px;
   color: var(--accent);
   font-weight: 800;
   background: #fff;
+}
+
+.statistics-rna-table td {
+  height: 52px;
+  padding: 0 13px;
 }
 
 .statistics-rna-table th:first-child,
@@ -8510,6 +8516,7 @@ button:disabled:hover {
 }
 
 .statistics-rna-table-meta {
+  height: 30px;
   padding-top: 9px;
   color: #777f8b;
   font-size: 0.78rem;
