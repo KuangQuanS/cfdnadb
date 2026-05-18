@@ -36,6 +36,7 @@ const STAT_BAR_GRID = {
   containLabel: true,
 } as const;
 const STAT_BAR_VISIBLE_ROW_LIMIT = 24;
+const STAT_BAR_ZOOM_THRESHOLD = 12;
 const STAT_CHART_MIN_HEIGHT = 460;
 const STAT_TABLE_STATIC_HEIGHT = STAT_TABLE_HEADER_HEIGHT + STAT_TABLE_META_HEIGHT;
 
@@ -207,6 +208,8 @@ function buildSortedBarOption(
   });
   const chartData = normalized;
   const total = normalized.reduce((sum, item) => sum + item.count, 0);
+  const showZoom = chartData.length > STAT_BAR_ZOOM_THRESHOLD;
+  const rotateLabels = chartData.length > 8;
   return {
     tooltip: {
       trigger: "axis",
@@ -217,12 +220,15 @@ function buildSortedBarOption(
         return `${p.name}<br/>${formatNumber(p.value)} ${unitLabel} (${pct}%)`;
       },
     },
-    grid: STAT_BAR_GRID,
-    dataZoom: chartData.length > 1 ? [
+    grid: {
+      ...STAT_BAR_GRID,
+      bottom: showZoom ? 82 : rotateLabels ? 58 : 36,
+    },
+    dataZoom: showZoom ? [
       {
         type: "slider",
         xAxisIndex: 0,
-        bottom: 16,
+        bottom: 10,
         height: 12,
         startValue: 0,
         endValue: Math.min(STAT_BAR_VISIBLE_ROW_LIMIT - 1, chartData.length - 1),
@@ -247,8 +253,8 @@ function buildSortedBarOption(
         fontSize: 11,
         fontWeight: 700,
         interval: 0,
-        rotate: chartData.length > 8 ? 38 : 0,
-        width: chartData.length > 8 ? 82 : 108,
+        rotate: rotateLabels ? 38 : 0,
+        width: rotateLabels ? 82 : 108,
         overflow: "truncate",
       },
       axisTick: { show: false },
