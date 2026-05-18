@@ -31,8 +31,8 @@ const STAT_TABLE_META_HEIGHT = 30;
 const STAT_BAR_GRID = {
   left: 72,
   right: 34,
-  top: STAT_TABLE_HEADER_HEIGHT,
-  bottom: STAT_TABLE_META_HEIGHT,
+  top: 26,
+  bottom: 38,
   containLabel: true,
 } as const;
 const STAT_BAR_VISIBLE_ROW_LIMIT = 24;
@@ -245,6 +245,12 @@ function buildSortedBarOption(
     yAxis: {
       type: "category",
       data: chartData.map((item) => item.label),
+      splitArea: {
+        show: true,
+        areaStyle: {
+          color: ["rgba(246, 248, 252, 0.72)", "rgba(255, 255, 255, 0.92)"],
+        },
+      },
       axisLabel: {
         color: "#33415c",
         fontSize: 11,
