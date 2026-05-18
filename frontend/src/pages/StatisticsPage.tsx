@@ -30,9 +30,9 @@ const STAT_TABLE_ROW_HEIGHT = 52;
 const STAT_TABLE_META_HEIGHT = 30;
 const STAT_BAR_GRID = {
   left: 72,
-  right: 34,
-  top: 26,
-  bottom: 38,
+  right: 28,
+  top: 34,
+  bottom: 82,
   containLabel: true,
 } as const;
 const STAT_BAR_VISIBLE_ROW_LIMIT = 24;
@@ -205,7 +205,7 @@ function buildSortedBarOption(
     if (lastDiff !== 0) return lastDiff;
     return b.count - a.count;
   });
-  const chartData = [...normalized].reverse();
+  const chartData = normalized;
   const total = normalized.reduce((sum, item) => sum + item.count, 0);
   return {
     tooltip: {
@@ -218,31 +218,22 @@ function buildSortedBarOption(
       },
     },
     grid: STAT_BAR_GRID,
-    dataZoom: normalized.length > STAT_BAR_VISIBLE_ROW_LIMIT ? [
+    dataZoom: chartData.length > 1 ? [
       {
         type: "slider",
-        yAxisIndex: 0,
-        right: 8,
-        width: 12,
-        startValue: Math.max(chartData.length - STAT_BAR_VISIBLE_ROW_LIMIT, 0),
-        endValue: chartData.length - 1,
+        xAxisIndex: 0,
+        bottom: 16,
+        height: 12,
+        startValue: 0,
+        endValue: Math.min(STAT_BAR_VISIBLE_ROW_LIMIT - 1, chartData.length - 1),
         borderColor: "#d7deeb",
         fillerColor: "rgba(44, 58, 133, 0.18)",
-        handleSize: 0,
+        handleSize: 12,
         showDetail: false,
       },
-      { type: "inside", yAxisIndex: 0 },
+      { type: "inside", xAxisIndex: 0 },
     ] : undefined,
     xAxis: {
-      type: "value",
-      splitLine: { lineStyle: { color: "rgba(80, 95, 128, 0.12)" } },
-      axisLabel: {
-        color: "#5c6b86",
-        fontSize: 11,
-        formatter: (value: number) => formatAxisCount(value),
-      },
-    },
-    yAxis: {
       type: "category",
       data: chartData.map((item) => item.label),
       splitArea: {
@@ -255,11 +246,22 @@ function buildSortedBarOption(
         color: "#33415c",
         fontSize: 11,
         fontWeight: 700,
-        width: 132,
+        interval: 0,
+        rotate: chartData.length > 8 ? 38 : 0,
+        width: chartData.length > 8 ? 82 : 108,
         overflow: "truncate",
       },
       axisTick: { show: false },
       axisLine: { lineStyle: { color: "#c6cfde" } },
+    },
+    yAxis: {
+      type: "value",
+      splitLine: { lineStyle: { color: "rgba(80, 95, 128, 0.12)" } },
+      axisLabel: {
+        color: "#5c6b86",
+        fontSize: 11,
+        formatter: (value: number) => formatAxisCount(value),
+      },
     },
     series: [
       {
@@ -268,13 +270,13 @@ function buildSortedBarOption(
           value: item.count,
           itemStyle: { color: STAT_BAR_COLORS[index % STAT_BAR_COLORS.length] },
         })),
-        barMaxWidth: 30,
+        barMaxWidth: 34,
         itemStyle: {
-          borderRadius: [0, 9, 9, 0],
+          borderRadius: [8, 8, 0, 0],
         },
         label: {
           show: true,
-          position: "right",
+          position: "top",
           color: "#2C3A85",
           fontWeight: 700,
           fontSize: 11,

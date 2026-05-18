@@ -8526,7 +8526,8 @@ button:disabled:hover {
   min-width: 0;
   display: flex;
   align-items: stretch;
-  min-height: var(--statistics-chart-height, 460px);
+  height: var(--statistics-chart-height, 460px);
+  min-height: 0;
   padding-top: 0;
 }
 
