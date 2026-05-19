@@ -166,7 +166,7 @@ function StatisticsSplitSection({
   rows: StatRow[];
   labelHeader: string;
   countHeader?: string;
-  children: ReactNode;
+  children: (chartHeight: number) => ReactNode;
 }) {
   const visibleRowCount = Math.max(rows.length, 1);
   const chartHeight = Math.max(
@@ -185,7 +185,7 @@ function StatisticsSplitSection({
       </div>
       <div className="statistics-rna-split">
         <StatTable rows={rows} labelHeader={labelHeader} countHeader={countHeader} />
-        <div className="statistics-rna-chart" style={chartStyle}>{children}</div>
+        <div className="statistics-rna-chart" style={chartStyle}>{children(chartHeight)}</div>
       </div>
     </section>
   );
@@ -194,43 +194,64 @@ function StatisticsSplitSection({
 function StatisticsEChart({
   option,
   showLoading,
+  height,
 }: {
   option: EChartsOption;
   showLoading?: boolean;
+  height: number;
 }) {
   const chartRef = useRef<ReactECharts | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const timeoutRefs = useRef<number[]>([]);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return undefined;
 
     let frame = 0;
+    let secondFrame = 0;
     const resizeChart = () => {
       window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(secondFrame);
       frame = window.requestAnimationFrame(() => {
-        chartRef.current?.getEchartsInstance().resize();
+        secondFrame = window.requestAnimationFrame(() => {
+          chartRef.current?.getEchartsInstance().resize();
+        });
       });
+    };
+
+    const pulseResize = () => {
+      resizeChart();
+      for (const delay of [60, 180]) {
+        timeoutRefs.current.push(window.setTimeout(resizeChart, delay));
+      }
     };
 
     resizeChart();
     const observer = new ResizeObserver(resizeChart);
     observer.observe(wrapper);
+    pulseResize();
 
     return () => {
       window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(secondFrame);
+      for (const timeout of timeoutRefs.current) window.clearTimeout(timeout);
+      timeoutRefs.current = [];
       observer.disconnect();
     };
-  }, [option]);
+  }, [height, option]);
 
   return (
-    <div className="statistics-rna-echart" ref={wrapperRef}>
+    <div className="statistics-rna-echart" ref={wrapperRef} style={{ height }}>
       <ReactECharts
         ref={chartRef}
         option={option}
         showLoading={showLoading}
         loadingOption={CHART_LOADING_OPTION}
-        style={STANDARD_STAT_CHART_STYLE}
+        onChartReady={() => {
+          chartRef.current?.getEchartsInstance().resize();
+        }}
+        style={{ ...STANDARD_STAT_CHART_STYLE, height }}
       />
     </div>
   );
@@ -813,10 +834,13 @@ export function StatisticsPage() {
         labelHeader="Disease"
         countHeader="Sample Count"
       >
-        <StatisticsEChart
-          option={buildCohortBarOption(activeCohorts)}
-          showLoading={cohortChartLoading}
-        />
+        {(chartHeight) => (
+          <StatisticsEChart
+            option={buildCohortBarOption(activeCohorts)}
+            showLoading={cohortChartLoading}
+            height={chartHeight}
+          />
+        )}
       </StatisticsSplitSection>
 
       <StatisticsSplitSection
@@ -825,10 +849,13 @@ export function StatisticsPage() {
         rows={funcRows}
         labelHeader="Region"
       >
-        <StatisticsEChart
-          option={buildSortedBarOption(genomicRegionDistribution, "variants")}
-          showLoading={funcChartLoading}
-        />
+        {(chartHeight) => (
+          <StatisticsEChart
+            option={buildSortedBarOption(genomicRegionDistribution, "variants")}
+            showLoading={funcChartLoading}
+            height={chartHeight}
+          />
+        )}
       </StatisticsSplitSection>
 
       <StatisticsSplitSection
@@ -837,10 +864,13 @@ export function StatisticsPage() {
         rows={exonicRows}
         labelHeader="Consequence"
       >
-        <StatisticsEChart
-          option={buildCompositionBarOption(overview?.exonicDistribution ?? [], "variants")}
-          showLoading={exonicChartLoading}
-        />
+        {(chartHeight) => (
+          <StatisticsEChart
+            option={buildCompositionBarOption(overview?.exonicDistribution ?? [], "variants")}
+            showLoading={exonicChartLoading}
+            height={chartHeight}
+          />
+        )}
       </StatisticsSplitSection>
 
       <StatisticsSplitSection
@@ -849,10 +879,13 @@ export function StatisticsPage() {
         rows={chromRows}
         labelHeader="Chromosome"
       >
-        <StatisticsEChart
-          option={buildSortedBarOption(normalizeChromData(overview?.chromDistribution ?? []), "variants")}
-          showLoading={chromChartLoading}
-        />
+        {(chartHeight) => (
+          <StatisticsEChart
+            option={buildSortedBarOption(normalizeChromData(overview?.chromDistribution ?? []), "variants")}
+            showLoading={chromChartLoading}
+            height={chartHeight}
+          />
+        )}
       </StatisticsSplitSection>
 
       {/* Ridgeline Plot — VAF Distribution (private only; public aggregates lack per-sample VAF) */}

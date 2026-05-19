@@ -30,7 +30,7 @@ export function GeneSearchPage() {
   // none selected defaults to Collected Samples; selecting both queries the combined cfDNA view.
   const dataSources = selectedDataSources.length === 0 ? ["private"] : selectedDataSources;
   const source = dataSources.length === 1 ? dataSources[0] : "cfDNA";
-  const gene = searchParams.get("gene") ?? DEFAULT_GENE;
+  const gene = searchParams.get("gene") ?? "";
   const cancerTypes = searchParams.getAll("cancerType");
   const chromosomes = searchParams.getAll("chromosome");
   const variantClasses = searchParams.getAll("variantClass");
@@ -39,10 +39,10 @@ export function GeneSearchPage() {
   const pageSizeParam = Number(searchParams.get("size") ?? "");
   const pageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(pageSizeParam) ? pageSizeParam : DEFAULT_PAGE_SIZE;
 
-  const [geneInput, setGeneInput] = useState(gene);
+  const [geneInput, setGeneInput] = useState(gene || DEFAULT_GENE);
 
   useEffect(() => {
-    setGeneInput(gene);
+    setGeneInput(gene || DEFAULT_GENE);
   }, [gene]);
 
   const deferredGeneInput = useDeferredValue(geneInput.trim());
@@ -140,9 +140,9 @@ export function GeneSearchPage() {
 
   const clearFilters = () => {
     const next = new URLSearchParams();
-    if (geneInput.trim()) next.set("gene", geneInput.trim());
     next.set("page", "1");
     if (pageSize !== DEFAULT_PAGE_SIZE) next.set("size", String(pageSize));
+    setGeneInput(DEFAULT_GENE);
     setSearchParams(next);
   };
 
