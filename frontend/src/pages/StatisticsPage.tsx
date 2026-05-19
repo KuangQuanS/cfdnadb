@@ -191,6 +191,51 @@ function StatisticsSplitSection({
   );
 }
 
+function StatisticsEChart({
+  option,
+  showLoading,
+}: {
+  option: EChartsOption;
+  showLoading?: boolean;
+}) {
+  const chartRef = useRef<ReactECharts | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return undefined;
+
+    let frame = 0;
+    const resizeChart = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        chartRef.current?.getEchartsInstance().resize();
+      });
+    };
+
+    resizeChart();
+    const observer = new ResizeObserver(resizeChart);
+    observer.observe(wrapper);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [option]);
+
+  return (
+    <div className="statistics-rna-echart" ref={wrapperRef}>
+      <ReactECharts
+        ref={chartRef}
+        option={option}
+        showLoading={showLoading}
+        loadingOption={CHART_LOADING_OPTION}
+        style={STANDARD_STAT_CHART_STYLE}
+      />
+    </div>
+  );
+}
+
 function formatAxisCount(value: number) {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
@@ -768,11 +813,9 @@ export function StatisticsPage() {
         labelHeader="Disease"
         countHeader="Sample Count"
       >
-        <ReactECharts
+        <StatisticsEChart
           option={buildCohortBarOption(activeCohorts)}
           showLoading={cohortChartLoading}
-          loadingOption={CHART_LOADING_OPTION}
-          style={STANDARD_STAT_CHART_STYLE}
         />
       </StatisticsSplitSection>
 
@@ -782,11 +825,9 @@ export function StatisticsPage() {
         rows={funcRows}
         labelHeader="Region"
       >
-        <ReactECharts
+        <StatisticsEChart
           option={buildSortedBarOption(genomicRegionDistribution, "variants")}
           showLoading={funcChartLoading}
-          loadingOption={CHART_LOADING_OPTION}
-          style={STANDARD_STAT_CHART_STYLE}
         />
       </StatisticsSplitSection>
 
@@ -796,11 +837,9 @@ export function StatisticsPage() {
         rows={exonicRows}
         labelHeader="Consequence"
       >
-        <ReactECharts
+        <StatisticsEChart
           option={buildCompositionBarOption(overview?.exonicDistribution ?? [], "variants")}
           showLoading={exonicChartLoading}
-          loadingOption={CHART_LOADING_OPTION}
-          style={STANDARD_STAT_CHART_STYLE}
         />
       </StatisticsSplitSection>
 
@@ -810,11 +849,9 @@ export function StatisticsPage() {
         rows={chromRows}
         labelHeader="Chromosome"
       >
-        <ReactECharts
+        <StatisticsEChart
           option={buildSortedBarOption(normalizeChromData(overview?.chromDistribution ?? []), "variants")}
           showLoading={chromChartLoading}
-          loadingOption={CHART_LOADING_OPTION}
-          style={STANDARD_STAT_CHART_STYLE}
         />
       </StatisticsSplitSection>
 
