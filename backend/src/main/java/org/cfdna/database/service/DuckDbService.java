@@ -20,6 +20,7 @@ import org.cfdna.database.dto.SampleDetailDto;
 import org.cfdna.database.dto.SampleDownloadRequestDto;
 import org.cfdna.database.dto.SampleFileDto;
 import org.cfdna.database.dto.SampleSelectionDto;
+import org.cfdna.database.dto.StatisticsOverviewDto;
 import org.cfdna.database.dto.TopGeneDto;
 import org.cfdna.database.dto.VafDistributionDto;
 import org.cfdna.database.exception.ResourceNotFoundException;
@@ -922,6 +923,141 @@ public class DuckDbService {
             log.warn("Public cohort listing failed: {}", exception.getMessage());
         }
         return cancers;
+    }
+
+    public StatisticsOverviewDto getTcgaStatisticsOverview() {
+        if (!mafDatabaseAvailable()) {
+            return emptyTcgaStatisticsOverview();
+        }
+        try (Connection connection = openMafConnection()) {
+            if (!mafTableExists(connection, TCGA_MAF_TABLE)) {
+                return emptyTcgaStatisticsOverview();
+            }
+            return new StatisticsOverviewDto(
+                    "TCGA",
+                    java.time.Instant.now().toString(),
+                    queryTcgaCancerSummary(connection),
+                    queryTcgaMafSummary(connection),
+                    queryTcgaLabelCounts(connection,
+                            "SELECT TRIM(COALESCE(functional_region, '')) AS label, COUNT(*) AS cnt " +
+                                    "FROM " + TCGA_MAF_TABLE + " " +
+                                    "WHERE TRIM(COALESCE(functional_region, '')) <> '' " +
+                                    "GROUP BY label ORDER BY cnt DESC"),
+                    queryTcgaLabelCounts(connection,
+                            "SELECT TRIM(COALESCE(exonic_function, '')) AS label, COUNT(*) AS cnt " +
+                                    "FROM " + TCGA_MAF_TABLE + " " +
+                                    "WHERE TRIM(COALESCE(exonic_function, '')) <> '' " +
+                                    "  AND TRIM(COALESCE(exonic_function, '')) <> '.' " +
+                                    "GROUP BY label ORDER BY cnt DESC"),
+                    queryTcgaLabelCounts(connection,
+                            "SELECT TRIM(COALESCE(CAST(chromosome AS VARCHAR), '')) AS label, COUNT(*) AS cnt " +
+                                    "FROM " + TCGA_MAF_TABLE + " " +
+                                    "WHERE TRIM(COALESCE(CAST(chromosome AS VARCHAR), '')) <> '' " +
+                                    "GROUP BY label " +
+                                    "ORDER BY TRY_CAST(REGEXP_REPLACE(label, '^chr', '') AS INTEGER) NULLS LAST, label ASC"),
+                    queryTcgaTopGenes(connection)
+            );
+        } catch (SQLException exception) {
+            log.warn("TCGA statistics overview query failed: {}", exception.getMessage());
+            return emptyTcgaStatisticsOverview();
+        }
+    }
+
+    private StatisticsOverviewDto emptyTcgaStatisticsOverview() {
+        return new StatisticsOverviewDto(
+                "TCGA",
+                java.time.Instant.now().toString(),
+                List.of(),
+                new MafSummaryDto("TCGA", 0, 0, 0),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+    }
+
+    private MafSummaryDto queryTcgaMafSummary(Connection connection) throws SQLException {
+        String sql = "SELECT COUNT(*) AS total_variants, " +
+                "COUNT(DISTINCT NULLIF(TRIM(COALESCE(tumor_sample_barcode, '')), '')) AS total_samples, " +
+                "COUNT(DISTINCT NULLIF(TRIM(COALESCE(hugo_symbol, '')), '')) AS total_genes " +
+                "FROM " + TCGA_MAF_TABLE;
+        try (Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            if (rs.next()) {
+                return new MafSummaryDto(
+                        "TCGA",
+                        rs.getLong("total_variants"),
+                        rs.getLong("total_samples"),
+                        rs.getLong("total_genes")
+                );
+            }
+        }
+        return new MafSummaryDto("TCGA", 0, 0, 0);
+    }
+
+    private List<CancerSummaryDto> queryTcgaCancerSummary(Connection connection) throws SQLException {
+        if (!mafTableExists(connection, "sample_inventory")) {
+            return List.of();
+        }
+        String sql = "SELECT cancer_type, COUNT(DISTINCT sample_id) AS sample_count, " +
+                "COALESCE(SUM(variant_count), 0) AS mutation_count " +
+                "FROM sample_inventory " +
+                "WHERE source = 'tcga' AND TRIM(COALESCE(cancer_type, '')) <> '' " +
+                "GROUP BY cancer_type ORDER BY sample_count DESC, cancer_type ASC";
+        List<CancerSummaryDto> results = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            while (rs.next()) {
+                String cancer = normalizeTcgaCancerDisplay(rs.getString("cancer_type"));
+                long sampleCount = rs.getLong("sample_count");
+                long mutationCount = rs.getLong("mutation_count");
+                results.add(new CancerSummaryDto(
+                        cancer,
+                        sampleCount,
+                        sampleCount,
+                        sampleCount,
+                        0,
+                        sampleCount,
+                        0,
+                        0,
+                        sampleCount,
+                        mutationCount,
+                        "Complete",
+                        "Not started",
+                        "Complete",
+                        "Not started",
+                        "Not started",
+                        "Complete"
+                ));
+            }
+        }
+        return results;
+    }
+
+    private List<LabelCountDto> queryTcgaLabelCounts(Connection connection, String sql) throws SQLException {
+        List<LabelCountDto> results = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            while (rs.next()) {
+                results.add(new LabelCountDto(rs.getString("label"), rs.getLong("cnt")));
+            }
+        }
+        return results;
+    }
+
+    private List<TopGeneDto> queryTcgaTopGenes(Connection connection) throws SQLException {
+        String sql = "SELECT TRIM(COALESCE(hugo_symbol, '')) AS gene, COUNT(*) AS cnt " +
+                "FROM " + TCGA_MAF_TABLE + " " +
+                "WHERE TRIM(COALESCE(hugo_symbol, '')) <> '' " +
+                "GROUP BY gene ORDER BY cnt DESC LIMIT 20";
+        List<TopGeneDto> results = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            while (rs.next()) {
+                results.add(new TopGeneDto(rs.getString("gene"), rs.getLong("cnt")));
+            }
+        }
+        return results;
     }
 
     private String resolvePublicCancerInClause(String cancerParam) {
