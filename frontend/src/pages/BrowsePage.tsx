@@ -173,9 +173,6 @@ export function BrowsePage() {
     (key: string, value: string) => {
       const params = new URLSearchParams(searchParams);
       params.set(key, value);
-      if (key === "cancer") {
-        params.delete("source");
-      }
       setSearchParams(params);
     },
     [searchParams, setSearchParams]
