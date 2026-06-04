@@ -48,3 +48,4 @@ tutorial/
 *.psd
 body_simple*.png
 index_mutect.png
+.codex*

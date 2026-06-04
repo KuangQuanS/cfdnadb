@@ -36,7 +36,7 @@ const SOURCE_RING_ORDER = ["internal", "public", "tcga"] as const;
 
 const SOURCE_RING_LABELS: Record<typeof SOURCE_RING_ORDER[number], { label: string; browseSource: string }> = {
   internal: { label: "Collected Samples", browseSource: "cfDNA" },
-  public: { label: "Public Cohort", browseSource: "Public" },
+  public: { label: "Public Cohort", browseSource: "tcga" },
   tcga: { label: "TCGA", browseSource: "tcga" },
 };
 
@@ -186,11 +186,55 @@ function formatCompactCount(value: number) {
 function buildSunburstEntries(
   entries: HeroRingEntry[],
   palette: readonly string[],
+  getChartValue: (entry: HeroRingEntry) => number = (entry) => entry.value,
 ) {
   const sorted = [...entries].sort((a, b) => b.value - a.value);
   return sorted.map((entry, idx) => ({
     name: entry.label,
-    value: entry.value,
+    value: getChartValue(entry),
+    actualValue: entry.value,
+    browseKey: entry.browseKey,
+    itemStyle: { color: palette[idx % palette.length] },
+  }));
+}
+
+function getCancerChartEntries(entries: HeroRingEntry[], palette: readonly string[]) {
+  const sorted = [...entries].sort((a, b) => b.value - a.value);
+  const minAngle = 19.5;
+  const maxAngle = 30;
+  const baseTotal = sorted.length * minAngle;
+  const extraTotal = Math.max(0, 360 - baseTotal);
+  const extraCapacity = Math.max(0, maxAngle - minAngle);
+  const remaining = sorted.map((entry) => ({ ...entry, angle: minAngle }));
+  let availableExtra = extraTotal;
+  let unlocked = remaining;
+
+  while (availableExtra > 0.001 && unlocked.length > 0) {
+    const unlockedTotal = unlocked.reduce((sum, entry) => sum + entry.value, 0);
+    if (unlockedTotal <= 0) break;
+
+    const nextUnlocked: typeof unlocked = [];
+    let distributed = 0;
+    for (const entry of unlocked) {
+      const share = availableExtra * (entry.value / unlockedTotal);
+      const room = extraCapacity - (entry.angle - minAngle);
+      const applied = Math.min(room, share);
+      entry.angle += applied;
+      distributed += applied;
+      if (room - applied > 0.001) {
+        nextUnlocked.push(entry);
+      }
+    }
+
+    if (distributed <= 0.001) break;
+    availableExtra -= distributed;
+    unlocked = nextUnlocked;
+  }
+
+  return remaining.map((entry, idx) => ({
+    name: entry.label,
+    value: entry.angle,
+    actualValue: entry.value,
     browseKey: entry.browseKey,
     itemStyle: { color: palette[idx % palette.length] },
   }));
@@ -207,8 +251,12 @@ function buildHeroSunburstOption(
   minAngle = 15,
 ): EChartsOption {
   const isVariantCountChart = title === "Genome distribution" || title === "Variant Types";
-  const children = buildSunburstEntries(entries, palette);
+  const isCancerSamplesChart = title === "Cancer Types";
+  const children = isCancerSamplesChart
+    ? getCancerChartEntries(entries, palette)
+    : buildSunburstEntries(entries, palette);
   const formatValue = (value: number) => (isVariantCountChart ? formatCompactCount(value) : formatNumber(value));
+  const tooltipUnit = isCancerSamplesChart || title === "Source samples" ? "samples" : title.toLowerCase();
 
   return {
     animationDuration: 600,
@@ -220,10 +268,10 @@ function buildHeroSunburstOption(
         color: "#f7fbff",
         fontSize: 12,
       },
-      formatter: (params: { name?: string; value?: number }) => {
-        const value = params.value ?? 0;
+      formatter: (params: { name?: string; value?: number; data?: { actualValue?: number } }) => {
+        const value = params.data?.actualValue ?? params.value ?? 0;
         const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0.0";
-        return `${params.name}<br/>${formatValue(value)} ${title.toLowerCase()} (${pct}%)`;
+        return `${params.name}<br/>${formatValue(value)} ${tooltipUnit} (${pct}%)`;
       },
     },
     series: [
@@ -280,8 +328,8 @@ function buildHeroSunburstOption(
         startAngle: 180,
         sort: undefined,
         clockwise: true,
-        minAngle,
-        avoidLabelOverlap: false,
+        minAngle: isCancerSamplesChart ? 0 : minAngle,
+        avoidLabelOverlap: isCancerSamplesChart,
         labelLine: {
           show: false,
         },
@@ -296,8 +344,8 @@ function buildHeroSunburstOption(
           fontSize: 10,
           lineHeight: 11,
           overflow: "break",
-          formatter: (params: { name?: string; value?: number }) => {
-            const value = params.value ?? 0;
+          formatter: (params: { name?: string; value?: number; data?: { actualValue?: number } }) => {
+            const value = params.data?.actualValue ?? params.value ?? 0;
             const pct = formatPercent(value, total);
             if (!params.name) return "";
             return formatRingLabel(params.name, pct);
