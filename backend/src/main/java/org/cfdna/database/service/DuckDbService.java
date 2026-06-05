@@ -1598,7 +1598,8 @@ public class DuckDbService {
             }
             try (ResultSet rs = stmt.executeQuery(
                     "SELECT DISTINCT variant_classification FROM " + table +
-                            " WHERE NULLIF(TRIM(variant_classification), '') IS NOT NULL ORDER BY variant_classification")) {
+                            " WHERE NULLIF(TRIM(variant_classification), '') IS NOT NULL" +
+                            " AND TRIM(variant_classification) <> '.' ORDER BY variant_classification")) {
                 while (rs.next()) variantClassifications.add(rs.getString(1));
             }
             try (ResultSet rs = stmt.executeQuery(
@@ -1872,7 +1873,7 @@ public class DuckDbService {
                                 rs.getString("end_position"),
                                 rs.getString("reference_allele"),
                                 rs.getString("tumor_seq_allele2"),
-                                rs.getString("variant_classification"),
+                                normalizeVariantClassificationForDisplay(rs.getString("variant_classification"), rs.getString("exonic_function")),
                                 rs.getString("variant_type"),
                                 rs.getString("tumor_sample_barcode"),
                                 rs.getString("transcript"),
@@ -1972,7 +1973,7 @@ public class DuckDbService {
                                 rs.getString("end_position"),
                                 rs.getString("reference_allele"),
                                 rs.getString("tumor_seq_allele2"),
-                                rs.getString("variant_classification"),
+                                normalizeVariantClassificationForDisplay(rs.getString("variant_classification"), rs.getString("exonic_function")),
                                 rs.getString("variant_type"),
                                 rs.getString("tumor_sample_barcode"),
                                 rs.getString("transcript"),
@@ -2124,7 +2125,7 @@ public class DuckDbService {
                                 rs.getString("end_position"),
                                 rs.getString("reference_allele"),
                                 rs.getString("tumor_seq_allele2"),
-                                rs.getString("variant_classification"),
+                                normalizeVariantClassificationForDisplay(rs.getString("variant_classification"), rs.getString("exonic_function")),
                                 rs.getString("variant_type"),
                                 rs.getString("tumor_sample_barcode"),
                                 rs.getString("transcript"),
@@ -2885,7 +2886,7 @@ public class DuckDbService {
         String allelesPreview = joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
                 alleleValueExpr, alleleValueExpr, "value ASC", 4));
         String classesPreview = joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
-                "COALESCE(variant_classification, '')", "COALESCE(variant_classification, '')", "value ASC", 4));
+                "NULLIF(TRIM(COALESCE(variant_classification, '')), '.')", "NULLIF(TRIM(COALESCE(variant_classification, '')), '.')", "value ASC", 4));
         String typesPreview = joinPreview(fetchMafGenePreviewValues(conn, table, geneSymbol, hasSample, sample, cancerTypes, chromosomes, variantClasses, variantTypes, tcga,
                 "COALESCE(variant_type, '')", "COALESCE(variant_type, '')", "value ASC", 4));
         String annotationPreview = tcga
@@ -2949,6 +2950,35 @@ public class DuckDbService {
         return values.isEmpty() ? "-" : String.join(", ", values);
     }
 
+    private String normalizeVariantClassificationForDisplay(String variantClassification, String exonicFunction) {
+        String value = variantClassification == null ? "" : variantClassification.trim();
+        if (!value.isEmpty() && !".".equals(value)) return value;
+
+        String exonic = exonicFunction == null ? "" : exonicFunction.trim().toLowerCase(Locale.ROOT);
+        switch (exonic) {
+            case "nonsynonymous snv":
+                return "Missense_Mutation";
+            case "synonymous snv":
+                return "Silent";
+            case "stopgain":
+                return "Nonsense_Mutation";
+            case "stoploss":
+                return "Nonstop_Mutation";
+            case "startloss":
+                return "Translation_Start_Site";
+            case "frameshift deletion":
+                return "Frame_Shift_Del";
+            case "frameshift insertion":
+                return "Frame_Shift_Ins";
+            case "nonframeshift deletion":
+                return "In_Frame_Del";
+            case "nonframeshift insertion":
+                return "In_Frame_Ins";
+            default:
+                return "Unknown";
+        }
+    }
+
     private String buildMafAnnotationPreview(Connection conn,
                                              String table,
                                              String geneSymbol,
@@ -2990,12 +3020,12 @@ public class DuckDbService {
                     List<List<String>> aaGroups = splitAaChangeEntries(aa);
                     for (List<String> aaParts : aaGroups) {
                         LinkedHashSet<String> parts = new LinkedHashSet<>();
-                        if (!fr.isEmpty()) parts.add(fr);
-                        if (!ef.isEmpty()) parts.add(ef);
-                        if (!ex.isEmpty()) parts.add(ex);
-                        for (String p : aaParts) {
-                            if (!p.isEmpty()) parts.add(p);
-                        }
+                    if (isMeaningfulAnnotationPart(fr)) parts.add(fr);
+                    if (isMeaningfulAnnotationPart(ef)) parts.add(ef);
+                    if (isMeaningfulAnnotationPart(ex)) parts.add(ex);
+                    for (String p : aaParts) {
+                            if (isMeaningfulAnnotationPart(p)) parts.add(p);
+                    }
                         if (parts.isEmpty()) continue;
                         String joined = String.join(" | ", parts);
                         if (seen.add(joined)) {
@@ -3007,6 +3037,15 @@ public class DuckDbService {
             }
         }
         return entries.isEmpty() ? "-" : String.join(", ", entries);
+    }
+
+    private boolean isMeaningfulAnnotationPart(String value) {
+        if (value == null) return false;
+        String normalized = value.trim();
+        return !normalized.isEmpty()
+                && !".".equals(normalized)
+                && !"unknown".equalsIgnoreCase(normalized)
+                && !"null".equalsIgnoreCase(normalized);
     }
 
     private List<List<String>> splitAaChangeEntries(String aa) {
