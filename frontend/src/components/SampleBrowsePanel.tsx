@@ -23,7 +23,8 @@ const SOURCE_OPTIONS = [
   { value: "geo", label: "GEO" },
 ] as const;
 const DOWNLOAD_SOURCE_OPTIONS = [
-  ...SOURCE_OPTIONS,
+  { value: "private", label: "Collected Samples" },
+  { value: "public", label: "Public Cohorts" },
 ] as const;
 const DOWNLOAD_CANCER_OPTIONS = [...CANCER_OPTIONS] as const;
 const COLUMN_OPTIONS = [
@@ -62,7 +63,7 @@ interface SampleBrowsePanelProps {
 function defaultDraft(mode: "browse" | "downloads"): BrowseDraft {
   return {
     cancers: [DEFAULT_CANCER],
-    sources: ["private", "geo"],
+    sources: mode === "downloads" ? ["private", "public"] : ["private", "geo"],
     gene: "",
     sample: "",
     minVariants: "",
@@ -98,7 +99,7 @@ function sampleKey(item: SampleSelection) {
 
 function sourceLabel(source: string) {
   if (source === "private") return "Collected Samples";
-  if (source === "public") return "Public Data";
+  if (source === "public") return "Public Cohorts";
   if (source === "tcga") return "TCGA";
   if (source === "healthy") return "Healthy VCF";
   return source;
